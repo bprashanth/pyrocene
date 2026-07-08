@@ -1,0 +1,511 @@
+<title>Pyrocene</title>
+<style>
+  :root{
+    --paper:#eef5e8; --panel:#fff; --panel-2:#f3f8ee; --edge:#d9e4d1;
+    --text:#18291f; --soft:#4d6354; --muted:#7d9384;
+    --native:#37c871; --native-deep:#1f9d55; --ember:#ff6a3d; --ember-2:#ffc24b;
+    --invasive:#c158d8; --water:#41a6f0; --sun:#ffd23f; --danger:#ff4d5e;
+    --fog:#cdd9c8; --fog-2:#bccbb6; --shadow:rgba(16,32,26,.16);
+    --round:ui-rounded,"SF Pro Rounded","Nunito","Quicksand",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#0e1a14; --panel:#16241c; --panel-2:#12201a; --edge:#294235;
+    --text:#e8f2e9; --soft:#a9c1b1; --muted:#7f9987; --fog:#22352b; --fog-2:#2c4236; --shadow:rgba(0,0,0,.4);
+  }}
+  :root[data-theme="light"]{--paper:#eef5e8;--panel:#fff;--panel-2:#f3f8ee;--edge:#d9e4d1;--text:#18291f;--soft:#4d6354;--muted:#7d9384;--fog:#cdd9c8;--fog-2:#bccbb6;--shadow:rgba(16,32,26,.16);}
+  :root[data-theme="dark"]{--paper:#0e1a14;--panel:#16241c;--panel-2:#12201a;--edge:#294235;--text:#e8f2e9;--soft:#a9c1b1;--muted:#7f9987;--fog:#22352b;--fog-2:#2c4236;--shadow:rgba(0,0,0,.4);}
+
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--round);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;
+    background:radial-gradient(1000px 500px at 12% -10%,color-mix(in srgb,var(--native) 12%,transparent),transparent 60%),
+               radial-gradient(800px 460px at 112% 6%,color-mix(in srgb,var(--ember-2) 12%,transparent),transparent 55%),var(--paper);}
+  .wrap{max-width:1060px;margin:0 auto;padding:16px 16px 48px}
+
+  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .logo{font-size:clamp(24px,4vw,34px);font-weight:800;letter-spacing:-.02em;margin-right:auto;line-height:1;
+    background:linear-gradient(100deg,var(--ember),var(--sun) 55%,var(--native));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat{background:var(--panel);border:2px solid var(--edge);border-radius:999px;padding:6px 13px;font-weight:800;box-shadow:0 3px 0 var(--shadow);white-space:nowrap}
+  .stat small{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-right:5px}
+  .stat .val{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .icb{background:var(--panel);border:2px solid var(--edge);border-radius:999px;width:38px;height:38px;font-size:17px;cursor:pointer;box-shadow:0 3px 0 var(--shadow)}
+  .icb:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shadow)}
+
+  .health{background:var(--panel);border:2px solid var(--edge);border-radius:16px;padding:10px 14px;box-shadow:0 4px 0 var(--shadow);margin-bottom:14px}
+  .health .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+  .health .lab{font-weight:800;font-size:14px}
+  .health .num{font-family:var(--mono);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+  .track{position:relative;height:18px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--danger) 20%,var(--panel-2));border:2px solid var(--edge)}
+  .fill{position:absolute;inset:0;width:75%;border-radius:999px;transition:width .6s cubic-bezier(.2,.8,.2,1),background .4s;background:linear-gradient(90deg,var(--native-deep),var(--native))}
+  .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--soft);opacity:.35}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(268px,.9fr);gap:16px;align-items:start}
+  @media (max-width:820px){.layout{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:2px solid var(--edge);border-radius:16px;padding:13px;box-shadow:0 4px 0 var(--shadow)}
+  .board-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+  .pill{font-weight:800;font-size:12.5px;padding:5px 11px;border-radius:999px;background:linear-gradient(180deg,var(--sun),color-mix(in srgb,var(--sun) 70%,var(--ember)));color:#3a2600;box-shadow:0 2px 0 var(--shadow)}
+  .fc{font-size:12.5px;font-weight:800;color:var(--soft);display:flex;gap:5px;align-items:center}
+  .fc .w{font-family:var(--mono);color:var(--water)}
+
+  .board{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;aspect-ratio:1/1}
+  .cell{position:relative;border:none;padding:0;border-radius:14px;cursor:pointer;color:var(--text);
+    background:linear-gradient(180deg,var(--fog),var(--fog-2));
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),inset 0 2px 0 rgba(255,255,255,.25);
+    display:flex;align-items:center;justify-content:center;font-size:clamp(20px,5vw,30px);overflow:hidden;transition:transform .12s,box-shadow .12s,filter .12s}
+  .cell .tok{line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.22))}
+  .cell .q{font-weight:800;color:color-mix(in srgb,var(--text) 40%,transparent);font-size:.8em}
+  .cell.native{background:linear-gradient(180deg,color-mix(in srgb,var(--native) 55%,#fff),var(--native))}
+  .cell.invasive{background:linear-gradient(180deg,color-mix(in srgb,var(--invasive) 45%,#fff),var(--invasive))}
+  .cell.barren{background:linear-gradient(180deg,#e9dcc2,#d9c49a)}
+  .cell.rlow{background:linear-gradient(180deg,color-mix(in srgb,var(--native) 28%,var(--fog)),var(--fog-2))}
+  .cell.rmed{background:linear-gradient(180deg,color-mix(in srgb,var(--sun) 45%,var(--fog)),var(--fog-2))}
+  .cell.rhigh{background:linear-gradient(180deg,color-mix(in srgb,var(--ember) 45%,var(--fog)),var(--fog-2))}
+  .cell.burning{background:linear-gradient(0deg,var(--ember),var(--ember-2));animation:flick .5s infinite alternate}
+  .cell.burned{background:linear-gradient(180deg,#3a3a3a,#232323);color:#cfcfcf}
+  .cell.good{background:linear-gradient(0deg,var(--native-deep),var(--sun))}
+  @keyframes flick{from{filter:brightness(1)}to{filter:brightness(1.18) saturate(1.15)}}
+  .cell.fl{box-shadow:inset 0 0 0 3px var(--water),inset 0 -4px 0 rgba(0,0,0,.12)}
+  .cell .flag{position:absolute;top:2px;right:3px;font-size:.55em}
+  .cell .sprout{position:absolute;bottom:2px;right:3px;font-size:.5em}
+  .cell:hover{transform:translateY(-2px)}
+  .cell.aim{box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),0 0 0 3px var(--sun)}
+  .cell.foot{box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),0 0 0 3px color-mix(in srgb,var(--sun) 80%,transparent)}
+  @media (prefers-reduced-motion:reduce){.cell.burning{animation:none}.cell:hover{transform:none}}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+  .lg{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--soft);
+    background:var(--panel-2);border:1.5px solid var(--edge);border-radius:999px;padding:3px 9px;cursor:pointer}
+  .lg:active{transform:translateY(1px)}
+  .lg .sw{width:13px;height:13px;border-radius:4px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+
+  .side{display:flex;flex-direction:column;gap:12px}
+  .coach{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:2px solid var(--edge);border-radius:16px;padding:11px;box-shadow:0 4px 0 var(--shadow)}
+  .coach .avatar{width:52px;height:52px;flex:none;border-radius:14px;background:var(--panel-2);border:2px solid var(--edge);padding:3px}
+  .coach .avatar svg{width:100%;height:100%;display:block}
+  .bubble{position:relative;background:var(--panel-2);border:2px solid var(--edge);border-radius:14px;padding:8px 11px;font-weight:700;font-size:13.5px;line-height:1.35;color:var(--text);flex:1;min-width:0}
+  .bubble .who{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:1px}
+  .bubble:before{content:"";position:absolute;left:-8px;top:16px;width:12px;height:12px;background:var(--panel-2);border-left:2px solid var(--edge);border-bottom:2px solid var(--edge);transform:rotate(45deg)}
+
+  .tabs{display:flex;gap:8px}
+  .tab{flex:1;border:2px solid var(--edge);background:var(--panel-2);color:var(--soft);font-family:var(--round);font-weight:800;font-size:13.5px;padding:9px 6px;border-radius:12px;cursor:pointer;box-shadow:0 3px 0 var(--shadow);display:flex;align-items:center;justify-content:center;gap:6px}
+  .tab .e{font-size:17px}
+  .tab.on.eco{background:linear-gradient(180deg,color-mix(in srgb,var(--water) 22%,var(--panel)),var(--panel));color:var(--text);border-color:var(--water)}
+  .tab.on.ran{background:linear-gradient(180deg,color-mix(in srgb,var(--ember) 20%,var(--panel)),var(--panel));color:var(--text);border-color:var(--ember)}
+  .tab:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shadow)}
+
+  .acts{display:flex;flex-direction:column;gap:7px}
+  .act{display:flex;align-items:center;gap:9px;text-align:left;width:100%;border:2px solid var(--edge);background:var(--panel-2);border-radius:12px;padding:8px 10px;cursor:pointer;font-family:var(--round);color:var(--text);box-shadow:0 3px 0 var(--shadow)}
+  .act:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 var(--shadow)}
+  .act.sel{border-color:var(--sun);background:linear-gradient(180deg,color-mix(in srgb,var(--sun) 22%,var(--panel)),var(--panel))}
+  .act:disabled{opacity:.42;cursor:not-allowed}
+  .act .ico{font-size:19px;width:24px;text-align:center}
+  .act .b{flex:1;min-width:0}
+  .act .nm{font-weight:800;font-size:13.5px}
+  .act .sb{font-size:11px;color:var(--soft)}
+  .act .co{font-family:var(--mono);font-weight:800;font-size:12.5px;color:var(--sun);background:color-mix(in srgb,var(--sun) 16%,var(--panel-2));border-radius:8px;padding:3px 7px}
+  .act .co.free{color:var(--native-deep);background:color-mix(in srgb,var(--native) 16%,var(--panel-2))}
+
+  .run{width:100%;border:none;border-radius:14px;padding:13px;cursor:pointer;font-family:var(--round);font-weight:800;font-size:16px;color:#2a1500;background:linear-gradient(180deg,var(--ember-2),var(--ember));box-shadow:0 5px 0 color-mix(in srgb,var(--ember) 60%,black)}
+  .run:active{transform:translateY(3px);box-shadow:0 2px 0 color-mix(in srgb,var(--ember) 60%,black)}
+  .run:disabled{opacity:.5;cursor:wait}
+
+  @keyframes pulse{0%,100%{box-shadow:0 3px 0 var(--shadow),0 0 0 0 color-mix(in srgb,var(--sun) 70%,transparent)}50%{box-shadow:0 3px 0 var(--shadow),0 0 0 7px color-mix(in srgb,var(--sun) 0%,transparent)}}
+  .pulse{animation:pulse 1.2s infinite;border-color:var(--sun)!important}
+  @media (prefers-reduced-motion:reduce){.pulse{animation:none;box-shadow:0 3px 0 var(--shadow),0 0 0 4px color-mix(in srgb,var(--sun) 40%,transparent)!important}}
+
+  .scrim{position:fixed;inset:0;background:color-mix(in srgb,#0a140f 60%,transparent);display:none;align-items:center;justify-content:center;padding:18px;z-index:50;backdrop-filter:blur(3px)}
+  .scrim.show{display:flex}
+  .modal{background:var(--panel);border:2px solid var(--edge);border-radius:22px;max-width:460px;width:100%;padding:20px;box-shadow:0 12px 0 var(--shadow);max-height:88vh;overflow-y:auto}
+  .modal .big{width:88px;height:88px;margin:0 auto 6px;display:block}
+  .modal h2{margin:2px 0 6px;font-size:21px;text-align:center;text-wrap:balance}
+  .modal p{color:var(--soft);font-size:14px;line-height:1.5;margin:0 0 10px;text-align:center}
+  .modal .tip{background:var(--panel-2);border-left:4px solid var(--sun);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);text-align:left;font-weight:700;margin:10px 0}
+  .dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--edge)}
+  .dot.on{background:var(--native)}
+  .btnrow{display:flex;gap:8px}
+  .cta{flex:1;border:none;border-radius:13px;padding:12px;cursor:pointer;font-family:var(--round);font-weight:800;font-size:15px;color:#08130d;background:linear-gradient(180deg,var(--native),var(--native-deep));box-shadow:0 4px 0 color-mix(in srgb,var(--native-deep) 65%,black)}
+  .cta:active{transform:translateY(2px);box-shadow:0 2px 0 color-mix(in srgb,var(--native-deep) 65%,black)}
+  .cta.ghost{background:var(--panel-2);color:var(--soft);box-shadow:0 4px 0 var(--shadow);border:2px solid var(--edge)}
+  .delta{font-family:var(--mono);font-weight:800;font-size:30px;text-align:center;margin:4px 0}
+  .delta.up{color:var(--native-deep)} .delta.down{color:var(--danger)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}
+  .chip{font-size:12.5px;font-weight:800;border-radius:999px;padding:4px 10px;background:var(--panel-2);border:1.5px solid var(--edge)}
+  .chip.g{color:var(--native-deep)} .chip.b{color:var(--danger)}
+  .badge{font-size:54px;text-align:center;margin:2px 0}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(18px);background:#0a140f;color:#fff;padding:10px 17px;border-radius:999px;font-weight:800;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div class="logo">PYROCENE</div>
+    <div class="stat"><small>Night</small><span class="val" id="nightVal">1/6</span></div>
+    <div class="stat"><small>Coins</small><span class="val" id="coinVal">10</span></div>
+    <button class="icb" id="helpBtn" aria-label="Help">?</button>
+    <button class="icb" id="themeBtn" aria-label="Theme">◐</button>
+  </div>
+
+  <div class="health">
+    <div class="row"><span class="lab">🌲 Forest Health</span><span class="num" id="healthNum">75</span></div>
+    <div class="track"><div class="fill" id="fill"></div><div class="mark" style="left:50%"></div><div class="mark" style="left:75%"></div><div class="mark" style="left:90%"></div></div>
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      <div class="board-head">
+        <div class="pill" id="phase">☀️ Day</div>
+        <div class="fc" id="fc">🌤️ Tonight: <span class="w">calm</span></div>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="side">
+      <div class="coach"><div class="avatar" id="coachAv"></div><div class="bubble"><span class="who" id="coachWho">Ivy</span><span id="coachTxt"></span></div></div>
+      <div class="tabs">
+        <button class="tab eco on" id="tabEco" data-role="eco"><span class="e">🔬</span>Ivy</button>
+        <button class="tab ran" id="tabRan" data-role="ran"><span class="e">🪓</span>Rocky</button>
+      </div>
+      <div class="card"><div class="acts" id="acts"></div></div>
+      <button class="run" id="runBtn">🌙 Run the Night</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+  "use strict";
+  const N=5,TURNS=6,START=75,WIN=75,GOLD=90,LOSE=50,BUDGET=10,BONUS=4;
+  const DIRS={N:[0,-1],S:[0,1],E:[1,0],W:[-1,0]};
+  const RM=matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  const IVY=`<svg viewBox="0 0 64 64"><circle cx="32" cy="37" r="18" fill="#f4c8a0"/><path d="M14 32 Q32 8 50 32 Q40 24 32 24 Q24 24 14 32Z" fill="#2fae63"/><circle cx="46" cy="17" r="4" fill="#37c871"/><circle cx="26" cy="36" r="6" fill="#fff" stroke="#2a3b31" stroke-width="2"/><circle cx="40" cy="36" r="6" fill="#fff" stroke="#2a3b31" stroke-width="2"/><path d="M32 36h2" stroke="#2a3b31" stroke-width="2"/><circle cx="26" cy="36" r="2" fill="#2a3b31"/><circle cx="40" cy="36" r="2" fill="#2a3b31"/><path d="M28 46 Q32 50 37 46" stroke="#2a3b31" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+  const ROCKY=`<svg viewBox="0 0 64 64"><circle cx="32" cy="38" r="18" fill="#e8b98f"/><path d="M13 31 Q32 9 51 31 Z" fill="#ff7a3d"/><rect x="11" y="29" width="42" height="5" rx="2.5" fill="#ff9a56"/><rect x="30" y="13" width="4" height="10" fill="#ffb98a"/><path d="M23 39 Q26 37 29 39" stroke="#2a3b31" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M35 39 Q38 37 41 39" stroke="#2a3b31" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="26" cy="42" r="2.2" fill="#2a3b31"/><circle cx="38" cy="42" r="2.2" fill="#2a3b31"/><path d="M28 48 Q32 51 37 48" stroke="#2a3b31" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+  const EMBER=`<svg viewBox="0 0 64 64"><path d="M32 7 C21 22 15 30 19 42 C22 54 42 54 45 42 C49 30 43 22 32 7Z" fill="#ff6a3d"/><path d="M32 23 C27 32 25 36 27 43 C29 50 35 50 37 43 C39 36 37 32 32 23Z" fill="#ffc24b"/><circle cx="28" cy="38" r="3" fill="#fff"/><circle cx="37" cy="38" r="3" fill="#fff"/><circle cx="28" cy="39" r="1.4" fill="#2a1500"/><circle cx="37" cy="39" r="1.4" fill="#2a1500"/><path d="M29 44 Q32 47 36 44" stroke="#2a1500" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>`;
+  const CHAR={ivy:{svg:IVY,name:"Ivy"},rocky:{svg:ROCKY,name:"Rocky"},ember:{svg:EMBER,name:"Ember"}};
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  let rng,S;
+
+  function newGame(seed){
+    seed=(seed??(Math.random()*1e9))|0; rng=mulberry32(seed);
+    const clueDir=["N","S","E","W"][Math.floor(rng()*4)];
+    const g=[];
+    for(let i=0;i<N*N;i++)g.push({i,x:i%N,y:(i/N|0),fuel:Math.floor(rng()*4),moisture:Math.floor(rng()*4),veg:"native",ridge:false,asset:false,state:"ok",fireline:false,flag:false,protect:false,anr:0,cleared:false,prescribed:false,known:{risk:false,fuel:false,veg:false,moist:false,asset:false,hist:false}});
+    const ix=[...Array(N*N).keys()]; shuffle(ix);
+    ix.slice(0,5).forEach(k=>{g[k].veg="invasive";g[k].fuel=Math.max(g[k].fuel,2);});
+    ix.slice(5,9).forEach(k=>g[k].ridge=true);
+    ix.slice(9,12).forEach(k=>{if(g[k].veg==="native")g[k].veg="barren";});
+    let v=0; for(const k of ix){if(v>=2)break;if(!g[k].asset&&g[k].veg!=="invasive"){g[k].asset=true;v++;}}
+    S={seed,clueDir,grid:g,ehs:START,turn:1,budget:BUDGET,bonus:0,role:"eco",pending:null,communityUsed:false,wind:{dir:"N",str:0,rain:false},forecast:rollW(),history:[],over:false,clueGiven:false};
+    renderAll(); renderLegend(); showIntro();
+  }
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+  function rollW(){const rain=rng()<.18;return{dir:["N","S","E","W"][Math.floor(rng()*4)],str:rain?0:Math.floor(rng()*3),rain};}
+  function dirName(d){return{N:"north",S:"south",E:"east",W:"west"}[d];}
+  function strName(s){return["still","breeze","strong"][s];}
+  function coord(i){return String.fromCharCode(65+(i%N))+(1+(i/N|0));}
+  function neighbors(i){const x=i%N,y=i/N|0,o=[];for(const d in DIRS){const[dx,dy]=DIRS[d],nx=x+dx,ny=y+dy;if(nx>=0&&nx<N&&ny>=0&&ny<N)o.push({idx:ny*N+nx,dir:d});}return o;}
+
+  const ECO=[
+    {id:"satellite",ico:"🛰️",nm:"Scan",sb:"Reveal risk, 3x3",cost:1,t:"a3"},
+    {id:"drone",ico:"🚁",nm:"Drone",sb:"Fuel + plants, 2x2",cost:2,t:"a2"},
+    {id:"survey",ico:"🔍",nm:"Survey",sb:"One square, all of it",cost:3,t:"c"},
+    {id:"community",ico:"🧑‍🌾",nm:"Ask Elders",sb:"A secret clue, once a night",cost:1,t:"none"},
+    {id:"hindcast",ico:"⏳",nm:"Hindcast",sb:"See a square's past",cost:2,t:"c"},
+    {id:"flag",ico:"🚩",nm:"Flag",sb:"Mark a danger spot",cost:0,t:"c"},
+  ];
+  const RAN=[
+    {id:"fireline",ico:"🧱",nm:"Fire Line",sb:"Blocks fire spreading",cost:3,t:"c"},
+    {id:"suppress",ico:"🚒",nm:"Protect",sb:"Shield a village tonight",cost:4,t:"c"},
+    {id:"prescribe",ico:"🔥",nm:"Good Burn",sb:"Burn fuel on purpose",cost:2,t:"c"},
+    {id:"clear",ico:"🌿",nm:"Clear Weeds",sb:"Remove an invasive",cost:2,t:"c"},
+    {id:"anr",ico:"🌱",nm:"Restore",sb:"Grow natives, needs Hindcast",cost:2,t:"c"},
+  ];
+  const ALL=Object.fromEntries([...ECO,...RAN].map(a=>[a.id,a]));
+  const isEco=id=>ECO.some(a=>a.id===id);
+
+  function selectAction(id){
+    const a=ALL[id];
+    if(S.pending===id){S.pending=null;renderAll();return;}
+    if(a.cost>S.budget){toast("Not enough coins.");return;}
+    if(id==="community"&&S.communityUsed){toast("Already asked tonight.");return;}
+    if(a.t==="none"){doCommunity();return;}
+    S.pending=id; renderAll();
+    toast(a.t==="c"?"Tap a square":"Tap the top-left square");
+  }
+  function doCommunity(){
+    S.budget-=1;S.communityUsed=true;
+    if(rng()<.12&&!S.clueGiven){toast("Old dialect. Clue lost for now.");}
+    else{S.clueGiven=true;openCard("ivy","🧑‍🌾 A clue!",`The elders say the ridges always catch fire first when the ${dirName(S.clueDir)} wind blows. Find which squares are ridges!`,"Cross-check the clue with your scans, then guard those spots.");}
+    renderAll();
+  }
+
+  function onCell(i){
+    const c=S.grid[i];
+    if(!S.pending||S.over){openTile(i);return;}
+    const a=ALL[S.pending];
+    if(a.cost>S.budget){toast("Not enough coins.");return;}
+    if(a.id==="satellite"){area3(i).forEach(k=>S.grid[k].known.risk=true);S.budget-=1;toast("Risk revealed!");}
+    else if(a.id==="drone"){area2(i).forEach(k=>{S.grid[k].known.fuel=true;S.grid[k].known.veg=true;});S.budget-=2;toast("Fuel & plants mapped!");}
+    else if(a.id==="survey"){Object.keys(c.known).forEach(k=>c.known[k]=true);S.budget-=3;toast("Fully revealed!");}
+    else if(a.id==="hindcast"){c.known.hist=true;S.budget-=2;
+      if(c.veg==="invasive"){c.known.veg=true;openCard("ivy","⏳ Look at the past!","This spot was a healthy native forest before the weeds took over. Now Rocky can Restore natives here!","Switch to Rocky and tap Restore on this square.");}
+      else toast("History revealed.");}
+    else if(a.id==="flag"){c.flag=!c.flag;toast(c.flag?"Flag placed":"Flag removed");}
+    else if(a.id==="fireline"){if(c.fireline){toast("Already has a line.");return;}c.fireline=true;S.budget-=3;toast("Fire line dug!");}
+    else if(a.id==="suppress"){if(!c.asset){toast("No village here.");return;}c.protect=true;S.budget-=4;toast("Village guarded!");}
+    else if(a.id==="prescribe"){if(c.state!=="ok"){toast("Can't burn that.");return;}c.prescribed=true;S.budget-=2;toast("Good Burn planned. Contain it!");}
+    else if(a.id==="clear"){if(!(c.known.veg&&c.veg==="invasive")){toast("Find an invasive first.");return;}c.veg="barren";c.cleared=true;c.fuel=Math.max(0,c.fuel-1);S.budget-=2;toast("Weeds cleared!");}
+    else if(a.id==="anr"){if(!c.known.hist){toast("Hindcast this square first.");return;}if(c.veg==="native"){toast("Already native.");return;}if(c.anr){toast("Restore already going.");return;}c.anr=S.turn;S.budget-=2;toast("Restoring! Ready in 2 nights.");}
+    S.pending=null; renderAll();
+  }
+  function area3(i){const cx=i%N,cy=i/N|0,o=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=cx+dx,y=cy+dy;if(x>=0&&x<N&&y>=0&&y<N)o.push(y*N+x);}return o;}
+  function area2(i){const cx=i%N,cy=i/N|0,o=[];for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++){o.push(Math.min(cy+dy,N-1)*N+Math.min(cx+dx,N-1));}return[...new Set(o)];}
+
+  // ---- night ----
+  function runNight(){
+    if(S.over)return; S.pending=null; const w=S.forecast; S.wind=w; const g=S.grid; const ev=[];
+    for(const c of g){if(c.prescribed){c.prescribed=false;
+      const ok=neighbors(c.i).every(n=>{const x=g[n.idx];return x.fireline||x.state==="burned"||x.fuel<=1||x.moisture>=3||x.veg==="barren";});
+      if(ok){c.state="good";c.fuel=0;ev.push(c.i);}else{c.state="burning";ev.push(c.i);}
+    }}
+    if(!w.rain){
+      for(const c of g)if(c.ridge&&w.dir===S.clueDir&&w.str>=1&&c.fuel>=2&&c.state==="ok"&&!c.fireline){c.state="burning";ev.push(c.i);}
+      let best=null,bs=-9;for(const c of g){if(c.state!=="ok"||c.fireline)continue;const r=c.fuel+(c.veg==="invasive"?2:0)-c.moisture+(c.ridge&&w.dir===S.clueDir?w.str:0);if(r>bs){bs=r;best=c;}}
+      if(best&&bs>=2){best.state="burning";ev.push(best.i);}
+    }
+    for(let p=0;p<4;p++){const ign=[];
+      for(const c of g){if(c.state!=="burning")continue;for(const n of neighbors(c.i)){const x=g[n.idx];if(x.state!=="ok"||x.fireline)continue;const al=(w.dir===n.dir)?w.str:0;const sp=x.fuel+(x.veg==="invasive"?2:0)+al-x.moisture-(w.rain?2:0);if(sp>=3)ign.push(n.idx);}}
+      if(!ign.length)break;[...new Set(ign)].forEach(k=>{g[k].state="burning";ev.push(k);});
+    }
+    animate(ev);
+  }
+  function animate(ev){
+    setPhase("🌙 Night"); const btn=document.getElementById("runBtn");btn.disabled=true;renderBoard();
+    const step=i=>{if(i>=ev.length){setTimeout(dawn,RM?0:300);return;}renderBoard();setTimeout(()=>step(i+1),RM?0:170);};
+    step(0);
+  }
+  function dawn(){
+    const g=S.grid;let d=0,vil=0,nat=0,bar=0,good=0,anr=0,saved=0;S.bonus=0;
+    for(const c of g){
+      if(c.state==="burning"){
+        if(c.asset&&c.protect){c.state="ok";c.protect=false;saved++;continue;}
+        c.state="burned";if(c.asset){d-=20;vil++;c.asset=false;}else if(c.veg==="native"){d-=10;nat++;}else{d-=3;bar++;}c.fuel=0;
+      }else if(c.state==="good"){c.state="ok";if(c.veg==="invasive")c.veg="barren";d+=10;good++;S.bonus+=BONUS;}
+      c.protect=false;
+    }
+    for(const c of g)if(c.anr&&c.anr<S.turn){c.veg="native";c.fuel=Math.min(c.fuel,1);c.moisture=Math.min(3,c.moisture+1);c.anr=0;c.known.veg=true;d+=15;anr++;}
+    let inv=0;for(const c of g)if(c.veg==="invasive"&&c.state!=="burned")inv++;
+    const ip=Math.min(5,inv);if(ip)d-=ip;
+    S.ehs=Math.max(0,Math.min(100,S.ehs+d));
+    S.history.push({turn:S.turn,delta:d,ehs:S.ehs,wind:S.wind,vil,nat,good,anr,inv,saved});
+    if(S.ehs<LOSE)return end(false);
+    if(S.turn>=TURNS)return end(true);
+    showDawn(d,{vil,nat,good,anr,ip,saved});
+  }
+  function nextTurn(){
+    S.turn++;S.budget=BUDGET+S.bonus;S.bonus=0;S.communityUsed=false;S.pending=null;S.forecast=rollW();
+    setPhase("☀️ Day");renderAll();
+  }
+
+  // ---- render ----
+  function renderAll(){renderHUD();renderBoard();renderConsole();renderCoach();}
+  function renderHUD(){
+    document.getElementById("nightVal").textContent=S.turn+"/"+TURNS;
+    document.getElementById("coinVal").textContent="🪙 "+S.budget;
+    document.getElementById("healthNum").textContent=Math.round(S.ehs);
+    const f=document.getElementById("fill");f.style.width=S.ehs+"%";
+    f.style.background=S.ehs<LOSE?"linear-gradient(90deg,var(--danger),#ff8a4d)":S.ehs>=GOLD?"linear-gradient(90deg,var(--sun),var(--native))":"linear-gradient(90deg,var(--native-deep),var(--native))";
+    document.getElementById("runBtn").disabled=S.over;
+    const w=S.forecast;document.querySelector("#fc .w").textContent=w.rain?"rain 🌧️":dirName(w.dir)+" "+strName(w.str);
+  }
+  function riskCls(c){const r=c.fuel+(c.veg==="invasive"?2:0)-c.moisture;return r>=4?"rhigh":r>=2?"rmed":"rlow";}
+  function renderBoard(){
+    const b=document.getElementById("board");b.innerHTML="";
+    const aim=S.pending?ALL[S.pending]:null;
+    for(const c of S.grid){
+      const el=document.createElement("button");let cls=["cell"],tok='<span class="q">?</span>';
+      if(c.state==="burning"){cls.push("burning");tok='<span class="tok">🔥</span>';}
+      else if(c.state==="burned"){cls.push("burned");tok='<span class="tok">🌑</span>';}
+      else if(c.state==="good"){cls.push("good");tok='<span class="tok">🔥</span>';}
+      else if(c.known.asset&&c.asset){tok='<span class="tok">🏠</span>';}
+      else if(c.known.veg){cls.push(c.veg);tok='<span class="tok">'+(c.veg==="native"?"🌲":c.veg==="invasive"?"🌿":"🍂")+'</span>';}
+      else if(c.known.risk){cls.push(riskCls(c));}
+      if(c.fireline)cls.push("fl");
+      if(aim)cls.push("aim");
+      el.className=cls.join(" ");el.innerHTML=tok;
+      if(c.flag)el.innerHTML+='<span class="flag">🚩</span>';
+      if(c.anr)el.innerHTML+='<span class="sprout">🌱</span>';
+      el.setAttribute("aria-label",coord(c.i));
+      if(aim){el.addEventListener("mouseenter",()=>foot(c.i,aim));el.addEventListener("mouseleave",unfoot);}
+      el.addEventListener("click",()=>onCell(c.i));
+      b.appendChild(el);
+    }
+  }
+  function foot(i,a){let cs=[i];if(a.t==="a3")cs=area3(i);if(a.t==="a2")cs=area2(i);const ns=document.querySelectorAll(".cell");cs.forEach(k=>ns[k]&&ns[k].classList.add("foot"));}
+  function unfoot(){document.querySelectorAll(".cell.foot").forEach(n=>n.classList.remove("foot"));}
+
+  function renderConsole(){
+    document.getElementById("tabEco").classList.toggle("on",S.role==="eco");
+    document.getElementById("tabRan").classList.toggle("on",S.role==="ran");
+    const list=S.role==="eco"?ECO:RAN,w=document.getElementById("acts");w.innerHTML="";
+    for(const a of list){
+      const btn=document.createElement("button");btn.className="act"+(S.pending===a.id?" sel":"");btn.dataset.id=a.id;
+      const dis=(a.cost>S.budget)||(a.id==="community"&&S.communityUsed)||S.over;btn.disabled=dis;
+      btn.innerHTML=`<span class="ico">${a.ico}</span><span class="b"><span class="nm">${a.nm}</span><span class="sb">${a.sb}</span></span><span class="co ${a.cost===0?"free":""}">${a.cost===0?"free":"🪙"+a.cost}</span>`;
+      btn.addEventListener("click",()=>selectAction(a.id));
+      w.appendChild(btn);
+    }
+  }
+
+  function advise(){
+    if(S.over)return{who:"ivy",text:"That's a wrap. Play again?"};
+    const g=S.grid,w=S.forecast;
+    const anySeen=g.some(c=>c.known.risk||c.known.veg);
+    const vegSeen=g.some(c=>c.known.veg);
+    const anrReady=g.find(c=>c.known.hist&&c.veg!=="native"&&!c.anr);
+    const invId=g.find(c=>c.known.veg&&c.veg==="invasive"&&!c.cleared);
+    if(!anySeen)return{who:"ivy",text:"We're blind! Tap Scan to reveal where danger hides.",tgt:"satellite"};
+    if(anrReady)return{who:"rocky",text:"History says natives belong here. Tap Restore to bring them back!",tgt:"anr"};
+    if(invId)return{who:"rocky",text:"Invasive weeds! Tap Clear Weeds before they spread.",tgt:"clear"};
+    if(!vegSeen)return{who:"ivy",text:"Red squares are risky. Send a Drone to learn why.",tgt:"drone"};
+    if(S.clueGiven&&w.dir===S.clueDir&&w.str>=1)return{who:"ember",text:"Hehe. "+dirName(w.dir)+" wind tonight. Your ridges are mine!",tgt:null};
+    if(!S.clueGiven)return{who:"ivy",text:"Ask the Elders for a secret clue sensors can't give.",tgt:"community"};
+    if(S.budget<=1)return{who:"rocky",text:"Low on coins. Run the night and see what happens.",tgt:"run"};
+    return{who:"rocky",text:"Guard villages, clear weeds, then run the night.",tgt:null};
+  }
+  function renderCoach(){
+    const a=advise();
+    document.getElementById("coachAv").innerHTML=CHAR[a.who].svg;
+    document.getElementById("coachWho").textContent=CHAR[a.who].name;
+    document.getElementById("coachTxt").textContent=a.text;
+    document.querySelectorAll(".pulse").forEach(e=>e.classList.remove("pulse"));
+    if(!a.tgt)return;
+    if(a.tgt==="run"){document.getElementById("runBtn").classList.add("pulse");return;}
+    const eco=isEco(a.tgt);
+    if((eco&&S.role!=="eco")||(!eco&&S.role!=="ran")){document.getElementById(eco?"tabEco":"tabRan").classList.add("pulse");return;}
+    const btn=[...document.querySelectorAll(".act")].find(b=>b.dataset.id===a.tgt);if(btn)btn.classList.add("pulse");
+  }
+
+  const LEGEND=[
+    {i:"🌲",l:"Healthy",b:"Native forest. Strong and worth protecting."},
+    {i:"🌿",l:"Weeds",b:"Invasive weeds. They catch fire fast and spread. Rocky can Clear them."},
+    {i:"🍂",l:"Dry",b:"Barren ground with little growing on it."},
+    {i:"🏠",l:"Village",b:"People live here. If fire reaches it, health drops a lot. Rocky can Protect it."},
+    {i:"🔥",l:"Fire",b:"Burning right now. It spreads to neighbours each night."},
+    {i:"🧱",l:"Line",b:"A fire line (blue edge). Blocks fire from spreading in or out."},
+    {i:"❓",l:"Hidden",b:"Not revealed yet. Use Scan, Drone or Survey to see what is here."},
+  ];
+  function renderLegend(){const w=document.getElementById("legend");w.innerHTML="";for(const g of LEGEND){const s=document.createElement("button");s.className="lg";s.innerHTML=`<span>${g.i}</span>${g.l}`;s.addEventListener("click",()=>openCard("ivy",g.i+" "+g.l,g.b,""));w.appendChild(s);}}
+
+  function setPhase(t){document.getElementById("phase").textContent=t;}
+  let tT;function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("show");clearTimeout(tT);tT=setTimeout(()=>e.classList.remove("show"),1700);}
+
+  // ---- modals ----
+  const scrim=document.getElementById("scrim"),modal=document.getElementById("modal");
+  function open(html,dismiss=true){modal.innerHTML=html;scrim.classList.add("show");scrim.dataset.d=dismiss?"1":"0";}
+  function close(){scrim.classList.remove("show");}
+  scrim.addEventListener("click",e=>{if(e.target===scrim&&scrim.dataset.d==="1")close();});
+
+  function openCard(who,title,body,tip){
+    open(`<div class="big">${CHAR[who].svg}</div><h2>${title}</h2><p>${body}</p>${tip?`<div class="tip">👉 ${tip}</div>`:""}<div class="btnrow"><button class="cta" id="ok">Got it!</button></div>`);
+    document.getElementById("ok").addEventListener("click",()=>{close();renderAll();});
+  }
+
+  function openTile(i){
+    const c=S.grid[i];let title="Unknown",body="We can't see this yet. Scan, Drone or Survey to reveal it.",tip="";
+    if(c.state==="burning"){title="🔥 On fire!";body="This square is burning right now.";}
+    else if(c.state==="burned"){title="🌑 Burned";body="Nothing left to save here.";}
+    else if(c.known.asset&&c.asset){title="🏠 Village";body="People live here. If fire reaches it, health drops a lot.";tip="Rocky can Protect it before a bad night.";}
+    else if(c.known.veg){
+      if(c.veg==="native"){title="🌲 Healthy forest";body="Native plants, strong and worth protecting.";}
+      else if(c.veg==="invasive"){title="🌿 Invasive weeds";body="Volatile. They catch fire fast and spread.";tip=c.known.hist?"History is unlocked. Rocky can Restore natives here!":"Rocky can Clear them. Hindcast to unlock Restore.";}
+      else{title="🍂 Dry ground";body="Barren. Not much growing here.";}
+      body+=` Fuel level ${c.fuel} (dry stuff that feeds fire).`;
+    }else if(c.known.risk){title="Risk reading";body="This area looks "+(c.fuel-c.moisture>=2?"dangerous":"calmer")+". Drone or Survey for details.";}
+    openCard("ivy",title,body,tip);
+  }
+
+  // ---- intro slides ----
+  const SLIDES=[
+    {who:"ember",t:"Hi, I'm Ember!",b:"Every night I try to burn this forest down. Wind, dry leaves and weeds are my friends. Hehe."},
+    {who:"ivy",t:"I'm Ivy, the eye.",b:"I can SEE the forest with scans, drones and elder clues. But I can't touch a thing. One clue is never enough, so mix them!"},
+    {who:"rocky",t:"I'm Rocky, the hand.",b:"I ACT: dig fire lines, clear weeds, plant trees. But I'm blind. I can only help where Ivy has looked."},
+    {who:"ivy",t:"Work together!",b:"Share 🪙10 each night. Keep Forest Health above 50 for 6 nights. Finish at 75 to win, 90 for gold!"},
+  ];
+  let si=0;
+  function showIntro(){si=0;drawSlide();}
+  function drawSlide(){
+    const s=SLIDES[si];
+    open(`<div class="big">${CHAR[s.who].svg}</div><h2>${s.t}</h2><p>${s.b}</p>
+      <div class="dots">${SLIDES.map((_,i)=>`<span class="dot ${i===si?"on":""}"></span>`).join("")}</div>
+      <div class="btnrow">${si>0?`<button class="cta ghost" id="pv">Back</button>`:""}<button class="cta" id="nx">${si<SLIDES.length-1?"Next":"Play!"}</button></div>`,false);
+    if(si>0)document.getElementById("pv").addEventListener("click",()=>{si--;drawSlide();});
+    document.getElementById("nx").addEventListener("click",()=>{if(si<SLIDES.length-1){si++;drawSlide();}else close();});
+  }
+
+  function showDawn(d,r){
+    const up=d>=0,chips=[];
+    if(r.good)chips.push(`<span class="chip g">🔥 Good Fire +10</span>`);
+    if(r.anr)chips.push(`<span class="chip g">🌱 Restored +15</span>`);
+    if(r.saved)chips.push(`<span class="chip g">🚒 Village saved</span>`);
+    if(r.vil)chips.push(`<span class="chip b">🏠 Village lost -20</span>`);
+    if(r.nat)chips.push(`<span class="chip b">🍂 Forest burned -10</span>`);
+    if(r.ip)chips.push(`<span class="chip b">🌿 Weeds -${r.ip}</span>`);
+    if(!chips.length)chips.push(`<span class="chip">Quiet night</span>`);
+    const h=S.history[S.history.length-1];
+    open(`<div class="big">${CHAR[up?"ivy":"rocky"].svg}</div><h2>🌅 Morning, Night ${S.turn}</h2>
+      <div class="delta ${up?"up":"down"}">${up?"+":""}${d}</div>
+      <div class="chips">${chips.join("")}</div>
+      <p>Forest Health is now <b>${Math.round(S.ehs)}</b>.</p>
+      <div class="tip">${turnLine(h)}</div>
+      <p>Tomorrow: <b>${S.forecast.rain?"rain 🌧️":dirName(S.forecast.dir)+" wind, "+strName(S.forecast.str)}</b>.</p>
+      <div class="btnrow"><button class="cta" id="nx">Start Night ${S.turn+1}</button></div>`,false);
+    document.getElementById("nx").addEventListener("click",()=>{close();nextTurn();});
+  }
+  function turnLine(h){
+    if(h.good)return"Setting your own small fire cleared the fuel safely. That is how real forests stay healthy.";
+    if(h.vil)return"A village burned. That is why the instinct is to fight every fire. But the real fix was upstream: less fuel, fewer weeds, earlier data.";
+    if(h.anr)return"Reading the past told you what belonged here. You turned a weak spot into your strongest ground.";
+    if(h.nat)return"Forest was lost. Fire that reaches squares you never scanned is fire you had no data to stop.";
+    if(h.inv>3)return"Weeds are creeping in. Each one quietly raises fire risk until Ivy spots them and Rocky clears them.";
+    return"Quiet, but quiet is not safe. Use calm nights to learn before the wind turns.";
+  }
+
+  function end(win){
+    S.over=true;const gold=S.ehs>=GOLD;
+    const who=win?"ivy":"ember",badge=!win?"🥀":gold?"🏆":"🌲",title=!win?"Collapse":gold?"Gold! True Resilience":"You win! Resilience";
+    open(`<div class="badge">${badge}</div><div class="big">${CHAR[who].svg}</div><h2>${title}</h2>
+      <p>Final Forest Health: <b>${Math.round(S.ehs)}</b> after ${S.turn} nights.</p>
+      <div class="tip">${keyLine()}</div>
+      <p>${win?"Neither seeing nor acting wins alone. Data made every action cheap and precise. That is resilience.":"The forest outran your knowledge. Next time, learn before the wind turns. A blind ranger just burns coins."}</p>
+      <div class="btnrow"><button class="cta" id="again">Play a new forest 🎲</button></div>`,false);
+    document.getElementById("again").addEventListener("click",()=>{close();newGame();});
+    renderHUD();
+  }
+  function keyLine(){
+    let worst=null,best=null;for(const h of S.history){if(!worst||h.delta<worst.delta)worst=h;if(!best||h.delta>best.delta)best=h;}
+    if(worst&&worst.delta<=-15)return`Night ${worst.turn} hurt most (${worst.delta}). A scan and one fire line beforehand would likely have held it.`;
+    if(best&&best.delta>=10)return`Night ${best.turn} was your pivot (+${best.delta}), acting on what you had learned.`;
+    return"No single night broke you. Steady scanning plus cheap fixes kept the forest in balance.";
+  }
+
+  // ---- wiring ----
+  document.getElementById("tabEco").addEventListener("click",()=>{S.role="eco";S.pending=null;renderAll();});
+  document.getElementById("tabRan").addEventListener("click",()=>{S.role="ran";S.pending=null;renderAll();});
+  document.getElementById("runBtn").addEventListener("click",()=>{if(!S.over)runNight();});
+  document.getElementById("helpBtn").addEventListener("click",showIntro);
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(S.pending){S.pending=null;renderAll();}else if(scrim.classList.contains("show")&&scrim.dataset.d==="1")close();}});
+  let theme=null;
+  document.getElementById("themeBtn").addEventListener("click",()=>{const cur=theme||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");theme=cur==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",theme);});
+
+  newGame();
+})();
+</script>
