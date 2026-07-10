@@ -1,0 +1,40 @@
+# The command help. Command names stay in code; these are their descriptions.
+
+[header]
+COMMANDS
+
+[header_note]
+(one per night)
+
+[sat]
+scan the whole map, rough
+
+[drone]
+reveal a 4x4 cluster in detail
+
+[survey]
+one cell, full truth
+
+[dss]
+(auto) advises you each night
+
+[ask]
+elders advise on a patch
+
+[remove]
+clear invasive, pull saplings early
+
+[restore]
+replant natives on bare ground
+
+[burn]
+controlled burn of a big stand, over several nights
+
+[crew]
+clear a big stand by hand, over several nights
+
+[pass]
+do nothing; nature still moves
+
+[footer]
+commands take a cell, for example drone D4. type help or quit.

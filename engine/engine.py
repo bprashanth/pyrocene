@@ -304,14 +304,14 @@ def _dss_advice(s: State) -> str:
         c = max(mature, key=lambda x: x.stage)
         tail = f" Drift opening at {_coord(s, drift[0].index)} too." if drift else ""
         return (f"{_coord(s, c.index)} is going {'dense' if c.stage >= DENSE else 'thick'}, "
-                f"uproot it now (Keystone: cut-rootstock) before it seeds around.{tail}")
+                f"uproot it now before it seeds around.{tail}")
     if seedlings:
         c = seedlings[0]
         return f"{_coord(s, c.index)} just sprouted, pull it clean now while it's isolated, early removal sticks."
     if drift:
         return f"Hotspots held. Now clear the drift at {_coord(s, drift[0].index)} and let natives reclaim it."
     if any(c.cover == BARE for c in s.cells):
-        return "Hotspots clear. Replant the bare ground (native nursery stock, like Farmers for Forests) and hold."
+        return "Hotspots clear. Replant the bare ground and hold."
     return "All hotspots held and healing. Keep the watch through the next disaster."
 
 

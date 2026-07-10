@@ -1,0 +1,130 @@
+# What your team says on the right-hand panel. Grep a line to change a voice.
+# {n}, {cleared}, {remaining}, {reason} are filled in by the game.
+
+# --- opening lines when a game starts ---
+[intro.ivy]
+Use satellite to understand the terrain. Run help. 
+
+[intro.rocky]
+Point me at a problem and I will deal with it.
+
+[intro.elder]
+Ask me about a patch: type "ask D4".
+
+[intro.ember]
+Every night, I spread. Hehe.
+
+# --- Ember: nature and threats ---
+[ember.burn_escape]
+Your fire jumped the lines. It is an inferno now, {n} cells gone.
+
+[ember.village_fire]
+The fire reached the homes. The worst has happened.
+
+[ember.fire]
+Whoosh. A dense stand caught, {n} cells lost.
+
+[ember.spread]
+{n} new outbreak tonight. Hehe.
+
+[ember.risk_high]
+Fuel load is high. A dry night and it will run. Cut the dense stands.
+
+[ember.risk_high_wind]
+Fuel load is high and the wind is up. One spark and it runs. Cut the dense stands.
+
+[ember.risk_med]
+Fuel is building in the dense lantana. Clear it before it catches.
+
+# --- Ivy: data and detection ---
+[ivy.drone_found]
+Drone: {n} invasive cells in that cluster.
+
+[ivy.drone_clean]
+That cluster is clean, confirmed. Solid green now.
+
+[ivy.survey]
+Surveyed that cell. Full picture now.
+
+[ivy.sat_drone]
+Satellite is rough. Drone the haze to be sure.
+
+[ivy.sat_only]
+Satellite is all I have, and it is rough. Restore bare ground. 
+
+[ivy.wasted]
+That did nothing: {reason}.
+
+# --- Rocky: action and the job chain ---
+[rocky.controlled_burn]
+Clean burn. Bare ground now. Restore it next turn.
+
+[rocky.crew_done]
+Crew is finished, stand cleared. Replant the bare ground.
+
+[rocky.lines_ready]
+Lines are dug. Light it on a calm night: press Enter.
+
+[rocky.lining]
+Laying fire line. {n} nights left. Press Enter.
+
+[rocky.wait_wind]
+Lines holding. Waiting for the wind to drop.
+
+[rocky.wind_calm]
+Wind is calm now. Press Enter to light.
+
+[rocky.start_burn]
+Starting the burn. Digging lines, cannot do anything else.
+
+[rocky.start_crew]
+Crew is in. We are clearing by hand for a few nights.
+
+[rocky.abort]
+Called it off. That effort is lost.
+
+[rocky.crew_work]
+Crew cleared {cleared}, {remaining} left.
+
+[rocky.reinvaded_all]
+Pulled them, but the weeds swept right back. Clear the source first.
+
+[rocky.reinvaded_some]
+Some held, but {n} got reinvaded. The source is still near.
+
+[rocky.reclaimed]
+Pulled the young growth. Natives filled in clean.
+
+[rocky.bared]
+Cleared it. Bare ground now, restore it next.
+
+[rocky.planted]
+Planted {n} patches. Ours again!
+
+[event.work_party]
+A work party came through and uprooted a whole stand. Ours again.
+
+[event.drought]
+Drought. The land dries and I grow bolder. Hehe.
+
+[event.monsoon]
+Monsoon. My seeds ride the water down to the banks.
+
+[event.grazing]
+Cattle churned fresh soil. A brand new hotspot for me.
+
+# --- Ivy's coaching: nudge the player to try the actions they are neglecting ---
+[coach.try_look]
+We are working half blind. Use satellite to read the land, or a drone to check a square.
+
+[coach.try_look_sat]
+We are working half blind. Use satellite to read the land before you act.
+
+[coach.try_remove]
+Good, that patch is ours. Now remove some lantana to open new ground, or it just keeps spreading.
+
+[coach.try_restore]
+You cleared it, but bare ground reinvades fast. Restore it to native forest to lock the gain in.
+
+[coach.balanced]
+Look, remove, restore. That is the whole loop. Keep all three going and we hold the line.

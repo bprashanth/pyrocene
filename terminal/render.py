@@ -15,15 +15,17 @@ def bg(n): return _sgr(48, 5, n)
 def fg(n): return _sgr(38, 5, n)
 RESET = _sgr(0)
 STRIKE = _sgr(9)      # strike-through (for locked commands)
+BLINK = _sgr(5)       # blink attribute (for drawing attention, e.g. a target)
 CLEAR = "\x1b[2J\x1b[H"
 
 
 def set_color(on: bool):
     """Toggle colour + screen-clear codes. Must run before rendering."""
-    global USE_COLOR, RESET, STRIKE, CLEAR
+    global USE_COLOR, RESET, STRIKE, BLINK, CLEAR
     USE_COLOR = on
     RESET = _sgr(0)
     STRIKE = _sgr(9)
+    BLINK = _sgr(5)
     CLEAR = "\x1b[2J\x1b[H" if on else "\n"
 
 # 2-char tile per cell: colour block + a small severity glyph.
@@ -104,28 +106,28 @@ def _bar(pct: int, width: int = 22, target: int = None) -> str:
 
 
 def render_status(view: dict) -> str:
-    winds = {"N": "↑ N", "S": "↓ S", "E": "→ E", "W": "← W"}
-    risk_c = {"low": 40, "med": 214, "high": 196}[view["fire_risk"]]
+    """One score (forest health) and one goal (hold it N nights). Wind and fire
+    are off the HUD now; Ember narrates those on the character panel."""
     res = view.get("resilience", {"streak": 0, "need": 3})
     need, streak = res["need"], res["streak"]
     target = view["thresholds"]["win"]
-    left = need - streak
     dots = fg(40) + "●" * streak + fg(238) + "○" * (need - streak) + RESET
-    if left <= 0:
-        goal = f"{fg(40)}restored — you win!{RESET}"
+    if need - streak <= 0:
+        goal = f"{fg(40)}restored, you win{RESET}"
     else:
-        goal = f"{fg(250)}hold native forest above {fg(255)}{target}%{fg(250)} — {fg(255)}{streak} of {need}{fg(250)} nights{RESET}"
-    wind_s = ["still", "breeze", "strong"][view.get("wind_str", 1)]
+        goal = (f"{fg(250)}hold above {fg(255)}{target}%{fg(250)} for "
+                f"{fg(255)}{need}{fg(250)} nights, {fg(255)}{streak}/{need}{fg(250)} so far{RESET}")
 
     def row(label, body):
         return f"{fg(250)}{label:<11}{RESET}{body}"
 
+    # The dots sit in a bar-width field so the goal text lines up under the
+    # forest percentage (both start one space past a 16-wide column).
+    bar_w = 16
+    dots_field = dots + " " * (bar_w - need)
     return "\n".join([
-        row("Forest", f"{_bar(view['health'], 16, target)} {fg(255)}{view['health']:>3}%{RESET}"),
-        row("Wildlife", f"{_bar(view['wildlife'], 16)} {fg(255)}{view['wildlife']:>3}%{RESET}"),
-        row("Wind", f"{fg(45)}{winds[view['wind']]}  {wind_s}{RESET}"),
-        row("Fire", f"{fg(risk_c)}{view['fire_risk'].upper()}{RESET}"),
-        row("Win goal", f"{dots}  {goal}"),
+        row("Forest", f"{_bar(view['health'], bar_w, target)} {fg(255)}{view['health']:>3}%{RESET}"),
+        row("Win goal", f"{dots_field} {goal}"),
     ])
 
 
@@ -184,7 +186,7 @@ def render_job(view: dict) -> str:
         else:
             wind = ["still", "a breeze", "STRONG"][view["wind_str"]]
             status = (f"{fg(196)}Lines ready, but wind is {wind}.{RESET} "
-                      f"Enter lights it anyway (it will jump the lines!) — or 'w' to wait.")
+                      f"Enter lights it anyway (it will jump the lines). Or 'w' to wait.")
         return f"{fg(214)}BURN PLAN{RESET}   {plan}\n           {status}"
     return (f"{fg(202)}CREW{RESET}   clearing by hand, {fg(255)}{job['remaining']}{RESET} invasive cell(s) left.  "
             f"{fg(245)}Press Enter to keep working.{RESET}")

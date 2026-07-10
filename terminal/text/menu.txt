@@ -1,0 +1,16 @@
+# The opening menu. Grep any line here to change what the player reads.
+
+[title]
+P Y R O C E N E
+
+[tagline]
+restore the forest. hold the line.
+
+[learn]
+Learn the game
+
+[play]
+Play the game
+
+[prompt]
+choose 1 or 2 (q to quit):

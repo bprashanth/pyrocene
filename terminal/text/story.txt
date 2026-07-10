@@ -1,0 +1,47 @@
+# The story: what the team says between levels. Grep a line to change a voice.
+# brief = before a level (the plan). debrief = after it (the lesson + next tool).
+
+# --- level 1 ---
+[l1.brief.ivy]
+Get native forest above the yellow line and hold it for three nights. Start with satellite to read the land.
+
+[l1.debrief.ivy]
+We have been struggling with this for a long time. The satellite scan does not show where the seedbanks are, so lantana keeps coming back and we lose more forest. We have a new drone now. Let us see if we can put it to good use.
+
+# --- level 2 ---
+[l2.brief.ivy]
+Use satellite to read the land, then deploy a drone on one square to see what is really there.
+
+[l2.debrief.ivy]
+The drone helps us find the seedlings. But we cannot remove them fast enough on our own. We need the community's help.
+
+[l2.debrief.rocky]
+Let us talk to the village elders in the next round.
+
+# --- level 3 ---
+[l3.brief.ivy]
+Same plan as last time.
+
+[l3.brief.rocky]
+Use ask to talk to the elder about a square.
+
+[l3.debrief.ivy]
+The elders know where lantana hides, and Ember can see where the fire will run. Give me a night. I will put it all together into an advisor.
+
+# --- level 4 ---
+[l4.brief.ivy]
+The advisor is ready. It names the one square to clear each night. Follow it, and I think we can finally hold the line.
+
+[l4.debrief.rocky]
+We did it. The native forest is coming back, and holding.
+
+[l4.debrief.ivy]
+First real win. But do not pack up yet. There is a storm building.
+
+# --- level 5 ---
+[l5.brief.ivy]
+A storm is coming, with a flood alert for the low banks. Monsoon washes seeds down to the water, and drought feeds the fire. This is the real test.
+
+# --- end ---
+[end]
+End of the season.

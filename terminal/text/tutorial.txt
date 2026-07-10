@@ -1,0 +1,94 @@
+# The "Learn the game" flow, in the order the player meets it.
+# Placeholders in {curly braces} are filled by the game (cell names, numbers).
+
+[welcome.title]
+Welcome to Pyrocene
+
+[welcome.body]
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+(intro placeholder, real copy to come)
+
+[cap.score]
+This is your score: forest health. It is how much of the land is native forest. You will take actions to increase it. If you hold the green bar above the yellow line for three consecutive nights, you win.
+
+[cap.friends]
+This is your team. Ivy reads the data. Rocky works the field. Ember watches the fire. The Elder knows the land. They speak up here as things happen.
+
+[cap.map]
+This is the land. Green is native forest. The vv, * and # marks are Invasive plants getting worse as they grow. Pale tiles are bare ground, wavy tiles are water, and HH are homes. We want more green. 
+
+[cap.legend]
+The legend names every tile on the map. That is the whole screen. Nothing is hidden from you here.
+
+[raise.title]
+How the score goes up
+
+[raise.body]
+Your score is forest health: how much of the land is native forest.
+It goes up when you bring the forest back.
+
+Plant native forest on bare ground with "restore".
+Pull young lantana so the natives take the ground back with "remove".
+
+Your turn. Let us raise it.
+
+[task1.header]
+TASK 1. Raise the score.
+
+[task1.prompt]
+The glowing patch at {name} is bare ground. Plant native forest on it.
+
+[task1.hint]
+type: restore {name}   (or type skip)
+
+[task1.badcell]
+"{tok}" is not a cell on the map. Try {name}.
+
+[task1.nochange]
+Nothing changed there. Aim at the glowing patch: restore {name}
+
+[task1.retype]
+type: restore {name}
+
+[task1.success]
+Forest health rose from {before}% to {after}%. That is restoration. Bare ground became native forest.
+
+[lose.title]
+How the score goes down
+
+[lose.body]
+But lantana never quits. Left alone, it spreads into native forest.
+Where it grows dense it turns into fuel, and one dry night it burns,
+leaving bare ground behind. Both of those cost you score.
+
+Let us watch it happen.
+
+[task2.header]
+TASK 2. Do nothing, and watch.
+
+[task2.prompt]
+Night {turn}, forest {health}%. Do not act. Just pass, and let lantana take its course.
+
+[task2.pass]
+press Enter to pass the night
+
+[task2.result]
+The forest fell from {start}% to {end}% while you watched. Lantana spread, and where it went dense, fire took the rest.
+
+[end.title]
+That is the game
+
+[end.body]
+So the loop is simple. Restore to gain ground, and stay ahead of
+lantana and fire, or you lose what you gained. Ivy, Rocky, Ember
+and the Elder help you see the land and act on it.
+
+Ready to play for real? Run the game and choose Play.
+
+[continue]
+press Enter to continue
+
+[enter]
+press Enter

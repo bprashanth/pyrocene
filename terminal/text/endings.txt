@@ -1,0 +1,28 @@
+# The win / lose screens. {target}, {need}, {health}, {wildlife}, {turn} filled by the game.
+
+[gold.title]
+GOLD: THRIVING
+
+[gold.sub]
+You restored the forest to full health and held it. A landscape that lasts.
+
+[win.title]
+RESTORED, YOU WIN
+
+[win.sub]
+You brought native forest back above {target}% and held it {need} nights running.
+
+[lose.title]
+DEFEAT
+
+[lose.default]
+The forest never recovered.
+
+[stats]
+Final native forest {health}%. Wildlife {wildlife}%. After {turn} nights.
+
+[lesson_label]
+LESSON
+
+[lesson]
+You cannot wipe lantana out; the seed banks always return. You win by keeping its strongholds cut back, so the native forest recovers and holds.

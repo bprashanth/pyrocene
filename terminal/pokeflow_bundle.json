@@ -1,0 +1,95 @@
+{
+  "meta": { "title": "FIELD STATION", "panel": { "cols": 54, "rows": 16 } },
+  "actors": [
+    {
+      "id": "you", "kind": "avatar", "name": "You",
+      "appearance": {
+        "idle": ["(@)", "/|\\"], "walk": ["(@)", "/|\\"], "walk_alt": ["(@)", "\\|/"],
+        "emote": { "cheer": ["\\@/", " | "] }, "color": 230
+      }
+    },
+    {
+      "id": "ivy", "kind": "resident", "name": "Ivy", "tag": "data", "home": "desk",
+      "appearance": {
+        "idle": ["(i)", "/|\\"], "idle_alt": ["(-)", "/|\\"],
+        "walk": ["(i)", "/|\\"], "walk_alt": ["(i)", "\\|/"], "talk": ["(I)", "/|\\"],
+        "emote": { "cheer": ["\\i/", " | "], "surprise": ["(!)", "/|\\"] }, "color": 45
+      }
+    },
+    {
+      "id": "rocky", "kind": "resident", "name": "Rocky", "tag": "field", "home": "bench",
+      "appearance": {
+        "idle": ["[o]", "/|\\"], "idle_alt": ["[-]", "/|\\"],
+        "walk": ["[o]", "/|\\"], "walk_alt": ["[o]", "\\|/"], "talk": ["[O]", "/|\\"],
+        "emote": { "cheer": ["\\o/", " | "], "surprise": ["[!]", "/|\\"] }, "color": 208
+      }
+    },
+    {
+      "id": "ember", "kind": "resident", "name": "Ember", "tag": "watch", "home": "window",
+      "appearance": {
+        "idle": ["{^}", "^^^"], "idle_alt": ["{~}", "^^^"],
+        "walk": ["{^}", "^^^"], "walk_alt": ["{^}", "vvv"], "talk": ["{O}", "^^^"],
+        "emote": { "surprise": ["{!}", "^^^"] }, "color": 203
+      }
+    },
+    {
+      "id": "elder", "kind": "visitor", "name": "Elder", "tag": "community", "enter_from": "door",
+      "appearance": {
+        "idle": ["<o>", "/|\\"], "idle_alt": ["<->", "/|\\"],
+        "walk": ["<o>", "/|\\"], "walk_alt": ["<o>", "\\|/"], "talk": ["<O>", "/|\\"],
+        "emote": { "cheer": ["\\o/", " | "], "surprise": ["<!>", "/|\\"] }, "color": 114
+      }
+    },
+    {
+      "id": "manager", "kind": "visitor", "name": "Manager", "tag": "office", "enter_from": "door",
+      "appearance": {
+        "idle": ["[m]", "/|\\"], "idle_alt": ["[-]", "/|\\"],
+        "walk": ["[m]", "/|\\"], "walk_alt": ["[m]", "\\|/"], "talk": ["[M]", "/|\\"],
+        "emote": { "cheer": ["\\m/", " | "] }, "color": 250
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "station",
+      "map": [
+        "#########################",
+        "#.......................#",
+        "#...I..............R....#",
+        "#.......................#",
+        "#.....................E.#",
+        "#.......................#",
+        "#..........@............#",
+        "#.......................#",
+        "#......F...........X....#",
+        "#.......................#",
+        "############=############"
+      ],
+      "legend": {
+        "#": { "walkable": false },
+        ".": { "walkable": true },
+        "=": { "walkable": true, "door": true }
+      },
+      "spots": {
+        "desk": "I", "bench": "R", "window": "E", "front": "F",
+        "door": "=", "exit": "X"
+      },
+      "spawns": { "default": "@", "door": "=" },
+      "exits": { "X": { "intent": "proceed", "from": "exit-tile" } }
+    }
+  ],
+  "dialogue": [
+    {
+      "id": "welcome",
+      "start": "hi",
+      "nodes": {
+        "hi": { "actor": "ivy", "text": "You're the new lead. Walk over and say hello to everyone.", "terminal": true }
+      }
+    }
+  ],
+  "grants": [
+    { "id": "drone", "label": "Drone", "icon": "><", "blurb": "Confirm the haze." },
+    { "id": "ask",   "label": "Translator", "icon": "<>", "blurb": "Understand the elders." },
+    { "id": "dss",   "label": "DSS Advisor", "icon": "[*]", "blurb": "Names the spot each night." }
+  ]
+}
