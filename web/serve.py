@@ -10,6 +10,7 @@ import argparse
 import functools
 import http.server
 import os
+import subprocess
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -29,6 +30,9 @@ if __name__ == "__main__":
     ap.add_argument("--port", type=int, default=8010)
     args = ap.parse_args()
     root = os.path.dirname(os.path.abspath(__file__))
+    # Re-stage the game on every start. web/py/ is a copy, so without this it is
+    # easy to edit terminal/ and spend a while wondering why nothing changed.
+    subprocess.run(["bash", os.path.join(root, "build.sh")], check=True)
     handler = functools.partial(Handler, directory=root)
     print(f"pyrocene on http://localhost:{args.port}  (serving {root})")
     http.server.ThreadingHTTPServer(("", args.port), handler).serve_forever()

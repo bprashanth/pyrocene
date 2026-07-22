@@ -14,15 +14,53 @@ const INPUT_BYTES = 4096;
 
 const el = {
   boot: document.getElementById("boot"),
-  fill: document.getElementById("boot-fill"),
-  status: document.getElementById("boot-status"),
   fail: document.getElementById("fail"),
   failMsg: document.getElementById("fail-msg"),
   term: document.getElementById("term"),
 };
 
+/* --- the creeper doubles as the progress bar ------------------------------- */
+const vine = document.getElementById("vine");
+const VINE_LEN = vine.getTotalLength();
+
+/* Grow the leaves out of the path itself rather than placing them by hand: each
+   sits exactly on the vine, angled along its tangent and alternating sides. */
+const LEAF_AT = [0.18, 0.33, 0.47, 0.6, 0.72, 0.84, 0.93];
+const leaves = LEAF_AT.map((t, i) => {
+  const p = vine.getPointAtLength(VINE_LEN * t);
+  const q = vine.getPointAtLength(VINE_LEN * Math.min(t + 0.02, 1));
+  const deg = (Math.atan2(q.y - p.y, q.x - p.x) * 180) / Math.PI;
+  const side = i % 2 ? 6 : -6;
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.setAttribute("transform",
+    `translate(${p.x} ${p.y}) rotate(${deg + (i % 2 ? 34 : -34)}) translate(9 ${side})`);
+  const leaf = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+  leaf.setAttribute("class", "leaf");
+  leaf.setAttribute("rx", 11);
+  leaf.setAttribute("ry", 5.5);
+  g.appendChild(leaf);
+  vine.parentNode.appendChild(g);
+  return leaf;
+});
+vine.style.strokeDasharray = VINE_LEN;
+vine.style.strokeDashoffset = VINE_LEN;
+
+let growTarget = 0.06;   // where the vine is headed
+let grown = 0;           // where it actually is, easing toward the target
+
+function grow() {
+  grown += (growTarget - grown) * 0.045;
+  vine.style.strokeDashoffset = (VINE_LEN * (1 - grown)).toFixed(2);
+  // A leaf opens once the vine has grown past where it sits.
+  leaves.forEach((leaf, i) =>
+    leaf.classList.toggle("on", grown > LEAF_AT[i] + 0.04));
+  if (grown < 0.999) requestAnimationFrame(grow);
+}
+requestAnimationFrame(grow);
+
 function die(msg) {
   el.boot.hidden = true;
+  growTarget = grown;
   el.fail.hidden = false;
   el.failMsg.textContent = msg;
 }
@@ -110,7 +148,8 @@ term.onData((d) => {
 });
 
 /* --- worker ---------------------------------------------------------------- */
-const STAGE = { "loading python": 35, "loading the valley": 75, ready: 100 };
+// How far up the P the vine has climbed at each stage of the boot.
+const STAGE = { "loading python": 0.42, "loading the valley": 0.8, ready: 1 };
 const worker = new Worker("worker.js");
 
 worker.onmessage = (e) => {
@@ -121,11 +160,12 @@ worker.onmessage = (e) => {
     needInput = true;
     deliver();
   } else if (m.t === "status") {
-    el.status.textContent = m.text;
-    el.fill.style.width = (STAGE[m.text] || 10) + "%";
+    growTarget = STAGE[m.text] || growTarget;
   } else if (m.t === "ready") {
-    el.boot.classList.add("gone");
-    setTimeout(() => { el.boot.hidden = true; fit(); term.focus(); }, 500);
+    growTarget = 1;
+    // Let the vine finish curling before the title gives way to the game.
+    setTimeout(() => el.boot.classList.add("gone"), 900);
+    setTimeout(() => { el.boot.hidden = true; fit(); term.focus(); }, 1700);
   } else if (m.t === "exit") {
     term.write("\r\n\x1b[2m  the season is over. refresh to play again.\x1b[0m\r\n");
   } else if (m.t === "error") {

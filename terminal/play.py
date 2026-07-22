@@ -20,7 +20,7 @@ from engine import new_game, apply, observable
 from engine.engine import area
 from engine.model import INVASIVE, BARE, NATIVE, GROUND, SEEDLING, ESTABLISHED, DENSE
 from . import render as R
-from .text import T, lines as tlines
+from .text import T, has, lines as tlines
 
 FG = R.fg
 
@@ -711,6 +711,59 @@ def _demo_bot(s):
     return {"type": "drone", "target": cand[0]["index"]} if cand else {"type": "pass"}
 
 
+# ---- field notes: the real world behind a tool the player just used ---------
+# Shown once per run, the first time a tool is used. Text lives in text/learn.txt
+# so the wording and the case studies can be changed without touching this file.
+_SEEN_NOTES = set()
+
+
+def _typeout(text: str, indent: str, color: int, cps: float = 0.018):
+    """Print text a character at a time, so it reads as someone speaking."""
+    for line in R._wrap(text, 62):
+        print(f"{indent}{FG(color)}", end="", flush=True)
+        for ch in line:
+            print(ch, end="", flush=True)
+            time.sleep(cps)
+        print(R.RESET, flush=True)
+
+
+def field_note(topic: str) -> str:
+    """Ivy explains why a tool matters, then the player pages through real cases.
+    Returns 'ok' or 'quit'."""
+    meta = R.CHAR_META["ivy"]
+    col = meta["color"]
+    clear()
+    print()
+    print(f"   {FG(col)}{meta['fig'][0]}{R.RESET}   {FG(col)}{meta['name']}{R.RESET}  {FG(240)}{meta['tag']}{R.RESET}")
+    print(f"   {FG(col)}{meta['fig'][1]}{R.RESET}")
+    print()
+    _typeout(T("learn", f"{topic}.intro"), "     ", 250)
+    print()
+
+    n = 1
+    while has("learn", f"{topic}.case{n}.title"):
+        last = not has("learn", f"{topic}.case{n + 1}.title")
+        try:
+            input(f"\n   {FG(245)}{T('learn', 'nav.more')}{R.RESET}")
+        except (EOFError, KeyboardInterrupt):
+            return "quit"
+        clear()
+        print(f"\n   {FG(220)}{T('learn', f'{topic}.case{n}.title')}{R.RESET}\n")
+        for para in T("learn", f"{topic}.case{n}.body").split("\n\n"):
+            for line in R._wrap(para, 62):
+                print(f"   {FG(250)}{line}{R.RESET}")
+            print()
+        for line in tlines("learn", f"{topic}.case{n}.source"):
+            print(f"   {FG(240)}{line}{R.RESET}")
+        n += 1
+        if last:
+            try:
+                input(f"\n   {FG(245)}{T('learn', 'nav.done')}{R.RESET}")
+            except (EOFError, KeyboardInterrupt):
+                return "quit"
+    return "ok"
+
+
 def _play_field(state, demo, delay=0.14):
     """The field game loop, with the original text character panel. Returns the
     final state, or None if the player quit. Unchanged from the standalone game
@@ -749,6 +802,14 @@ def _play_field(state, demo, delay=0.14):
         nudge = coach.nudge_key(post)
         if nudge:
             chars["ivy"] = {"text": T("characters", nudge), "fresh": True}
+        # The first satellite scan is the moment the point lands, so let them see
+        # what it revealed, then hand them the real-world version of it.
+        if not demo and action.get("type") == "satellite" and "sat" not in _SEEN_NOTES:
+            _SEEN_NOTES.add("sat")
+            draw(post, chars)
+            time.sleep(1.1)
+            if field_note("sat") == "quit":
+                return None
     draw(observable(state), chars)
     return state
 

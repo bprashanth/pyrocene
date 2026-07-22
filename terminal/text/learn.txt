@@ -1,0 +1,45 @@
+# Field notes: the real world behind a tool the player just used.
+# Shown once, the first time that tool is used. Ivy types the intro, then the
+# player pages through the case studies.
+#
+# To add a case study, add case3.title / case3.body / case3.source below and it
+# appears automatically. Blank lines inside a body become paragraph breaks.
+
+# --- satellite --------------------------------------------------------------
+[sat.intro]
+On the ground you only ever see the patch in front of you. Ecologists use satellite imagery to see the whole terrain at once, because the pattern is the thing that matters: where the invasion started, which way it is moving, and what it is about to reach. That pattern is very hard to make out one patch at a time.
+
+[sat.case1.title]
+Finding a fire the size of a classroom
+
+[sat.case1.body]
+A wildfire is cheapest to stop in its first minutes. The satellites fire crews had could only pick out a blaze once it was already big, by which point the cheap options are gone.
+
+FireSat was built for the other end of the problem. Its sensors are designed to catch a fire about five metres across. The pilot satellite found small, low intensity fires that existing satellites missed completely. Three more went up in July 2026.
+
+[sat.case1.source]
+Google Research and the Earth Fire Alliance, July 2026
+blog.google/innovation-and-ai/models-and-research/
+google-research/firesat-satellites
+
+[sat.case2.title]
+Reading eight thousand fires at once
+
+[sat.case2.body]
+In June 2013 the haze over Sumatra was thick enough to close schools in Singapore and Malaysia. Everyone could see the smoke. Nobody could say where it was coming from.
+
+NASA satellites mapped more than 8,000 fire hotspots in Riau province that month. Eyes on the Forest, a coalition that includes WWF Indonesia, laid that map over the map of who held which land. Nearly 40 percent of the fires sat inside pulpwood or oil palm concessions, and 88 percent were burning on peat, where a fire keeps releasing carbon long after the flames are out.
+
+None of that is visible standing in the smoke. It is what turned a haze crisis into a case for zero burn laws.
+
+[sat.case2.source]
+Eyes on the Forest and WWF Indonesia, 2013
+wwf.panda.org, "WWF calls for zero burn laws as hotspot
+analysis fingers pulp and palm oil industries"
+
+# --- navigation prompts -----------------------------------------------------
+[nav.more]
+press Enter
+
+[nav.done]
+press Enter to get back to the valley

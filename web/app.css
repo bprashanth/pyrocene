@@ -6,6 +6,7 @@
   --ink: #cfe3d4;
   --dim: #6f8b79;
   --ember: #ff6a3d;
+  --vine: #3fbf6a;
 }
 
 * { box-sizing: border-box; }
@@ -46,7 +47,7 @@ html, body {
 .xterm .xterm-screen { outline: none; }
 .xterm-viewport::-webkit-scrollbar { width: 0; }
 
-/* --- loading / failure overlays ------------------------------------------ */
+/* --- opening screen ------------------------------------------------------- */
 .boot, .fail {
   position: fixed;
   inset: 0;
@@ -55,45 +56,68 @@ html, body {
   align-items: center;
   justify-content: center;
   background: var(--bg);
-  transition: opacity .5s ease;
 }
+.boot { transition: opacity .7s ease; }
 .boot.gone { opacity: 0; pointer-events: none; }
 
-.boot-inner { text-align: center; max-width: 420px; padding: 24px; }
+.mark {
+  width: min(76vw, 720px);
+  height: auto;
+  overflow: visible;
+}
 
-.boot-title {
-  margin: 0;
-  font-size: clamp(34px, 9vw, 56px);
+/* Square, hard-edged pixels: no anti-aliased softness on the letterforms. */
+.letters rect { shape-rendering: crispEdges; }
+
+.caret {
+  fill: var(--ember);
+  shape-rendering: crispEdges;
+  animation: blink 1.06s steps(1, end) infinite;
+}
+@keyframes blink { 0%, 50% { opacity: 1 } 50.01%, 100% { opacity: 0 } }
+
+/* The creeper is the progress indicator. main.js walks its stroke-dashoffset
+   from full to zero as the game loads, so the vine draws itself around the P. */
+#vine {
+  fill: none;
+  stroke: var(--vine);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.leaf {
+  fill: #4fd47a;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity .45s ease, scale .45s cubic-bezier(.2, 1.6, .4, 1);
+  scale: 0.3;
+}
+.leaf.on { opacity: .95; scale: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; }
+  .leaf { transition: none; }
+}
+
+/* --- failure ------------------------------------------------------------- */
+.fail-inner { text-align: center; max-width: 440px; padding: 24px; }
+
+.fail-title {
+  margin: 0 0 14px;
+  font-size: clamp(26px, 6vw, 38px);
   font-weight: 800;
-  letter-spacing: -.02em;
-  background: linear-gradient(100deg, var(--ember), #ffd23f 55%, #37c871);
+  background: linear-gradient(100deg, var(--ember), #ffd23f 55%, var(--vine));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.boot-tag { margin: 6px 0 26px; color: var(--dim); font-weight: 700; }
-
-.boot-bar {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--edge);
-  overflow: hidden;
-}
-.boot-bar span {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--ember), #ffd23f);
-  transition: width .6s cubic-bezier(.2, .8, .2, 1);
-}
-
-.boot-status {
-  margin: 14px 0 0;
+.fail-msg {
+  margin: 0;
   font-family: ui-monospace, Menlo, monospace;
   font-size: 13px;
-  color: var(--dim);
+  line-height: 1.6;
+  color: var(--ember);
+  white-space: pre-wrap;
 }
-.boot-note { margin: 18px 0 0; font-size: 12px; color: #4d6354; }
-.fail .boot-status { color: var(--ember); white-space: pre-wrap; }
