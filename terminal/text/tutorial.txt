@@ -1,14 +1,6 @@
 # The "Learn the game" flow, in the order the player meets it.
+# The opening pages that run before this live in learn.txt.
 # Placeholders in {curly braces} are filled by the game (cell names, numbers).
-
-[welcome.title]
-Welcome to Pyrocene
-
-[welcome.body]
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-eiusmod tempor incididunt ut labore et dolore magna aliqua.
-
-(intro placeholder, real copy to come)
 
 [cap.score]
 This is your score: forest health. It is how much of the land is native forest. You will take actions to increase it. If you hold the green bar above the yellow line for three consecutive nights, you win.

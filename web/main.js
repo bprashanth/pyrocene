@@ -19,41 +19,68 @@ const el = {
   term: document.getElementById("term"),
 };
 
-/* --- the creeper doubles as the progress bar ------------------------------- */
-const vine = document.getElementById("vine");
-const VINE_LEN = vine.getTotalLength();
+/* --- the canopy doubles as the progress bar --------------------------------
+   Foliage hangs from above the wordmark and creeps downward over it as the
+   game loads. It is built out of the same 10px pixels as the letters so the
+   whole screen reads as one grid. Deterministic noise, so it looks the same
+   every visit rather than reshuffling on each refresh. */
+const SVG_NS = "http://www.w3.org/2000/svg";
+const canopy = document.getElementById("canopy");
+const PX = 10, TOP = -110, LEFT = -30, RIGHT = 560;
 
-/* Grow the leaves out of the path itself rather than placing them by hand: each
-   sits exactly on the vine, angled along its tangent and alternating sides. */
-const LEAF_AT = [0.18, 0.33, 0.47, 0.6, 0.72, 0.84, 0.93];
-const leaves = LEAF_AT.map((t, i) => {
-  const p = vine.getPointAtLength(VINE_LEN * t);
-  const q = vine.getPointAtLength(VINE_LEN * Math.min(t + 0.02, 1));
-  const deg = (Math.atan2(q.y - p.y, q.x - p.x) * 180) / Math.PI;
-  const side = i % 2 ? 6 : -6;
-  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  g.setAttribute("transform",
-    `translate(${p.x} ${p.y}) rotate(${deg + (i % 2 ? 34 : -34)}) translate(9 ${side})`);
-  const leaf = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-  leaf.setAttribute("class", "leaf");
-  leaf.setAttribute("rx", 11);
-  leaf.setAttribute("ry", 5.5);
-  g.appendChild(leaf);
-  vine.parentNode.appendChild(g);
-  return leaf;
+function noise(seed) {
+  let s = seed >>> 0;
+  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+
+const rand = noise(20260722);
+const pix = [];   // {x, y, row, leaf} — row drives the reveal order
+
+// A ragged band of leaves along the top, uneven on both edges so it reads as
+// foliage rather than a bar.
+for (let x = LEFT; x <= RIGHT; x += PX) {
+  const lift = rand() < 0.35 ? 1 : 0;
+  const depth = 2 + Math.floor(rand() * 3);
+  for (let r = -lift; r < depth; r++) {
+    pix.push({ x, y: TOP + r * PX, row: r + lift, leaf: r < depth - 1 });
+  }
+}
+
+// Strands trailing down out of the band, wandering as they fall and draping
+// over the wordmark below.
+for (let i = 0; i < 13; i++) {
+  let x = LEFT + i * 45 + Math.round(rand() * 2) * PX;
+  const len = 8 + Math.floor(rand() * 17);
+  for (let r = 3; r < len; r++) {
+    if (r > 3 && rand() < 0.28) x += rand() < 0.5 ? -PX : PX;
+    pix.push({ x, y: TOP + r * PX, row: r });
+    if (r > 4 && rand() < 0.3) {
+      const side = rand() < 0.5 ? -PX : PX;
+      pix.push({ x: x + side, y: TOP + r * PX, row: r, leaf: true });
+      if (rand() < 0.35) pix.push({ x: x + side, y: TOP + (r - 1) * PX, row: r, leaf: true });
+    }
+  }
+}
+
+pix.sort((a, b) => a.row - b.row);          // grow strictly downward
+const cells = pix.map((p) => {
+  const el = document.createElementNS(SVG_NS, "rect");
+  el.setAttribute("x", p.x);
+  el.setAttribute("y", p.y);
+  el.setAttribute("width", 9);
+  el.setAttribute("height", 9);
+  el.setAttribute("class", p.leaf ? "vpx leaf" : "vpx");
+  canopy.appendChild(el);
+  return el;
 });
-vine.style.strokeDasharray = VINE_LEN;
-vine.style.strokeDashoffset = VINE_LEN;
 
-let growTarget = 0.06;   // where the vine is headed
+let growTarget = 0.06;   // how far down the canopy is headed
 let grown = 0;           // where it actually is, easing toward the target
 
 function grow() {
   grown += (growTarget - grown) * 0.045;
-  vine.style.strokeDashoffset = (VINE_LEN * (1 - grown)).toFixed(2);
-  // A leaf opens once the vine has grown past where it sits.
-  leaves.forEach((leaf, i) =>
-    leaf.classList.toggle("on", grown > LEAF_AT[i] + 0.04));
+  const n = Math.round(grown * cells.length);
+  cells.forEach((c, i) => c.classList.toggle("on", i < n));
   if (grown < 0.999) requestAnimationFrame(grow);
 }
 requestAnimationFrame(grow);

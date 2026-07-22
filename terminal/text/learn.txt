@@ -1,45 +1,98 @@
-# Field notes: the real world behind a tool the player just used.
-# Shown once, the first time that tool is used. Ivy types the intro, then the
-# player pages through the case studies.
+# The opening of "Learn the game": five pages that set up why the game works
+# the way it does. Ivy types them out one page at a time.
 #
-# To add a case study, add case3.title / case3.body / case3.source below and it
-# appears automatically. Blank lines inside a body become paragraph breaks.
+# To add a page, add intro.p6.title / .body / .source here and a matching row in
+# _INTRO_PAGES in terminal/play.py (the row carries the artwork and its colour).
+# Blank lines inside a body become paragraph breaks.
 
-# --- satellite --------------------------------------------------------------
-[sat.intro]
-On the ground you only ever see the patch in front of you. Ecologists use satellite imagery to see the whole terrain at once, because the pattern is the thing that matters: where the invasion started, which way it is moving, and what it is about to reach. That pattern is very hard to make out one patch at a time.
+# --- the two ends of the same instrument ------------------------------------
+[intro.p1.title]
+A fire the size of a room
 
-[sat.case1.title]
-Finding a fire the size of a classroom
+[intro.p1.body]
+Fire is cheapest to stop in its first minutes. The satellites watching for it could only see a blaze once it was already big, and by then the cheap options are gone.
 
-[sat.case1.body]
-A wildfire is cheapest to stop in its first minutes. The satellites fire crews had could only pick out a blaze once it was already big, by which point the cheap options are gone.
+FireSat was built for the other end of that problem. Its sensors can pick out a fire about five metres across. Three of them went up in July 2026.
 
-FireSat was built for the other end of the problem. Its sensors are designed to catch a fire about five metres across. The pilot satellite found small, low intensity fires that existing satellites missed completely. Three more went up in July 2026.
+[intro.p1.source]
+Google Research and the Earth Fire Alliance
 
-[sat.case1.source]
-Google Research and the Earth Fire Alliance, July 2026
-blog.google/innovation-and-ai/models-and-research/
-google-research/firesat-satellites
+[intro.p2.title]
+Eight thousand fires at once
 
-[sat.case2.title]
-Reading eight thousand fires at once
+[intro.p2.body]
+Now zoom the other way. In June 2013 the haze over Sumatra closed schools in Singapore and Malaysia. Everyone could see the smoke. Nobody could say where it came from.
 
-[sat.case2.body]
-In June 2013 the haze over Sumatra was thick enough to close schools in Singapore and Malaysia. Everyone could see the smoke. Nobody could say where it was coming from.
+Satellites mapped more than 8,000 hotspots in Riau that month. Laid over a map of who held which land, nearly 40 percent sat inside pulpwood or oil palm concessions, and 88 percent were burning on peat.
 
-NASA satellites mapped more than 8,000 fire hotspots in Riau province that month. Eyes on the Forest, a coalition that includes WWF Indonesia, laid that map over the map of who held which land. Nearly 40 percent of the fires sat inside pulpwood or oil palm concessions, and 88 percent were burning on peat, where a fire keeps releasing carbon long after the flames are out.
-
-None of that is visible standing in the smoke. It is what turned a haze crisis into a case for zero burn laws.
-
-[sat.case2.source]
+[intro.p2.source]
 Eyes on the Forest and WWF Indonesia, 2013
-wwf.panda.org, "WWF calls for zero burn laws as hotspot
-analysis fingers pulp and palm oil industries"
 
-# --- navigation prompts -----------------------------------------------------
-[nav.more]
-press Enter
+# --- seeing is not enough ----------------------------------------------------
+[intro.p3.title]
+Seeing is not stopping
 
-[nav.done]
-press Enter to get back to the valley
+[intro.p3.body]
+Spotting a fire is not the same as stopping one. Somebody still has to get there.
+
+In Gadchiroli, Farmers for Forests watch 4,000 hectares with drones. In one dry season they mapped 282 fires and reached them in 51 minutes on average. Their fastest was five.
+
+[intro.p3.source]
+Farmers for Forests, Gadchiroli
+
+[intro.p4.title]
+Better still, before it starts
+
+[intro.p4.body]
+But what if the fire never started? That takes understanding it instead of chasing it.
+
+Not all fire is bad. These forests have burned gently for centuries, and people used it to keep them open. What turns a good fire bad is fuel. Invasive plants pile up fuel where there was none, and a fire that would have crept along the ground takes the canopy instead.
+
+[intro.p4.source]
+Keystone Foundation, on forest fire ecology in India
+
+# --- the handover ------------------------------------------------------------
+[intro.p5.title]
+Your job
+
+[intro.p5.body]
+This game puts you in the chair where those calls get made. One action a night, on land that keeps moving whether you act or not.
+
+Look, so you know what is actually out there. Remove the lantana that is building the fuel. Restore what you clear, before it is taken back.
+
+Hold the forest above the line for three nights and it is yours.
+
+# --- artwork -----------------------------------------------------------------
+# Pixel motifs, not the organisations' actual logos. Edit freely; each block is
+# printed as-is, so keep the leading spaces if you want it to stay centred.
+[art.satellite]
+   ███    ▄█████▄    ███
+   ███   ██     ██   ███
+    █     ▀█████▀     █
+           ▄▄█▄▄
+
+[art.globe]
+        ▄███████▄
+      ███  ███  ███
+      ██  ██ ██  ██
+      ███  ███  ███
+        ▀███████▀
+
+[art.tree]
+          ▄███▄
+       ▄███████████▄
+      ███████████████
+            ███
+       ▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+[art.arch]
+          ▄███▄
+        ▄███████▄
+       ███     ███
+       ██       ██
+       ██       ██
+
+[art.grid]
+       ███ ░░░ ███ ░░░
+       ░░░ ███ ░░░ ███
+       ███ ░░░ ███ ░░░
