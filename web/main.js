@@ -14,6 +14,7 @@ const INPUT_BYTES = 4096;
 
 const el = {
   boot: document.getElementById("boot"),
+  hint: document.getElementById("hint"),
   fail: document.getElementById("fail"),
   failMsg: document.getElementById("fail-msg"),
   term: document.getElementById("term"),
@@ -190,9 +191,9 @@ worker.onmessage = (e) => {
     growTarget = STAGE[m.text] || growTarget;
   } else if (m.t === "ready") {
     growTarget = 1;
-    // Let the vine finish curling before the title gives way to the game.
-    setTimeout(() => el.boot.classList.add("gone"), 900);
-    setTimeout(() => { el.boot.hidden = true; fit(); term.focus(); }, 1700);
+    // Let the canopy finish growing, then invite them in. The title screen
+    // stays up until the player asks for it to go.
+    setTimeout(() => { loaded = true; el.hint.classList.add("show"); enter(); }, 1400);
   } else if (m.t === "exit") {
     term.write("\r\n\x1b[2m  the season is over. refresh to play again.\x1b[0m\r\n");
   } else if (m.t === "error") {
@@ -200,8 +201,32 @@ worker.onmessage = (e) => {
   }
 };
 
+/* --- holding the title screen --------------------------------------------- */
+let loaded = false;      // the game is booted and waiting
+let asked = false;       // the player has asked to begin
+
+function enter() {
+  if (!loaded || !asked || el.boot.hidden) return;
+  el.boot.classList.add("gone");
+  setTimeout(() => { el.boot.hidden = true; fit(); term.focus(); }, 700);
+}
+
+// Enter or space, or a tap. Captured so the keystroke never reaches the game.
+addEventListener("keydown", (e) => {
+  if (el.boot.hidden) return;
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    e.stopPropagation();
+    asked = true;
+    enter();
+  }
+}, true);
+addEventListener("pointerdown", () => {
+  if (!el.boot.hidden) { asked = true; enter(); }
+});
+
 // ?argv=--level+1 style passthrough, handy for testing a single level.
 const argv = (new URLSearchParams(location.search).get("argv") || "").split(" ").filter(Boolean);
 worker.postMessage({ t: "boot", sab, argv });
 fit();
-addEventListener("click", () => term.focus());
+addEventListener("click", () => { if (el.boot.hidden) term.focus(); });

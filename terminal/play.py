@@ -1070,20 +1070,23 @@ def _tut_intro() -> str:
     return "ok"
 
 
-def run_tutorial():
+def run_tutorial() -> str:
+    """Returns 'ok' if they saw it through, 'quit' if they left partway. The
+    caller runs the story straight after an 'ok', so learning hands over to
+    playing without a trip back to the menu."""
     if _tut_intro() == "quit":
-        return
+        return "quit"
     if _tut_walkthrough(_tutorial_state()) == "quit":
-        return
+        return "quit"
     if _tut_screen("raise.title", "raise.body") == "quit":
-        return
+        return "quit"
     if _tut_task_restore(_tutorial_state()) == "quit":
-        return
+        return "quit"
     if _tut_screen("lose.title", "lose.body") == "quit":
-        return
+        return "quit"
     if _tut_task_watch(_tutorial_state()) == "quit":
-        return
-    _tut_screen("end.title", "end.body")
+        return "quit"
+    return _tut_screen("end.title", "end.body")
 
 
 def main():
@@ -1100,7 +1103,8 @@ def main():
     R.set_color(not (args.no_color or not sys.stdout.isatty()))
     try:
         if args.learn:
-            run_tutorial()
+            if run_tutorial() != "quit":
+                run_story(args.seed)
         elif args.campaign:
             run_campaign(args.seed, args.demo)
         elif args.demo:
@@ -1112,7 +1116,8 @@ def main():
         else:
             choice = start_menu()
             if choice == "learn":
-                run_tutorial()
+                if run_tutorial() != "quit":
+                    run_story(args.seed)     # straight into the real thing
             elif choice == "play":
                 run_story(args.seed)
     finally:

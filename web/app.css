@@ -61,11 +61,32 @@ html, body {
 .boot { transition: opacity .7s ease; }
 .boot.gone { opacity: 0; pointer-events: none; }
 
+.boot-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+}
+
 .mark {
   width: min(76vw, 720px);
   height: auto;
   overflow: visible;
 }
+
+/* The only text on the screen, and it only appears once loading is done: the
+   title screen waits for the player rather than snatching itself away. */
+.hint {
+  margin: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: .18em;
+  color: var(--dim);
+  opacity: 0;
+  transition: opacity .9s ease;
+}
+.hint.show { opacity: 1; animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: .45 } 50% { opacity: 1 } }
 
 /* Square, hard-edged pixels: no anti-aliased softness on the letterforms. */
 .letters rect { fill: var(--ember); shape-rendering: crispEdges; }
@@ -91,6 +112,7 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .caret { animation: none; }
   .vpx { transition: none; }
+  .hint.show { animation: none; }
 }
 
 /* --- failure ------------------------------------------------------------- */
