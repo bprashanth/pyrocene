@@ -24,10 +24,20 @@ for pkg in engine terminal; do
     done
 done
 
-# manifest.json: a flat list of paths, relative to py/.
-(cd "$out" && find . -type f -not -name manifest.json |
-  sed 's|^\./||' | sort |
-  python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))') \
-  > "$out/manifest.json"
+# manifest.json: a flat list of paths, relative to py/. Written with shell only,
+# so the build needs nothing but bash and coreutils on the host. The paths are
+# our own file names, so plain quoting is safe.
+files=$(cd "$out" && find . -type f -not -name manifest.json | sed 's|^\./||' | sort)
 
-echo "staged $(python3 -c 'import json;print(len(json.load(open("'"$out"'/manifest.json"))))') files into web/py/"
+{
+  printf '['
+  sep=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    printf '%s"%s"' "$sep" "$f"
+    sep=", "
+  done <<< "$files"
+  printf ']\n'
+} > "$out/manifest.json"
+
+echo "staged $(printf '%s\n' "$files" | grep -c .) files into web/py/"
