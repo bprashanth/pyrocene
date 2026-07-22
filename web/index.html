@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pyrocene</title>
+<meta name="description" content="A game about holding back an invasive-species invasion with good data and timely action.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css" crossorigin="anonymous">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- Loading screen. Deliberately plain for now; this is the piece to design. -->
+<div id="boot" class="boot">
+  <div class="boot-inner">
+    <h1 class="boot-title">Pyrocene</h1>
+    <p class="boot-tag">Hold the line. One action a night.</p>
+    <div class="boot-bar"><span id="boot-fill"></span></div>
+    <p class="boot-status" id="boot-status">starting</p>
+    <p class="boot-note">First visit downloads about 10&nbsp;MB of Python. It is cached after that.</p>
+  </div>
+</div>
+
+<div id="fail" class="fail" hidden>
+  <div class="boot-inner">
+    <h1 class="boot-title">Cannot start</h1>
+    <p class="boot-status" id="fail-msg"></p>
+  </div>
+</div>
+
+<main class="stage">
+  <div class="screen"><div id="term"></div></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js" crossorigin="anonymous"></script>
+<script src="main.js"></script>
+</body>
+</html>
