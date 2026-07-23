@@ -1,10 +1,12 @@
-# ASH & INTUITION: A Cooperative Simulation of Ecological Resilience
+# ASH & INTUITION: A Simulation of Ecological Resilience
 
 ---
 
-## Part I: The Philosophy of the Flame (Lore & Introduction)
+## Part I: Lore 
 
-For over a century, humanity treated the forest as a museum—an static gallery of green to be rigidly preserved, policed, and locked behind glass. We believed that peace meant the total absence of fire. We were wrong.
+### The Philosophy of the Flame
+
+For over a century, humanity treated the forest as a museum - a static gallery of green to be rigidly preserved, policed, and locked behind glass. We believed that peace meant the total absence of fire. We were wrong.
 
 By suffocating the flame, we starved the soil. By extinguishing every column of smoke, we allowed dead wood, dense brush, and opportunistic invasive species to accumulate into a catastrophic powder keg. Nature’s fury is not a malfunction of the system; it is a feature. Fire is the forest's great exhalation, a necessary disturbance that clears the old to make way for the resilient. When we deny the small, necessary fires, we inadvertently summon the megafire.
 
@@ -19,7 +21,7 @@ The fire is coming. You cannot stop it. You can only learn to dance with the spa
 
 ---
 
-## Part II: The 10-Minute Onboarding Guide (Quick-Start)
+## Part II: The 10-Minute Onboarding Guide 
 
 If you want to skip the deep theory and ignite your first simulation immediately, read this section. You can learn the nuanced strategies as the forest burns around you.
 
@@ -27,8 +29,8 @@ If you want to skip the deep theory and ignite your first simulation immediately
 
 You win or lose as a team based on your **Ecological Health Score (EHS)**, which starts at **75**:
 
-* **How to Win:** Maintain an EHS of **90 or above for 3 consecutive turns** (achieving True Resilience).
-* **How to Lose:** Allow the EHS to drop **below 50** at any point (Triggering Ecological Collapse).
+* **How to Win:** Maintain an EHS of **90 or above for 3 consecutive turns**.
+* **How to Lose:** Allow the EHS to drop **below 50** at any point.
 
 ### 2. Setup the Board
 
@@ -42,7 +44,7 @@ Each square contains hidden environmental variables that dictate how it behaves 
 * **Vegetation Status:** Can be **Native Patch** (resistant, high health) or **Invasive Colonization** (highly volatile, quick to ignite).
 * **Human Assets:** Contains villages, infrastructure, or community borders. Burning these inflicts a massive, immediate penalty to your EHS.
 
-### 4. Turn Structure (The Game Loop)
+### 4. The Game Loop
 
 Each game round represents a cycle of seasons, split into three distinct phases:
 
@@ -54,20 +56,18 @@ Each game round represents a cycle of seasons, split into three distinct phases:
 
 ```
 
-* **Phase 1: The Day Phase (Player Actions)**
+* **Phase 1: The Day Phase - Player Actions**
 * The Ecologist and Ranger receive a shared Turn Budget.
 * The Ecologist deploys monitoring strategies, places danger flags, or studies history.
 * The Ranger builds firelines, clears invasives, or restores land based on the Ecologist's guidance.
 
 
-* **Phase 2: The Night Phase (The AI Simulation)**
-* The AI evaluates the board's hidden states, triggers ignitions, and simulates fire spread based on weather (wind/rain) and fuel.
+* **Phase 2: The Night Phase - The AI Simulation**
+* The AI evaluates the board's hidden states, triggers ignitions, and simulates fire spread based on weather (possibly wind/rain) and fuel.
 
 
 * **Phase 3: The Dawn Debrief**
 * The players observe where the fire spread, calculate the new EHS, and check win/loss conditions.
-
-
 
 ---
 
@@ -75,11 +75,11 @@ Each game round represents a cycle of seasons, split into three distinct phases:
 
 The fundamental tension of the game rests on a communication barrier: **The Ecologist can see the problems but cannot fix them; the Ranger can fix the problems but cannot see them.** ---
 
-### The Ecologist (The Learning Mind)
+### The Ecologist - The Learning Mind
 
 Your goal is to build deep situational awareness. You look at the landscape through data, history, and human lore.
 
-#### 1. Bounded Data Strategies (Action Cost Varies)
+#### 1. Bounded Data Strategies
 
 * **Satellite Imagery (Low Cost):** Reveals broad, vague risk zones across a wide quadrant (e.g., "This $4\times4$ area is High Risk").
 * **Drone Reconnaissance (Medium Cost):** Uncovers precise data (Fuel Load, Vegetation Status) for a small, targeted cluster of squares.
@@ -157,7 +157,7 @@ $$\text{Fire Spread Probability} = \text{Fuel Load} + \text{Invasive Volatility}
 
 ### 2. The Trap of Reactive Suppression
 
-If players play purely reactively—blindly clearing invasives without scanning, or endlessly dumping money into fire lines around villages—the AI will deliberately ignite fires in other unmonitored sectors. You will rapidly deplete your budget, the invasives will aggressively return, and a massive megafire will eventually overwhelm your unmanaged borders, causing an immediate loss.
+If players play purely reactively-blindly clearing invasives without scanning, or endlessly dumping money into fire lines around villages-the AI will deliberately ignite fires in other unmonitored sectors. You will rapidly deplete your budget, the invasives will aggressively return, and a massive megafire will eventually overwhelm your unmanaged borders, causing an immediate loss.
 
 ---
 
@@ -177,11 +177,11 @@ If players play purely reactively—blindly clearing invasives without scanning,
 
 ### The "Turning Point" Debrief (The History Lesson)
 
-When the simulation concludes—whether in triumphant Resilience or devastating Collapse—the AI generates a retrospective timeline analysis.
+When the simulation concludes-whether in triumphant Resilience or devastating Collapse-the AI generates a retrospective timeline analysis.
 
 Rather than forcing a rigid historical template onto your creative gameplay, the AI uses your specific board movements to teach a real-world land management lesson. The debrief focuses on **Turning Points**:
 
-> ### 📋 SYSTEM DEBRIEF: The Ridge Sector Cascade (Turn 4)
+> ### SYSTEM DEBRIEF: The Ridge Sector Cascade (Turn 4)
 > 
 > 
 > **What Happened:** On Turn 4, a major fire broke out in Sector E7, threatens the local township. The Ranger opted for an emergency evacuation and suppression strategy, spending 80% of the turn's budget.
