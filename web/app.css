@@ -1,0 +1,138 @@
+/* Chrome around the terminal. The game itself paints everything inside #term,
+   so keep this quiet: it should read as a screen the game lives on. */
+:root {
+  --bg: #0d1410;
+  --edge: #24382c;
+  --ink: #cfe3d4;
+  --dim: #6f8b79;
+  --ember: #ff6a3d;
+  --vine: #2f9d55;
+  --vine-lit: #46c46f;
+}
+
+* { box-sizing: border-box; }
+
+/* The overlays below set display:flex, which would otherwise beat the user
+   agent's [hidden] rule and leave them painted over a working game. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", Nunito, system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+
+.stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+/* The terminal renders at a fixed 80 columns and is scaled to fit, so the
+   game's hand-tuned column alignment never reflows. */
+.screen {
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#term { transform-origin: center center; }
+
+/* xterm paints its own background; kill the stray focus outline. */
+.xterm .xterm-screen { outline: none; }
+.xterm-viewport::-webkit-scrollbar { width: 0; }
+
+/* --- opening screen ------------------------------------------------------- */
+.boot, .fail {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+.boot { transition: opacity .7s ease; }
+.boot.gone { opacity: 0; pointer-events: none; }
+
+.boot-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+}
+
+.mark {
+  width: min(76vw, 720px);
+  height: auto;
+  overflow: visible;
+}
+
+/* The only text on the screen, and it only appears once loading is done: the
+   title screen waits for the player rather than snatching itself away. */
+.hint {
+  margin: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: .18em;
+  color: var(--dim);
+  opacity: 0;
+  transition: opacity .9s ease;
+}
+.hint.show { opacity: 1; animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: .45 } 50% { opacity: 1 } }
+
+/* Square, hard-edged pixels: no anti-aliased softness on the letterforms. */
+.letters rect { fill: var(--ember); shape-rendering: crispEdges; }
+
+.caret {
+  fill: var(--ember);
+  shape-rendering: crispEdges;
+  animation: blink 1.06s steps(1, end) infinite;
+}
+@keyframes blink { 0%, 50% { opacity: 1 } 50.01%, 100% { opacity: 0 } }
+
+/* The canopy is the progress indicator: main.js switches these on top row
+   first, so the foliage creeps down over the wordmark as the game loads. */
+.vpx {
+  fill: var(--vine);
+  shape-rendering: crispEdges;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.vpx.leaf { fill: var(--vine-lit); }
+.vpx.on { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; }
+  .vpx { transition: none; }
+  .hint.show { animation: none; }
+}
+
+/* --- failure ------------------------------------------------------------- */
+.fail-inner { text-align: center; max-width: 440px; padding: 24px; }
+
+.fail-title {
+  margin: 0 0 14px;
+  font-size: clamp(26px, 6vw, 38px);
+  font-weight: 800;
+  background: linear-gradient(100deg, var(--ember), #ffd23f 55%, var(--vine-lit));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.fail-msg {
+  margin: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ember);
+  white-space: pre-wrap;
+}

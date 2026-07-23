@@ -64,6 +64,12 @@ def T(file: str, key: str, /, **kw) -> str:
     return val
 
 
+def has(file: str, key: str, /) -> bool:
+    """True if the key exists. Lets a caller page through case1, case2, ...
+    without hard-coding how many there are."""
+    return _file(file).get(key) is not None
+
+
 def lines(file: str, key: str, /, **kw) -> list:
     """A text value split into a list of lines."""
     val = T(file, key, **kw)

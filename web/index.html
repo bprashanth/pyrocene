@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pyrocene</title>
+<meta name="description" content="A game about holding back an invasive-species invasion with good data and timely action.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css" crossorigin="anonymous">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- The opening screen: the wordmark, with foliage hanging down over it. The
+     canopy grows downward as the game loads, so it is also the progress
+     indicator, and the screen needs no text at all. -->
+<div id="boot" class="boot">
+  <div class="boot-inner">
+  <svg class="mark" viewBox="-30 -120 590 250" role="img" aria-label="Pyrocene">
+    <g id="canopy"></g>
+
+    <g class="letters">
+      <rect x="0" y="0" width="9" height="9"/>
+      <rect x="10" y="0" width="9" height="9"/>
+      <rect x="20" y="0" width="9" height="9"/>
+      <rect x="30" y="0" width="9" height="9"/>
+      <rect x="0" y="10" width="9" height="9"/>
+      <rect x="40" y="10" width="9" height="9"/>
+      <rect x="0" y="20" width="9" height="9"/>
+      <rect x="40" y="20" width="9" height="9"/>
+      <rect x="0" y="30" width="9" height="9"/>
+      <rect x="10" y="30" width="9" height="9"/>
+      <rect x="20" y="30" width="9" height="9"/>
+      <rect x="30" y="30" width="9" height="9"/>
+      <rect x="0" y="40" width="9" height="9"/>
+      <rect x="0" y="50" width="9" height="9"/>
+      <rect x="0" y="60" width="9" height="9"/>
+      <rect x="60" y="0" width="9" height="9"/>
+      <rect x="100" y="0" width="9" height="9"/>
+      <rect x="60" y="10" width="9" height="9"/>
+      <rect x="100" y="10" width="9" height="9"/>
+      <rect x="70" y="20" width="9" height="9"/>
+      <rect x="90" y="20" width="9" height="9"/>
+      <rect x="80" y="30" width="9" height="9"/>
+      <rect x="80" y="40" width="9" height="9"/>
+      <rect x="80" y="50" width="9" height="9"/>
+      <rect x="80" y="60" width="9" height="9"/>
+      <rect x="120" y="0" width="9" height="9"/>
+      <rect x="130" y="0" width="9" height="9"/>
+      <rect x="140" y="0" width="9" height="9"/>
+      <rect x="150" y="0" width="9" height="9"/>
+      <rect x="120" y="10" width="9" height="9"/>
+      <rect x="160" y="10" width="9" height="9"/>
+      <rect x="120" y="20" width="9" height="9"/>
+      <rect x="160" y="20" width="9" height="9"/>
+      <rect x="120" y="30" width="9" height="9"/>
+      <rect x="130" y="30" width="9" height="9"/>
+      <rect x="140" y="30" width="9" height="9"/>
+      <rect x="150" y="30" width="9" height="9"/>
+      <rect x="120" y="40" width="9" height="9"/>
+      <rect x="140" y="40" width="9" height="9"/>
+      <rect x="120" y="50" width="9" height="9"/>
+      <rect x="150" y="50" width="9" height="9"/>
+      <rect x="120" y="60" width="9" height="9"/>
+      <rect x="160" y="60" width="9" height="9"/>
+      <rect x="190" y="0" width="9" height="9"/>
+      <rect x="200" y="0" width="9" height="9"/>
+      <rect x="210" y="0" width="9" height="9"/>
+      <rect x="180" y="10" width="9" height="9"/>
+      <rect x="220" y="10" width="9" height="9"/>
+      <rect x="180" y="20" width="9" height="9"/>
+      <rect x="220" y="20" width="9" height="9"/>
+      <rect x="180" y="30" width="9" height="9"/>
+      <rect x="220" y="30" width="9" height="9"/>
+      <rect x="180" y="40" width="9" height="9"/>
+      <rect x="220" y="40" width="9" height="9"/>
+      <rect x="180" y="50" width="9" height="9"/>
+      <rect x="220" y="50" width="9" height="9"/>
+      <rect x="190" y="60" width="9" height="9"/>
+      <rect x="200" y="60" width="9" height="9"/>
+      <rect x="210" y="60" width="9" height="9"/>
+      <rect x="250" y="0" width="9" height="9"/>
+      <rect x="260" y="0" width="9" height="9"/>
+      <rect x="270" y="0" width="9" height="9"/>
+      <rect x="240" y="10" width="9" height="9"/>
+      <rect x="280" y="10" width="9" height="9"/>
+      <rect x="240" y="20" width="9" height="9"/>
+      <rect x="240" y="30" width="9" height="9"/>
+      <rect x="240" y="40" width="9" height="9"/>
+      <rect x="240" y="50" width="9" height="9"/>
+      <rect x="280" y="50" width="9" height="9"/>
+      <rect x="250" y="60" width="9" height="9"/>
+      <rect x="260" y="60" width="9" height="9"/>
+      <rect x="270" y="60" width="9" height="9"/>
+      <rect x="300" y="0" width="9" height="9"/>
+      <rect x="310" y="0" width="9" height="9"/>
+      <rect x="320" y="0" width="9" height="9"/>
+      <rect x="330" y="0" width="9" height="9"/>
+      <rect x="340" y="0" width="9" height="9"/>
+      <rect x="300" y="10" width="9" height="9"/>
+      <rect x="300" y="20" width="9" height="9"/>
+      <rect x="300" y="30" width="9" height="9"/>
+      <rect x="310" y="30" width="9" height="9"/>
+      <rect x="320" y="30" width="9" height="9"/>
+      <rect x="330" y="30" width="9" height="9"/>
+      <rect x="300" y="40" width="9" height="9"/>
+      <rect x="300" y="50" width="9" height="9"/>
+      <rect x="300" y="60" width="9" height="9"/>
+      <rect x="310" y="60" width="9" height="9"/>
+      <rect x="320" y="60" width="9" height="9"/>
+      <rect x="330" y="60" width="9" height="9"/>
+      <rect x="340" y="60" width="9" height="9"/>
+      <rect x="360" y="0" width="9" height="9"/>
+      <rect x="400" y="0" width="9" height="9"/>
+      <rect x="360" y="10" width="9" height="9"/>
+      <rect x="370" y="10" width="9" height="9"/>
+      <rect x="400" y="10" width="9" height="9"/>
+      <rect x="360" y="20" width="9" height="9"/>
+      <rect x="380" y="20" width="9" height="9"/>
+      <rect x="400" y="20" width="9" height="9"/>
+      <rect x="360" y="30" width="9" height="9"/>
+      <rect x="390" y="30" width="9" height="9"/>
+      <rect x="400" y="30" width="9" height="9"/>
+      <rect x="360" y="40" width="9" height="9"/>
+      <rect x="400" y="40" width="9" height="9"/>
+      <rect x="360" y="50" width="9" height="9"/>
+      <rect x="400" y="50" width="9" height="9"/>
+      <rect x="360" y="60" width="9" height="9"/>
+      <rect x="400" y="60" width="9" height="9"/>
+      <rect x="420" y="0" width="9" height="9"/>
+      <rect x="430" y="0" width="9" height="9"/>
+      <rect x="440" y="0" width="9" height="9"/>
+      <rect x="450" y="0" width="9" height="9"/>
+      <rect x="460" y="0" width="9" height="9"/>
+      <rect x="420" y="10" width="9" height="9"/>
+      <rect x="420" y="20" width="9" height="9"/>
+      <rect x="420" y="30" width="9" height="9"/>
+      <rect x="430" y="30" width="9" height="9"/>
+      <rect x="440" y="30" width="9" height="9"/>
+      <rect x="450" y="30" width="9" height="9"/>
+      <rect x="420" y="40" width="9" height="9"/>
+      <rect x="420" y="50" width="9" height="9"/>
+      <rect x="420" y="60" width="9" height="9"/>
+      <rect x="430" y="60" width="9" height="9"/>
+      <rect x="440" y="60" width="9" height="9"/>
+      <rect x="450" y="60" width="9" height="9"/>
+      <rect x="460" y="60" width="9" height="9"/>
+    </g>
+
+    <rect class="caret" x="485" y="60" width="40" height="9"/>
+
+  </svg>
+  <p class="hint" id="hint">press enter</p>
+  </div>
+</div>
+
+<div id="fail" class="fail" hidden>
+  <div class="fail-inner">
+    <h1 class="fail-title">Cannot start</h1>
+    <p class="fail-msg" id="fail-msg"></p>
+  </div>
+</div>
+
+<main class="stage">
+  <div class="screen"><div id="term"></div></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js" crossorigin="anonymous"></script>
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+# The opening of "Learn the game": five pages that set up why the game works
+# the way it does. Ivy types them out one page at a time.
+#
+# To add a page, add intro.p6.title / .body / .source here and a matching row in
+# _INTRO_PAGES in terminal/play.py (the row carries the artwork and its colour).
+# Blank lines inside a body become paragraph breaks.
+
+# --- the two ends of the same instrument ------------------------------------
+[intro.p1.title]
+A fire the size of a room
+
+[intro.p1.body]
+Fire is cheapest to stop in its first minutes. The satellites watching for it could only see a blaze once it was already big, and by then the cheap options are gone.
+
+FireSat was built for the other end of that problem. Its sensors can pick out a fire about five metres across. Three of them went up in July 2026.
+
+[intro.p1.source]
+Google Research and the Earth Fire Alliance
+
+[intro.p2.title]
+Eight thousand fires at once
+
+[intro.p2.body]
+Now zoom the other way. In June 2013 the haze over Sumatra closed schools in Singapore and Malaysia. Everyone could see the smoke. Nobody could say where it came from.
+
+Satellites mapped more than 8,000 hotspots in Riau that month. Laid over a map of who held which land, nearly 40 percent sat inside pulpwood or oil palm concessions, and 88 percent were burning on peat.
+
+[intro.p2.source]
+Eyes on the Forest and WWF Indonesia, 2013
+
+# --- seeing is not enough ----------------------------------------------------
+[intro.p3.title]
+Seeing is not stopping
+
+[intro.p3.body]
+Spotting a fire is not the same as stopping one. Somebody still has to get there.
+
+In Gadchiroli, Farmers for Forests watch 4,000 hectares with drones. In one dry season they mapped 282 fires and reached them in 51 minutes on average. Their fastest was five.
+
+[intro.p3.source]
+Farmers for Forests, Gadchiroli
+
+[intro.p4.title]
+Better still, before it starts
+
+[intro.p4.body]
+But what if the fire never started? That takes understanding it instead of chasing it.
+
+Not all fire is bad. These forests have burned gently for centuries, and people used it to keep them open. What turns a good fire bad is fuel. Invasive plants pile up fuel where there was none, and a fire that would have crept along the ground takes the canopy instead.
+
+[intro.p4.source]
+Keystone Foundation, on forest fire ecology in India
+
+# --- the handover ------------------------------------------------------------
+[intro.p5.title]
+Your job
+
+[intro.p5.body]
+This game puts you in the chair where those calls get made. One action a night, on land that keeps moving whether you act or not.
+
+Look, so you know what is actually out there. Remove the lantana that is building the fuel. Restore what you clear, before it is taken back.
+
+Hold the forest above the line for three nights and it is yours.
+
+# --- artwork -----------------------------------------------------------------
+# Pixel motifs, not the organisations' actual logos. Edit freely; each block is
+# printed as-is, so keep the leading spaces if you want it to stay centred.
+[art.satellite]
+   ███    ▄█████▄    ███
+   ███   ██     ██   ███
+    █     ▀█████▀     █
+           ▄▄█▄▄
+
+[art.globe]
+        ▄███████▄
+      ███  ███  ███
+      ██  ██ ██  ██
+      ███  ███  ███
+        ▀███████▀
+
+[art.tree]
+          ▄███▄
+       ▄███████████▄
+      ███████████████
+            ███
+       ▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+[art.arch]
+          ▄███▄
+        ▄███████▄
+       ███     ███
+       ██       ██
+       ██       ██
+
+[art.grid]
+       ███ ░░░ ███ ░░░
+       ░░░ ███ ░░░ ███
+       ███ ░░░ ███ ░░░

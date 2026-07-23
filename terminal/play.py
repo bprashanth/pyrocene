@@ -20,7 +20,7 @@ from engine import new_game, apply, observable
 from engine.engine import area
 from engine.model import INVASIVE, BARE, NATIVE, GROUND, SEEDLING, ESTABLISHED, DENSE
 from . import render as R
-from .text import T, lines as tlines
+from .text import T, has, lines as tlines
 
 FG = R.fg
 
@@ -711,6 +711,17 @@ def _demo_bot(s):
     return {"type": "drone", "target": cand[0]["index"]} if cand else {"type": "pass"}
 
 
+def _typeout(text: str, indent: str, color: int, cps: float = 0.028):
+    """Print text a character at a time, so it reads as someone speaking. Holds
+    a beat at punctuation, which is most of what makes it feel spoken."""
+    for line in R._wrap(text, 64):
+        print(f"{indent}{FG(color)}", end="", flush=True)
+        for ch in line:
+            print(ch, end="", flush=True)
+            time.sleep(cps * (9 if ch in ".!?" else 4 if ch in ",;:" else 1))
+        print(R.RESET, flush=True)
+
+
 def _play_field(state, demo, delay=0.14):
     """The field game loop, with the original text character panel. Returns the
     final state, or None if the player quit. Unchanged from the standalone game
@@ -1027,20 +1038,55 @@ def _tut_task_watch(state) -> str:
     return "ok"
 
 
-def run_tutorial():
-    if _tut_screen("welcome.title", "welcome.body") == "quit":
-        return
+# ---- the tutorial opening: why any of this matters --------------------------
+# One row per page. The text (title, body, source) lives in text/learn.txt; this
+# table only says which pixel motif sits above it and in whose colour.
+_INTRO_PAGES = [
+    ("p1", "art.satellite", IVY),
+    ("p2", "art.globe", IVY),
+    ("p3", "art.tree", ROCKY),
+    ("p4", "art.arch", ELDER),
+    ("p5", "art.grid", 220),
+]
+
+
+def _tut_intro() -> str:
+    """The opening pages, typed out rather than printed. Returns 'ok' or 'quit'."""
+    for key, art, col in _INTRO_PAGES:
+        clear()
+        print()
+        for ln in tlines("learn", art):
+            print(f"   {FG(col)}{ln}{R.RESET}")
+        print(f"\n   {FG(208)}{T('learn', f'intro.{key}.title')}{R.RESET}\n")
+        for para in T("learn", f"intro.{key}.body").split("\n\n"):
+            _typeout(para, "   ", 250)
+            print()
+        if has("learn", f"intro.{key}.source"):
+            print(f"   {FG(240)}{T('learn', f'intro.{key}.source')}{R.RESET}")
+        try:
+            input(f"\n   {FG(245)}{T('tutorial', 'continue')}{R.RESET}")
+        except (EOFError, KeyboardInterrupt):
+            return "quit"
+    return "ok"
+
+
+def run_tutorial() -> str:
+    """Returns 'ok' if they saw it through, 'quit' if they left partway. The
+    caller runs the story straight after an 'ok', so learning hands over to
+    playing without a trip back to the menu."""
+    if _tut_intro() == "quit":
+        return "quit"
     if _tut_walkthrough(_tutorial_state()) == "quit":
-        return
+        return "quit"
     if _tut_screen("raise.title", "raise.body") == "quit":
-        return
+        return "quit"
     if _tut_task_restore(_tutorial_state()) == "quit":
-        return
+        return "quit"
     if _tut_screen("lose.title", "lose.body") == "quit":
-        return
+        return "quit"
     if _tut_task_watch(_tutorial_state()) == "quit":
-        return
-    _tut_screen("end.title", "end.body")
+        return "quit"
+    return _tut_screen("end.title", "end.body")
 
 
 def main():
@@ -1057,7 +1103,8 @@ def main():
     R.set_color(not (args.no_color or not sys.stdout.isatty()))
     try:
         if args.learn:
-            run_tutorial()
+            if run_tutorial() != "quit":
+                run_story(args.seed)
         elif args.campaign:
             run_campaign(args.seed, args.demo)
         elif args.demo:
@@ -1069,7 +1116,8 @@ def main():
         else:
             choice = start_menu()
             if choice == "learn":
-                run_tutorial()
+                if run_tutorial() != "quit":
+                    run_story(args.seed)     # straight into the real thing
             elif choice == "play":
                 run_story(args.seed)
     finally:

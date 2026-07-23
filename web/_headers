@@ -1,0 +1,10 @@
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+
+# Pyodide's wasm and stdlib are large and content-addressed by version, so let
+# the browser keep them. index.html stays uncached so deploys take effect.
+/py/*
+  Cache-Control: public, max-age=3600
+/index.html
+  Cache-Control: no-cache

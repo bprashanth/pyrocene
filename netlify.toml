@@ -1,0 +1,13 @@
+[build]
+  base = "."
+  publish = "web"
+  command = "bash web/build.sh"
+
+# Belt and braces: web/_headers already sets these, but keeping them here means
+# the isolation survives someone editing the publish directory by hand.
+# SharedArrayBuffer, and therefore the game's blocking stdin, needs both.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
