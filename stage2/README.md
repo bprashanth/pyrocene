@@ -88,6 +88,20 @@ keeps guessing and lantana can lie about it.
 Every line the players see is in `stage2/text/`. Grep the sentence, edit it,
 restart. No Python involved.
 
+## Changing how it looks
+
+The projector draws the terminal board by default. `stage2/maps/` holds six
+other cartographic treatments, and any of them can drive a whole game:
+
+```bash
+python3 -m stage2.maps.gallery      # build the comparison page, then open
+                                    # stage2/maps/out/gallery.html
+STAGE2_STYLE=drawn python3 -m stage2.server
+```
+
+See `stage2/maps/README.md`. Nothing there changes the game or the shipped
+board; `STAGE2_STYLE` defaults to `ansi`.
+
 ## Changing the game
 
 Everything tunable is in `stage2/config.py`.

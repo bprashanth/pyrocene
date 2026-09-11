@@ -1,123 +1,167 @@
 """Terrain: what it would look like from above.
 
-Layered greens with texture, water with depth, relief shading from a low sun.
-Lantana reads as a sickly bloom over the canopy rather than a flat colour, which
-is closer to how an invasion actually looks on imagery.
+The first pass was pretty and useless: a soft purple blur on a noisy green, and
+the room could not tell canopy from weed. This one keeps the imagery feel but
+buys back the contrast, because on a projector in a bright room contrast is the
+only thing that survives.
 """
 from __future__ import annotations
 from . import base
-from .geom import region_path
+from .geom import coast, band_svg
 
 NAME = "terrain"
-BLURB = "Naturalistic, like imagery from above."
+BLURB = "Imagery from above, with the contrast a projector needs."
 
-SKY = "#080b0e"
-CANOPY = "#1f3d24"
-CANOPY_HI = "#2d5531"
-SCRUB = "#3f5a2e"
-WATER_D = "#10293d"
-WATER_L = "#1d4c6b"
-SAND = "#6b5c3f"
-LANT = "#8f5ea8"
-LANT_HOT = "#b06fc4"
-FIRE = "#ff5a1f"
-TRENCH = "#d8cba6"
-ROOF = "#d9cfc0"
-TEXT = "#cfd8d2"
-DIM = "#69786f"
+SKY = "#070a0c"
+CANOPY = "#1b3a22"
+CANOPY_HI = "#2a5531"
+CANOPY_LO = "#12281a"
+SCRUB = "#5d7a3a"
+WATER_D = "#0d2436"
+WATER_L = "#215b80"
+SAND = "#7a6944"
+LANT = "#a97fc0"
+LANT_HI = "#cfa8e0"
+LANT_LO = "#6d4585"
+FIRE = "#ff5a18"
+EMBER = "#ffd06a"
+TRENCH = "#e6dcc0"
+ROOF = "#f2e9d8"
+TEXT = "#d3ddd6"
+DIM = "#6e7f75"
 
 CSS = """
-.lab{font-size:13px;letter-spacing:.22em;font-weight:700}
-.pct{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-.ttl{font-size:15px;letter-spacing:.38em;font-weight:800}
-.rnd{font-size:15px;letter-spacing:.1em;font-weight:600}
+.ttl{font-size:16px;letter-spacing:.4em;font-weight:800}
+.rnd{font-size:14px;letter-spacing:.14em;font-weight:600}
+.lab{font-size:12px;letter-spacing:.24em;font-weight:700}
+.pct{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
 .leg{font-size:14px;font-weight:600}
-.note{font-size:19px;font-weight:500}
+.note{font-size:21px;font-weight:500}
 """
 
 DEFS = f'''
 <filter id="canopyTex" x="0" y="0" width="100%" height="100%">
-  <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="4" seed="11" result="n"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="11" result="n"/>
   <feColorMatrix in="n" type="saturate" values="0" result="g"/>
-  <feComponentTransfer in="g" result="a"><feFuncA type="linear" slope="0.22"/></feComponentTransfer>
-  <feComposite in="a" in2="SourceGraphic" operator="atop"/>
+  <feComponentTransfer in="g"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
 </filter>
-<filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
-<filter id="softer"><feGaussianBlur stdDeviation="16"/></filter>
-<linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+<filter id="scrubTex" x="0" y="0" width="100%" height="100%">
+  <feTurbulence type="turbulence" baseFrequency="0.5" numOctaves="3" seed="23" result="n"/>
+  <feColorMatrix in="n" type="saturate" values="0"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.75"/></feComponentTransfer>
+</filter>
+<filter id="glow"><feGaussianBlur stdDeviation="14"/></filter>
+<filter id="shade"><feGaussianBlur stdDeviation="5"/></filter>
+<linearGradient id="wg" x1="0" y1="0" x2="0.2" y2="1">
   <stop offset="0" stop-color="{WATER_L}"/><stop offset="1" stop-color="{WATER_D}"/>
 </linearGradient>
-<radialGradient id="fg"><stop offset="0" stop-color="#fff3c4"/>
-  <stop offset=".45" stop-color="{FIRE}"/><stop offset="1" stop-color="#8c1d05" stop-opacity=".1"/>
+<radialGradient id="fireg"><stop offset="0" stop-color="#fff6d0"/>
+  <stop offset=".4" stop-color="{EMBER}"/><stop offset="1" stop-color="{FIRE}" stop-opacity="0"/>
 </radialGradient>
 '''
 
 
 def render(scene) -> str:
-    x0, y0, u = base.board_box(scene)
-    p = lambda c, r=0.42: region_path(c, scene.cols, scene.rows, u, r, x0, y0)
-    op = 0.3 if scene.haze else 1.0
-    b = [f'<defs>{DEFS}</defs>']
-    b.append(f'<rect x="{x0}" y="{y0}" width="{u*scene.cols}" height="{u*scene.rows}" fill="{CANOPY}"/>')
-    b.append(f'<g opacity="{op}">')
-    # canopy variation: hills catch the light, low ground is darker
-    if scene.hill:
-        b.append(f'<path d="{p(scene.hill, 0.46)}" fill="{CANOPY_HI}" filter="url(#soft)" fill-rule="evenodd"/>')
-        b.append(f'<path d="{p(scene.hill, 0.46)}" fill="none" stroke="#0a1a0e" stroke-width="{u*0.18:.1f}" '
-                 f'filter="url(#soft)" opacity=".5" transform="translate({u*0.18:.1f},{u*0.22:.1f})" fill-rule="evenodd"/>')
-    b.append(f'<path d="{p(scene.of("bare"), 0.4)}" fill="{SAND}" fill-rule="evenodd"/>')
-    b.append(f'<path d="{p(scene.of("water"), 0.46)}" fill="url(#wg)" fill-rule="evenodd"/>')
-    b.append(f'<path d="{p(scene.of("water"), 0.46)}" fill="none" stroke="#3e7ea3" stroke-width="1.6" '
-             f'opacity=".7" fill-rule="evenodd"/>')
-    b.append(f'<rect x="{x0}" y="{y0}" width="{u*scene.cols}" height="{u*scene.rows}" '
-             f'fill="{CANOPY}" filter="url(#canopyTex)" opacity=".55"/>')
-    b.append("</g>")
+    x0, y0, u = base.board_box(scene, top=118, bottom=132)
+    W, Hh = u * scene.cols, u * scene.rows
+    hazed = scene.haze
 
+    def nat(cells, wobble=0.18, seed=11, scale=4):
+        return coast(cells, scene.cols, scene.rows, u, scale, wobble, x0, y0, seed)
+
+    B = [f"<defs>{DEFS}<clipPath id=\"bd\"><rect x=\"{x0}\" y=\"{y0}\" width=\"{W}\" "
+         f"height=\"{Hh}\" rx=\"3\"/></clipPath></defs>", '<g clip-path="url(#bd)">']
+    B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" fill="{CANOPY}"/>')
+
+    ghost = 0.3 if hazed else 1.0
+    B.append(f'<g opacity="{ghost}">')
+    # relief: lit slopes and a cast shadow, which is what makes imagery read 3D
+    if scene.hill:
+        d = nat(scene.hill, 0.2, 53)
+        B.append(f'<path d="{d}" fill="{CANOPY_LO}" filter="url(#shade)" fill-rule="evenodd" '
+                 f'transform="translate({u*0.22:.1f},{u*0.26:.1f})"/>')
+        B.append(f'<path d="{d}" fill="{CANOPY_HI}" fill-rule="evenodd"/>')
+    # canopy grain over everything green
+    B.append(f'<g opacity=".22" clip-path="url(#bd)">'
+             f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" filter="url(#canopyTex)"/></g>')
+    bare = scene.of("bare")
+    if bare:
+        B.append(f'<path d="{nat(bare, 0.2, 41)}" fill="{SAND}" fill-rule="evenodd"/>')
+    water = scene.of("water")
+    if water:
+        d = nat(water, 0.13, 29)
+        B.append(f'<path d="{d}" fill="url(#wg)" fill-rule="evenodd"/>')
+        B.append(f'<path d="{d}" fill="none" stroke="#4e9ec4" stroke-width="1.4" '
+                 f'opacity=".55" fill-rule="evenodd"/>')
+    B.append("</g>")
+
+    # --- lantana: a pale bloom with its own texture, not a tinted blur -----
     lant = scene.of("lantana")
     if lant:
-        o = 1.0 if not scene.haze else 0.4
+        o = 1.0 if not hazed else 0.4
         thick = {i for i in lant if scene.stage.get(i, 1) >= 3}
-        b.append(f'<g opacity="{o}">')
-        b.append(f'<path d="{p(lant, 0.46)}" fill="{LANT}" filter="url(#soft)" opacity=".85" fill-rule="evenodd"/>')
-        b.append(f'<path d="{p(lant, 0.44)}" fill="{LANT}" fill-rule="evenodd"/>')
+        d = nat(lant, 0.22, 67)
+        B.append(f'<g opacity="{o}">')
+        B.append(f'<path d="{d}" fill="{LANT_LO}" filter="url(#shade)" fill-rule="evenodd" '
+                 f'transform="translate({u*0.14:.1f},{u*0.18:.1f})"/>')
+        B.append(f'<path d="{d}" fill="{LANT}" fill-rule="evenodd"/>')
         if thick:
-            b.append(f'<path d="{p(thick, 0.42)}" fill="{LANT_HOT}" fill-rule="evenodd"/>')
-        b.append(f'<path d="{p(lant, 0.44)}" fill="{CANOPY}" filter="url(#canopyTex)" opacity=".3" fill-rule="evenodd"/>')
-        b.append("</g>")
+            B.append(f'<path d="{nat(thick, 0.24, 71)}" fill="{LANT_HI}" fill-rule="evenodd"/>')
+        B.append(f'<clipPath id="lc"><path d="{d}" fill-rule="evenodd"/></clipPath>'
+                 f'<g clip-path="url(#lc)" opacity=".4">'
+                 f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" filter="url(#scrubTex)"/></g>')
+        B.append("</g>")
     if scene.halo:
-        b.append(f'<path d="{p(scene.halo, 0.46)}" fill="{LANT}" opacity=".28" filter="url(#soft)" fill-rule="evenodd"/>')
+        B.append(f'<path d="{nat(scene.halo, 0.2, 83)}" fill="{LANT}" opacity=".3" fill-rule="evenodd"/>')
+
+    def bd(cells, colour, width, dash=None, opacity=1.0, anim=None):
+        return band_svg(cells, scene.cols, scene.rows, u, x0, y0, colour, width,
+                        dash, opacity, anim)
+
+    if scene.fireline:
+        B.append(bd(scene.fireline, "#3a3428", max(10, u * 0.6)))
+        B.append(bd(scene.fireline, TRENCH, max(6, u * 0.36)))
 
     for i in scene.of("village"):
         r, c = scene.rc(i)
         cx, cy = x0 + (c + 0.5) * u, y0 + (r + 0.5) * u
-        for dx, dy, s in ((-0.2, -0.1, 0.2), (0.14, -0.18, 0.16), (0.02, 0.16, 0.18), (0.26, 0.1, 0.14)):
-            b.append(f'<rect x="{cx+dx*u:.1f}" y="{cy+dy*u:.1f}" width="{s*u:.1f}" '
-                     f'height="{s*u*0.8:.1f}" fill="{ROOF}" opacity=".95"/>')
-    if scene.fireline:
-        b.append(f'<path d="{p(scene.fireline, 0.36)}" fill="{TRENCH}" fill-rule="evenodd"/>')
-        b.append(f'<path d="{p(scene.fireline, 0.36)}" fill="none" stroke="#8d7f5e" stroke-width="1.6" fill-rule="evenodd"/>')
-    if scene.fire:
-        b.append(f'<path d="{p(scene.fire, 0.44)}" fill="url(#fg)" filter="url(#softer)" fill-rule="evenodd"/>')
-        b.append(f'<path d="{p(scene.fire, 0.4)}" fill="{FIRE}" fill-rule="evenodd"/>')
-        b.append(f'<path d="{p(scene.fire, 0.36)}" fill="#ffd06a" opacity=".55" fill-rule="evenodd"/>')
-    if scene.held:
-        b.append(f'<path d="{p(scene.held, 0.34)}" fill="none" stroke="#ffffff" '
-                 f'stroke-width="{max(4, u*0.22):.1f}" fill-rule="evenodd">'
-                 f'<animate attributeName="opacity" values="1;.35;1" dur=".9s" repeatCount="indefinite"/></path>')
-    if scene.focus:
-        b.append(f'<path d="{p(scene.focus, 0.44)}" fill="none" stroke="#fff" stroke-width="3" fill-rule="evenodd"/>')
+        B.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{u*0.46:.1f}" fill="{SAND}" opacity=".55"/>')
+        for dx, dy, w in ((-0.22, -0.14, 0.2), (0.06, -0.2, 0.16), (-0.06, 0.08, 0.18), (0.2, 0.0, 0.15)):
+            B.append(f'<rect x="{cx+dx*u:.1f}" y="{cy+dy*u:.1f}" width="{w*u:.1f}" '
+                     f'height="{w*u*0.75:.1f}" fill="{ROOF}"/>')
 
-    head = (f'<text x="{base.PAD}" y="62" class="ttl" fill="#bfe0c4">P Y R O C E N E</text>'
-            f'<text x="{base.PAD}" y="92" class="rnd" fill="{DIM}">NIGHT {scene.round} OF {scene.max_rounds}</text>')
-    bar = base.health_bar(base.W - base.PAD - 340, 52, 250, scene.health,
-                          DIM, "#4fb069", "#d2a531", "#ff5a1f", "#152119")
-    leg = base.legend(base.PAD, base.H - 86, [
-        (f'<rect width="20" height="20" rx="4" fill="{CANOPY_HI}"/>', "forest"),
-        (f'<rect width="20" height="20" rx="4" fill="{LANT}"/>', "lantana"),
-        (f'<rect width="20" height="20" rx="4" fill="{FIRE}"/>', "fire"),
-        (f'<rect width="20" height="20" rx="4" fill="{TRENCH}"/>', "fire line"),
-        (f'<rect width="20" height="20" rx="4" fill="{ROOF}"/>', "homes"),
-    ], TEXT, gap=175)
-    note = (f'<text x="{base.PAD}" y="{base.H-34}" class="note" fill="{TEXT}">{base.esc(scene.note)}</text>'
-            if scene.note else "")
-    return base.shell("".join(b) + head + bar + leg + note, CSS, SKY)
+    if scene.fire:
+        d = nat(scene.fire, 0.24, 97)
+        B.append(f'<path d="{d}" fill="url(#fireg)" filter="url(#glow)" fill-rule="evenodd"/>')
+        B.append(f'<path d="{d}" fill="{FIRE}" fill-rule="evenodd"/>')
+        B.append(f'<path d="{nat(scene.fire, 0.28, 103)}" fill="{EMBER}" opacity=".6" fill-rule="evenodd"/>')
+    if scene.held:
+        B.append(bd(scene.held, "#ffffff", max(15, u * 0.9), opacity=0.3, anim=".12;.5;.12"))
+        B.append(bd(scene.held, "#9fe8ff", max(5, u * 0.3)))
+    if scene.focus:
+        B.append(f'<path d="{nat(scene.focus, 0.0, 3, 3)}" fill="none" stroke="#fff" '
+                 f'stroke-width="3.2" fill-rule="evenodd"/>')
+    B.append("</g>")
+    B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" rx="3" fill="none" '
+             f'stroke="#1d2a24" stroke-width="1.5"/>')
+
+    head = (f'<text x="{base.PAD}" y="50" class="ttl" fill="#a9d6b4">P Y R O C E N E</text>'
+            f'<line x1="{base.PAD}" y1="62" x2="{base.PAD+252}" y2="62" stroke="#a9d6b4" '
+            f'stroke-width="1.4" opacity=".4"/>'
+            f'<text x="{base.PAD}" y="86" class="rnd" fill="{DIM}">'
+            f'NIGHT {scene.round} OF {scene.max_rounds}</text>')
+    bar = base.health_bar(base.W - base.PAD - 330, 44, 240, scene.health,
+                          DIM, "#4fc274", "#d2a531", FIRE, "#15211a")
+    sw = lambda f: f'<rect width="20" height="20" rx="4" fill="{f}"/>'
+    leg = base.legend(base.PAD, base.H - 78, [
+        (sw(CANOPY_HI), "forest"),
+        (sw(LANT), "lantana"),
+        (sw(LANT_HI), "thick lantana"),
+        (sw(FIRE), "fire"),
+        (f'<line x1="0" y1="10" x2="20" y2="10" stroke="{TRENCH}" stroke-width="7"/>', "fire line"),
+        (sw(WATER_L), "water"),
+        (sw(ROOF), "homes"),
+    ], TEXT, gap=150)
+    note = (f'<text x="{base.PAD}" y="{base.H-28}" class="note" fill="{TEXT}">'
+            f'{base.esc(scene.note)}</text>' if scene.note else "")
+    return base.shell("".join(B) + head + bar + leg + note, CSS, SKY)

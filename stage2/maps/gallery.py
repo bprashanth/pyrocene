@@ -123,35 +123,66 @@ def build(styles, keys=None, real=False):
             mods.append(load(s))
         except ModuleNotFoundError:
             print(f"  (no style {s} yet)")
+    # Judge a style across situations, not a situation across styles: a map that
+    # handles a quiet night and a running fire equally well is the one to ship.
+    NOTES = {
+        "poster": "Closest to a printed city map. Gold reads as fuel and escalates "
+                  "into red, which is the whole causal story in two colours.",
+        "drawn": "Fastest to read. Houses and hatching need no legend. Warm, and "
+                 "it looks like something an NGO would put in a report.",
+        "signal": "The most legible and the plainest. Good if the room is bright "
+                  "or the projector is poor. Does not feel like a landscape.",
+        "heat": "Risk rather than land. Shows where fire would run several nights "
+                "early. Better as a layer you can call up than as the base map.",
+        "terrain": "Imagery from above. Handsome, and the slowest to read: green "
+                   "against lilac is a weaker signal than green against gold.",
+        "iso": "Height is fuel load, which makes a thick stand physical. Costs "
+               "half the canvas to the angle and makes directions hard to name.",
+    }
+    order = ["opening", "showcase", "blocked", "focus"]
+    keys_present = [k for k in order if k in scenes] + [k for k in scenes if k not in order]
     rows = []
-    for key, scene in scenes.items():
+    for m in mods:
         cells = []
-        for m in mods:
+        for key in keys_present:
+            scene = scenes[key]
             try:
                 svg = m.render(scene)
-            except Exception as e:                      # a broken style must not
-                svg = f"<p style='color:#f66'>{m.NAME}: {e}</p>"   # hide the rest
-            path = os.path.join(OUT, f"{m.NAME}-{key}.svg")
+            except Exception as e:
+                svg = f"<p style='color:#f66;padding:20px'>{m.NAME}: {e}</p>"
             if svg.startswith("<svg"):
-                open(path, "w").write(svg)
-            cells.append(f'<figure><figcaption>{m.NAME}'
-                         f'<span>{getattr(m, "BLURB", "")}</span></figcaption>'
+                open(os.path.join(OUT, f"{m.NAME}-{key}.svg"), "w").write(svg)
+            cells.append(f'<figure><figcaption>{key}</figcaption>'
                          f'<div class="frame">{svg}</div></figure>')
-        rows.append(f'<section><h2>{key}</h2><div class="row">{"".join(cells)}</div></section>')
+        rows.append(f'<section><h2>{m.NAME}<small>{getattr(m, "BLURB", "")}</small></h2>'
+                    f'<p class="note">{NOTES.get(m.NAME, "")}</p>'
+                    f'<p class="run">STAGE2_STYLE={m.NAME} python3 -m stage2.server</p>'
+                    f'<div class="row">{"".join(cells)}</div></section>')
     html = f"""<!doctype html><meta charset="utf-8"><title>Pyrocene map styles</title>
 <style>
- body{{margin:0;background:#0a0d12;color:#e6edf5;font:15px/1.5 Inter,system-ui,sans-serif}}
- h1{{margin:0;padding:22px 28px;font-size:19px;letter-spacing:.2em}}
- section{{padding:6px 28px 26px}}
- h2{{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#7b8a9c;margin:22px 0 10px}}
- .row{{display:flex;gap:20px;flex-wrap:wrap}}
- figure{{margin:0;background:#11151c;border:1px solid #1e2530;border-radius:12px;overflow:hidden}}
- figcaption{{padding:9px 14px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
-   color:#9fb0c4;border-bottom:1px solid #1e2530;display:flex;gap:14px;align-items:baseline}}
- figcaption span{{text-transform:none;letter-spacing:0;color:#5f6e80;font-size:12px}}
- .frame{{width:640px}} .frame svg{{width:100%;height:auto;display:block}}
+ body{{margin:0;background:#0a0d12;color:#e6edf5;font:15px/1.6 Inter,system-ui,sans-serif}}
+ header{{padding:26px 30px 8px;border-bottom:1px solid #1b2230}}
+ h1{{margin:0;font-size:19px;letter-spacing:.24em}}
+ header p{{margin:8px 0 0;color:#7f8ea3;max-width:70ch}}
+ section{{padding:22px 30px 30px;border-bottom:1px solid #151b25}}
+ h2{{font-size:15px;letter-spacing:.22em;text-transform:uppercase;margin:0 0 4px;
+    display:flex;gap:16px;align-items:baseline}}
+ h2 small{{text-transform:none;letter-spacing:0;color:#66768a;font-size:13.5px;font-weight:400}}
+ .note{{margin:0 0 8px;color:#9db0c6;max-width:78ch}}
+ .run{{margin:0 0 16px;font:12.5px ui-monospace,monospace;color:#5d6b7e}}
+ .row{{display:flex;gap:16px;overflow-x:auto;padding-bottom:6px}}
+ figure{{margin:0;background:#11151c;border:1px solid #1e2530;border-radius:10px;
+   overflow:hidden;flex:0 0 auto}}
+ figcaption{{padding:7px 12px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+   color:#8497ac;border-bottom:1px solid #1e2530}}
+ .frame{{width:520px}} .frame svg{{width:100%;height:auto;display:block}}
 </style>
+<header>
 <h1>PYROCENE - STAGE 2 MAP STYLES</h1>
+<p>The same four situations drawn by each style. Clarity first: can a room tell
+forest from lantana, and see the fire meet the trench, from the back row. Run any
+of them with the command under its name; the projector takes either kind of frame.</p>
+</header>
 {''.join(rows)}"""
     path = os.path.join(OUT, "gallery.html")
     open(path, "w").write(html)

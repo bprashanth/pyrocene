@@ -269,20 +269,35 @@ def links(cells, cols: int, rows: int, diagonal: bool = True):
 
     A trench dug across a real map is rarely a straight row: it steps
     diagonally, and drawn cell by cell it reads as scattered chips rather than
-    as one barrier. Joining neighbouring centres and stroking the result with
-    round caps draws any arrangement as a single connected band.
+    as one barrier. Joining neighbouring centres and stroking the result draws
+    any arrangement as a single connected band.
+
+    Diagonals are only bridged where there is no way round the corner. Bridging
+    them everywhere cuts every elbow into a triangle, which on a projector looks
+    like a piece of geometry nobody dug.
     """
     cs = set(cells)
     centres = []
     segs = []
-    steps = ((0, 1), (1, 0), (1, 1), (1, -1)) if diagonal else ((0, 1), (1, 0))
     for i in cs:
         r, c = divmod(i, cols)
         centres.append((c + 0.5, r + 0.5))
-        for dr, dc in steps:
+        for dr, dc in ((0, 1), (1, 0)):
             rr, cc = r + dr, c + dc
             if 0 <= rr < rows and 0 <= cc < cols and rr * cols + cc in cs:
                 segs.append(((c + 0.5, r + 0.5), (cc + 0.5, rr + 0.5)))
+        if not diagonal:
+            continue
+        for dr, dc in ((1, 1), (1, -1)):
+            rr, cc = r + dr, c + dc
+            if not (0 <= rr < rows and 0 <= cc < cols) or rr * cols + cc not in cs:
+                continue
+            # the two cells that would form an elbow between them
+            elbow_a = r * cols + cc
+            elbow_b = rr * cols + c
+            if elbow_a in cs or elbow_b in cs:
+                continue                      # there is a way round; do not cut it
+            segs.append(((c + 0.5, r + 0.5), (cc + 0.5, rr + 0.5)))
     return centres, segs
 
 
