@@ -21,10 +21,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .game import Game, ACTIONS
 from . import frames
+from .maps import render as mapstyle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(HERE, "static")
 FAST = os.environ.get("STAGE2_FAST") == "1"
+# Which map the projector draws. "ansi" is the terminal board the game
+# shipped with; the rest live in stage2/maps and are drawn as SVG.
+STYLE = os.environ.get("STAGE2_STYLE", "ansi")
 
 
 class Room:
@@ -42,7 +46,8 @@ class Room:
         self.steps: list = []
         self.cursor = 0
         self.mode = "idle"            # idle | explain | playing
-        self.frame = frames.render_lobby(0, self.game.seed)
+        self.frame = (frames.render_lobby(0, self.game.seed) if STYLE == "ansi"
+                      else mapstyle.lobby_svg(0, STYLE))
 
     # --- sse ---------------------------------------------------------------
     def subscribe(self, channel: str, token: str) -> queue.Queue:
@@ -77,6 +82,7 @@ class Room:
         d["current"] = {"title": cur["title"], "text": cur["text"]} if cur else None
         d["actions"] = list(ACTIONS)
         d["fast"] = FAST
+        d["style"] = STYLE
         return d
 
     def me_payload(self, p):
@@ -89,20 +95,33 @@ class Room:
         self.frame = frame
         self.push("projector", "frame", dict({"frame": frame}, **extra))
 
+    # --- drawing, in whichever style the room is running -------------------
+    def draw_frame(self, beat) -> str:
+        if STYLE == "ansi":
+            return frames.render_beat(beat)
+        return mapstyle.frame_svg(beat, STYLE)
+
+    def draw_card(self, step) -> str:
+        if STYLE == "ansi":
+            return frames.render_card(step["title"], step["text"], self.game.view(),
+                                      step.get("cells"))
+        return mapstyle.card_svg(step["title"], step["text"], self.game.view(), STYLE)
+
     def show_card(self):
         step = self.steps[self.cursor]
         self.mode = "explain"
-        self.paint(frames.render_card(step["title"], step["text"], self.game.view(),
-                                      step.get("cells")), kind="card")
+        self.paint(self.draw_card(step), kind="card")
         self.broadcast_state()
 
     def show_map(self):
         self.mode = "idle"
         g = self.game
         if g.state:
-            self.paint(frames.render_beat(g._frame("settle", "")), kind="map")
-        else:
+            self.paint(self.draw_frame(g._frame("settle", "")), kind="map")
+        elif STYLE == "ansi":
             self.paint(frames.render_lobby(len(g.players), g.seed), kind="lobby")
+        else:
+            self.paint(mapstyle.lobby_svg(len(g.players), STYLE), kind="lobby")
         self.broadcast_state()
 
     def begin(self, steps: list):
@@ -122,7 +141,7 @@ class Room:
 
         def run():
             for f in step["beats"]:
-                self.paint(frames.render_beat(f), kind=f["kind"])
+                self.paint(self.draw_frame(f), kind=f["kind"])
                 if not FAST:
                     time.sleep(f["hold_ms"] / 1000)
             with self.lock:
@@ -227,9 +246,8 @@ class Handler(BaseHTTPRequestHandler):
                 out.append({"key": st["key"], "title": st["title"], "text": st["text"],
                             "cells": st["cells"],
                             "kinds": [b["kind"] for b in st["beats"]],
-                            "card": frames.render_card(st["title"], st["text"],
-                                                       ROOM.game.view(), st["cells"]),
-                            "frames": [frames.render_beat(b) for b in st["beats"]],
+                            "card": ROOM.draw_card(st),
+                            "frames": [ROOM.draw_frame(b) for b in st["beats"]],
                             "fire": [b["fire"] for b in st["beats"]],
                             "held": [b.get("held") or [] for b in st["beats"]],
                             "hold_ms": [b["hold_ms"] for b in st["beats"]]})
@@ -354,8 +372,9 @@ def main():
     print(f"  players   http://{ip}:{port}/")
     print(f"  game master  http://{ip}:{port}/gm")
     print(f"  projector    http://{ip}:{port}/projector")
+    print(f"  map style   {STYLE}")
     if FAST:
-        print("  (fast mode: no beat delays)")
+        print("  (fast mode: no animation delays)")
     sys.stdout.flush()
     try:
         srv.serve_forever()

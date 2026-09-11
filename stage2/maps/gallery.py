@@ -20,7 +20,9 @@ from .scenes import all_scenes
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 
-STYLES = ["poster", "signal", "heat", "drawn", "terrain", "iso"]
+# The SVG styles. "ansi" is the terminal board the game shipped with; it is a
+# server option, not a map module, so it is not in the gallery.
+STYLES = ["poster", "drawn", "signal", "heat", "terrain", "iso"]
 
 
 def load(name):

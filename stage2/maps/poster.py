@@ -8,7 +8,7 @@ trench never looks like a river.
 """
 from __future__ import annotations
 from . import base
-from .geom import region_path, coast
+from .geom import region_path, coast, band_svg
 
 NAME = "poster"
 BLURB = "Flat vector. Gold is fuel, red is fuel that caught."
@@ -126,11 +126,15 @@ def render(scene) -> str:
                  f'stroke-width="2.2" stroke-dasharray="6 6" opacity=".9" fill-rule="evenodd"/>')
 
     # --- the trench, one dug band whatever shape it makes ------------------
+    def bd(cells, colour, width, dash=None, opacity=1.0, anim=None):
+        return band_svg(cells, scene.cols, scene.rows, u, x0, y0, colour, width,
+                        dash, opacity, anim)
+
     if scene.fireline:
-        wide = max(8, u * 0.5)
-        B.append(band(scene.fireline, scene, x0, y0, u, mute(TRENCH_EARTH), wide))
-        B.append(band(scene.fireline, scene, x0, y0, u, mute(TRENCH), wide * 0.3,
-                      dash=f"{u*0.24:.0f} {u*0.18:.0f}"))
+        wide = max(9, u * 0.56)
+        B.append(bd(scene.fireline, mute(TRENCH_EARTH), wide))
+        B.append(bd(scene.fireline, mute(TRENCH), wide * 0.28,
+                    dash=f"{u*0.24:.0f} {u*0.18:.0f}"))
 
     # --- homes: a cleared patch with roofs on it, not a floating chip -------
     vill = scene.of("village")
@@ -154,9 +158,8 @@ def render(scene) -> str:
 
     # the moment the trench earns itself
     if scene.held:
-        B.append(band(scene.held, scene, x0, y0, u, "#ffffff", max(16, u * 0.95),
-                      opacity=0.22, anim=True))
-        B.append(band(scene.held, scene, x0, y0, u, TRENCH, max(6, u * 0.34)))
+        B.append(bd(scene.held, "#ffffff", max(16, u * 0.95), opacity=0.2, anim=".08;.4;.08"))
+        B.append(bd(scene.held, TRENCH, max(5, u * 0.3)))
 
     if scene.focus:
         d = cut(scene.focus, 0.24)
@@ -188,47 +191,6 @@ def render(scene) -> str:
     note = (f'<text x="{base.PAD}" y="{base.H - 28}" class="note" fill="{TEXT}">'
             f'{base.esc(scene.note)}</text>' if scene.note else "")
     return base.shell("".join(B) + head + bar + leg + note, CSS, INK)
-
-
-def _links(cells, scene):
-    """Every adjacent pair of cells, as centre-to-centre segments.
-
-    Drawing a trench as a chained polyline only works when the cells happen to
-    form a line. A trench that hugs a village is an arc two cells thick, and the
-    chain walked it into a zigzag. Segments plus round caps draw any shape as one
-    connected band.
-    """
-    pts, segs = {}, []
-    for i in cells:
-        r, c = scene.rc(i)
-        pts[i] = (c + 0.5, r + 0.5)
-    for i in cells:
-        r, c = scene.rc(i)
-        for dr, dc in ((0, 1), (1, 0)):
-            j = (r + dr) * scene.cols + (c + dc)
-            if 0 <= r + dr < scene.rows and 0 <= c + dc < scene.cols and j in cells:
-                segs.append((pts[i], pts[j]))
-    return pts.values(), segs
-
-
-def band(cells, scene, x0, y0, u, colour, width, dash=None, opacity=1.0, anim=False):
-    """A connected band through a set of cells, whatever shape they make."""
-    if not cells:
-        return ""
-    dots, segs = _links(cells, scene)
-    d = f' stroke-dasharray="{dash}"' if dash else ""
-    a = ('<animate attributeName="opacity" values=".12;.45;.12" dur="1s" '
-         'repeatCount="indefinite"/>') if anim else ""
-    out = [f'<g stroke="{colour}" stroke-width="{width:.1f}" stroke-linecap="round" '
-           f'fill="none" opacity="{opacity}"{d}>{a}']
-    for (ax, ay), (bx, by) in segs:
-        out.append(f'<line x1="{x0+ax*u:.1f}" y1="{y0+ay*u:.1f}" '
-                   f'x2="{x0+bx*u:.1f}" y2="{y0+by*u:.1f}"/>')
-    for (cx, cy) in dots:
-        out.append(f'<line x1="{x0+cx*u:.1f}" y1="{y0+cy*u:.1f}" '
-                   f'x2="{x0+cx*u:.1f}" y2="{y0+cy*u:.1f}"/>')
-    out.append("</g>")
-    return "".join(out)
 
 
 def _runs(cells, scene):

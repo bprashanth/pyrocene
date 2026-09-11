@@ -7,7 +7,7 @@ always draws the same way and nothing jitters between frames of an animation.
 """
 from __future__ import annotations
 from . import base
-from .geom import region_path, coast
+from .geom import region_path, coast, band_svg
 
 NAME = "drawn"
 BLURB = "Ink and hatching on paper. The one a room reads fastest."
@@ -130,12 +130,19 @@ def render(scene) -> str:
                  f'stroke-width="2" stroke-dasharray="7 6" opacity=".85" filter="url(#rough)" '
                  f'fill-rule="evenodd"/>')
 
-    # --- the trench: turned earth with a dashed centre ---------------------
+    # --- the trench: one band of turned earth ------------------------------
+    # Drawn cell by cell a real trench reads as scattered chips, because it
+    # steps diagonally across the map rather than running straight.
+    def bd(cells, colour, width, dash=None, opacity=1.0, anim=None):
+        return band_svg(cells, scene.cols, scene.rows, u, x0, y0, colour, width,
+                        dash, opacity, anim)
+
     if scene.fireline:
-        d = cut(scene.fireline, 0.16)
-        B.append(f'<path d="{d}" fill="{DUG}" filter="url(#rough)" fill-rule="evenodd"/>')
-        B.append(f'<path d="{d}" fill="none" stroke="{TRENCH}" stroke-width="2.6" '
-                 f'stroke-dasharray="{u*0.3:.0f} {u*0.2:.0f}" filter="url(#rough)" fill-rule="evenodd"/>')
+        B.append(f'<g filter="url(#rough)">')
+        B.append(bd(scene.fireline, DUG, max(10, u * 0.62)))
+        B.append(bd(scene.fireline, TRENCH, max(2.6, u * 0.09),
+                    dash=f"{u*0.28:.0f} {u*0.2:.0f}"))
+        B.append("</g>")
 
     # --- homes --------------------------------------------------------------
     for i in scene.of("village"):
@@ -156,10 +163,8 @@ def render(scene) -> str:
         B.append(f'<path d="{d}" fill="none" stroke="{FIRE_INK}" stroke-width="2.6" '
                  f'filter="url(#rougher)" fill-rule="evenodd"/>')
     if scene.held:
-        d = cut(scene.held, 0.16)
-        B.append(f'<path d="{d}" fill="none" stroke="{TRENCH}" stroke-width="{max(6, u*0.34):.1f}" '
-                 f'stroke-linejoin="round" filter="url(#rough)" fill-rule="evenodd">'
-                 f'<animate attributeName="opacity" values="1;.35;1" dur=".95s" repeatCount="indefinite"/></path>')
+        B.append(bd(scene.held, TRENCH, max(13, u * 0.8), opacity=0.28, anim=".12;.45;.12"))
+        B.append(bd(scene.held, TRENCH, max(4, u * 0.22)))
     if scene.focus:
         d = cut(scene.focus, 0.2)
         B.append(f'<path d="{d}" fill="{PAPER}" opacity=".35" filter="url(#rough)" fill-rule="evenodd"/>')

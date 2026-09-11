@@ -262,3 +262,48 @@ def coast(cells, cols: int, rows: int, unit: float, scale: int = 4,
         return ""
     return " ".join(smooth_path(lp, unit / scale, ox, oy, smoothing)
                     for lp in outlines(fine, fcols, frows) if len(lp) > 5)
+
+
+def links(cells, cols: int, rows: int, diagonal: bool = True):
+    """Adjacent pairs of cells as centre-to-centre segments, plus every centre.
+
+    A trench dug across a real map is rarely a straight row: it steps
+    diagonally, and drawn cell by cell it reads as scattered chips rather than
+    as one barrier. Joining neighbouring centres and stroking the result with
+    round caps draws any arrangement as a single connected band.
+    """
+    cs = set(cells)
+    centres = []
+    segs = []
+    steps = ((0, 1), (1, 0), (1, 1), (1, -1)) if diagonal else ((0, 1), (1, 0))
+    for i in cs:
+        r, c = divmod(i, cols)
+        centres.append((c + 0.5, r + 0.5))
+        for dr, dc in steps:
+            rr, cc = r + dr, c + dc
+            if 0 <= rr < rows and 0 <= cc < cols and rr * cols + cc in cs:
+                segs.append(((c + 0.5, r + 0.5), (cc + 0.5, rr + 0.5)))
+    return centres, segs
+
+
+def band_svg(cells, cols: int, rows: int, unit: float, ox: float, oy: float,
+             colour: str, width: float, dash: str | None = None,
+             opacity: float = 1.0, anim: str | None = None,
+             diagonal: bool = True) -> str:
+    """One connected band through a set of cells, whatever shape they make."""
+    if not cells:
+        return ""
+    centres, segs = links(cells, cols, rows, diagonal)
+    d = f' stroke-dasharray="{dash}"' if dash else ""
+    a = (f'<animate attributeName="opacity" values="{anim}" dur="1s" '
+         f'repeatCount="indefinite"/>') if anim else ""
+    out = [f'<g stroke="{colour}" stroke-width="{width:.1f}" stroke-linecap="round" '
+           f'stroke-linejoin="round" fill="none" opacity="{opacity}"{d}>{a}']
+    for (ax, ay), (bx, by) in segs:
+        out.append(f'<line x1="{ox+ax*unit:.1f}" y1="{oy+ay*unit:.1f}" '
+                   f'x2="{ox+bx*unit:.1f}" y2="{oy+by*unit:.1f}"/>')
+    for (cx, cy) in centres:
+        out.append(f'<line x1="{ox+cx*unit:.1f}" y1="{oy+cy*unit:.1f}" '
+                   f'x2="{ox+cx*unit:.1f}" y2="{oy+cy*unit:.1f}"/>')
+    out.append("</g>")
+    return "".join(out)
