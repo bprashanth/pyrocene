@@ -64,6 +64,9 @@ Nothing needs fencing yet, so the lookout posts a forecast instead.
 [growth]
 Lantana spread into {n} more squares.
 
+[growth.one]
+Lantana spread into one more square.
+
 [growth.none]
 Lantana did not spread tonight.
 
@@ -73,6 +76,9 @@ No fire tonight.
 
 [fire.spark]
 A small fire starts in the lantana in the {dir}. It burns {n} squares and goes out.
+
+[fire.spark.one]
+A small fire starts in the lantana in the {dir}. It burns one square and goes out.
 
 [fire.sev2]
 A fire starts in the dense lantana in the {dir}. It runs through {n} squares before it dies.

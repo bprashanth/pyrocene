@@ -45,7 +45,7 @@
 <body>
 <div class="wrap">
   <div class="row" style="justify-content:space-between">
-    <h1>PYROCENE · game master</h1>
+    <h1>PYROCENE - game master</h1>
     <div class="row">
       <span id="phase" class="muted"></span>
       <a href="/projector" target="_blank" class="muted" style="font-size:13px">open projector ↗</a>
@@ -76,25 +76,44 @@
     <div id="forecast" class="hint"></div>
   </div>
 
+  <div id="onscreen" class="card" hidden>
+    <h2>On the projector</h2>
+    <p id="cardtitle" style="margin:0 0 4px;font-weight:700;color:var(--orange)"></p>
+    <p id="cardtext" style="margin:0 0 14px;color:var(--muted)"></p>
+    <button id="advance" class="primary">Show what happened</button>
+    <span id="playing" class="muted" hidden>playing...</span>
+    <p class="hint" id="stepsleft"></p>
+  </div>
+
   <div id="night" class="card" hidden>
-    <h2>This night</h2>
+    <h2>Night</h2>
+    <p class="hint">Run the night as you always do. If lantana took someone, mark
+      them in the table below, then finish the night. The room sees one change.</p>
+    <div class="row">
+      <span id="nightpick" class="muted">nobody marked - the ranger saved them</span>
+      <button id="finishnight" class="primary">Finish night</button>
+    </div>
+    <p class="hint" id="villagewarn" hidden style="color:var(--orange)">
+      Dense lantana is close to the homes. If fire reaches them the game is over.</p>
+  </div>
+
+  <div id="day" class="card" hidden>
+    <h2>Day</h2>
     <div class="row choice">
       <label><input type="radio" name="choice" value="hunt"><span>Hunt lantana</span></label>
       <label><input type="radio" name="choice" value="resilience"><span>Resilience</span></label>
-      <span id="actions" class="row" hidden>
-        <label><input type="radio" name="action" value="" checked><span>let the system pick</span></label>
-        <label><input type="radio" name="action" value="fireline"><span>fire line</span></label>
-        <label><input type="radio" name="action" value="water"><span>water</span></label>
-        <label><input type="radio" name="action" value="ews"><span>early warning</span></label>
-      </span>
     </div>
-    <p class="hint">Mark who was eliminated tonight in the table, pick the room's choice, then resolve.
-      The projector plays the night out.</p>
-    <div class="row">
-      <button id="resolve" class="primary">Resolve night</button>
-      <button id="replay">Replay last night</button>
-      <span id="playing" class="muted" hidden>projector is playing the night…</span>
+    <div id="huntbox" class="row" hidden>
+      <span id="votepick" class="muted">mark who the room voted out</span>
     </div>
+    <div id="actions" class="row" hidden>
+      <label><input type="radio" name="action" value="" checked><span>let the system pick</span></label>
+      <label><input type="radio" name="action" value="fireline"><span>fire line</span></label>
+      <label><input type="radio" name="action" value="water"><span>water</span></label>
+      <label><input type="radio" name="action" value="ews"><span>early warning</span></label>
+    </div>
+    <div style="height:10px"></div>
+    <button id="finishvote" class="primary">Finish vote</button>
   </div>
 
   <div class="card">
@@ -119,73 +138,95 @@
 <script>
   const $ = (s) => document.querySelector(s);
   let S = null;
+  // Fire and forget. The reply is a snapshot from before the projector finished
+  // animating, so rendering it would overwrite the live update that arrives on
+  // the event stream and leave the console looking stuck. The stream is the only
+  // thing that paints.
   async function post(path, body) {
     const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
                                    body: JSON.stringify(body || {}) });
-    const d = await r.json();
+    const d = await r.json().catch(() => ({}));
     $("#err").textContent = r.ok ? "" : (d.error || "error");
     return d;
   }
   function render(s) {
     S = s;
     const lobby = s.phase === "lobby";
-    $("#phase").textContent = s.phase === "lobby" ? "lobby" : s.phase === "ended" ? "game over" : "in play";
+    const busy = s.mode !== "idle";
+    $("#phase").textContent = lobby ? "lobby" : s.phase === "ended" ? "game over" : "in play";
     $("#lobby").hidden = !lobby;
     $("#game").hidden = lobby;
-    $("#night").hidden = s.phase !== "playing";
+    $("#onscreen").hidden = !s.current;
+    $("#night").hidden = lobby || s.phase !== "playing" || busy || s.step !== "night";
+    $("#day").hidden = lobby || s.phase !== "playing" || busy || s.step !== "day";
     $("#count").textContent = s.players.length;
     $("#round").textContent = s.round;
     $("#maxr").textContent = s.max_rounds;
     $("#health").textContent = s.health == null ? "" : s.health + "%";
-    $("#alive").textContent = s.phase === "lobby" ? "" :
-      `lantana ${s.alive.lantana} · natives ${s.alive.native} · ecologist ${s.alive.ecologist ? "in" : "out"} · ranger ${s.alive.ranger ? "in" : "out"}`;
+    $("#alive").textContent = lobby ? "" :
+      `lantana ${s.alive.lantana} - natives ${s.alive.native} - ecologist ${s.alive.ecologist ? "in" : "out"} - ranger ${s.alive.ranger ? "in" : "out"}`;
     $("#ending").textContent = s.ending ? s.ending.text : "";
-    $("#forecast").textContent = s.forecast ? `Forecast for night ${s.forecast.round}: ${s.forecast.level} fire, wind from the ${s.forecast.wind}` : "";
-    $("#playing").hidden = !s.playing;
-    $("#resolve").disabled = s.playing;
-    $("#replay").disabled = s.playing || !s.last || !s.last.length;
+    $("#forecast").textContent = s.forecast
+      ? `Forecast for night ${s.forecast.round}: ${s.forecast.level} fire, wind from the ${s.forecast.wind}` : "";
+    $("#villagewarn").hidden = !s.village_at_risk;
+
+    if (s.current) {
+      $("#cardtitle").textContent = s.current.title;
+      $("#cardtext").textContent = s.current.text;
+    }
+    $("#advance").hidden = s.mode !== "explain";
+    $("#playing").hidden = s.mode !== "playing";
+    $("#stepsleft").textContent = s.steps_left > 1 ? `${s.steps_left} to go this round` : "";
+
+    const byId = {};
+    s.players.forEach(p => byId[p.id] = p);
+    const nk = s.pending.night_kill, vt = s.pending.vote;
+    $("#nightpick").textContent = nk
+      ? `lantana took ${byId[nk].name}` : "nobody marked - the ranger saved them";
+    $("#votepick").textContent = vt
+      ? `the room voted out ${byId[vt].name}` : "mark who the room voted out";
+
     const tb = $("#players"); tb.innerHTML = "";
     s.players.forEach((p, i) => {
-      const pend = s.pending.eliminations.includes(p.id);
+      const pend = p.id === nk || p.id === vt;
       const tr = document.createElement("tr");
       tr.className = !p.alive ? "out" : pend ? "pending" : "";
-      tr.dataset.id = p.id;
       tr.innerHTML = `<td class="muted">${i + 1}</td><td>${p.name}</td>
-        <td>${p.role ? `<span class="role ${p.role}">${p.role}</span>` : '<span class="muted">—</span>'}</td>
-        <td>${!p.alive ? `out, night ${p.out_round}` : pend ? "eliminated tonight" : "in"}</td>
-        <td style="text-align:right">${s.phase !== "playing" || !p.alive ? "" :
-          pend ? `<button data-un="${p.id}">undo</button>` : `<button data-elim="${p.id}">eliminate</button>`}</td>`;
+        <td>${p.role ? `<span class="role ${p.role}">${p.role}</span>` : '<span class="muted">-</span>'}</td>
+        <td>${!p.alive ? `out, night ${p.out_round}` : pend ? "going out" : "in"}</td>
+        <td style="text-align:right">${s.phase !== "playing" || !p.alive || busy ? "" :
+          pend ? `<button data-un="${p.id}">undo</button>` : `<button data-elim="${p.id}">mark</button>`}</td>`;
       tb.appendChild(tr);
     });
-    const last = s.last || [];
-    $("#last").hidden = !last.length;
-    $("#lastlines").innerHTML = last.map(b => `<p><span class="k">${b.kind}</span>${b.text}</p>`).join("");
-    // reflect the pending choice
+
     const c = s.pending.choice;
     document.querySelectorAll('input[name=choice]').forEach(r => r.checked = r.value === c);
     $("#actions").hidden = c !== "resilience";
+    $("#huntbox").hidden = c !== "hunt";
+    $("#finishvote").disabled = !c;
     const a = s.pending.action || "";
     document.querySelectorAll('input[name=action]').forEach(r => r.checked = r.value === a);
   }
   document.addEventListener("click", async (e) => {
     const t = e.target;
-    if (t.dataset.elim) return render(await post("/api/gm/eliminate", { id: t.dataset.elim }));
-    if (t.dataset.un) return render(await post("/api/gm/uneliminate", { id: t.dataset.un }));
+    if (t.dataset.elim) return void post("/api/gm/eliminate", { id: t.dataset.elim });
+    if (t.dataset.un) return void post("/api/gm/uneliminate", { id: t.dataset.un });
   });
   document.addEventListener("change", async (e) => {
     if (e.target.name === "choice" || e.target.name === "action") {
       const choice = document.querySelector('input[name=choice]:checked')?.value || null;
       const action = document.querySelector('input[name=action]:checked')?.value || null;
-      render(await post("/api/gm/choice", { choice, action: action || null }));
+      await post("/api/gm/choice", { choice, action: action || null });
     }
   });
   $("#seed").onclick = async () => { await post("/api/gm/seed", { n: +$("#seedn").value || 12 }); };
-  $("#start").onclick = async () => { render(await post("/api/gm/start", { lantana: +$("#lantana").value || null })); };
-  $("#resolve").onclick = async () => { render(await post("/api/gm/resolve")); };
-  $("#replay").onclick = async () => { render(await post("/api/gm/replay")); };
+  $("#start").onclick = async () => { await post("/api/gm/start", { lantana: +$("#lantana").value || null }); };
+  $("#finishnight").onclick = async () => { await post("/api/gm/night"); };
+  $("#finishvote").onclick = async () => { await post("/api/gm/vote"); };
+  $("#advance").onclick = async () => { await post("/api/gm/advance"); };
   $("#reset").onclick = async () => {
     if (!confirm("Reset the whole game back to the lobby?")) return;
-    render(await post("/api/gm/reset", { seed: $("#rseed").value || null }));
+    await post("/api/gm/reset", { seed: $("#rseed").value || null });
   };
   const es = new EventSource("/events?ch=gm");
   es.addEventListener("state", (e) => render(JSON.parse(e.data)));

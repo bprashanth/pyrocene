@@ -1,0 +1,69 @@
+# The full-screen explanation the room reads before each animation.
+# One card, then one animation. Keep these to a sentence or two.
+
+[night.title]
+The night
+
+[night.lantana]
+{name} was lantana, and the room lost them anyway.
+
+[night.native]
+Lantana took {name} in the night.
+
+[night.ecologist]
+Lantana took {name}, the ecologist.
+
+[night.ranger]
+Lantana took {name}, the ranger.
+
+[night.saved]
+Nobody was lost. The ranger guessed right.
+
+[vote.title]
+The vote
+
+[vote.lantana]
+The room voted out {name}. They were lantana.
+
+[vote.native]
+The room voted out {name}. They were native forest.
+
+[vote.ecologist]
+The room voted out {name}, their own ecologist.
+
+[vote.ranger]
+The room voted out {name}, their own ranger.
+
+[vote.nobody]
+The room could not agree. Nobody went out.
+
+[line.title]
+The crew digs
+
+[water.title]
+A response team stands by
+
+[ews.title]
+A lookout goes up
+
+[ews.body]
+No trench, no water. Tonight the crew watches the wind and reads the ground.
+
+[growth.title]
+Lantana moves
+
+[fire.title]
+Fire
+
+[fire.none_title]
+A quiet night
+
+[forecast.title]
+Tomorrow night
+
+[end.title]
+The season ends
+
+# --- the small print on the projector -----------------------------------------
+[prompt.show]
+the game master will show you

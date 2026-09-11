@@ -34,26 +34,20 @@ def set_color(on: bool):
 # 2-3) render as SOLID colour (confirmed). So a drone always visibly changes the
 # map: haze snaps to solid, or hidden invasion pops into view.
 def cell_str(c: dict) -> str:
+    """One tile per cover type. Stage 2 shows the whole map at ground truth, so
+    there is no haze and no separate sapling/established/dense look: lantana is
+    lantana. How thick it is comes through in what Ember says, not in a colour
+    the room has to decode."""
     cov = c.get("cover")
-    st = c.get("stage", 0)
-    detail = c.get("detail", 3)
     if c.get("fireline"):
         return bg(236) + fg(51) + "++" + RESET          # dug fire line
     if cov == "village":
         return bg(131) + fg(231) + "HH" + RESET
     if cov == "water":
         return bg(24) + fg(45) + "~ " + RESET
-    if cov == "unknown":
-        # fogged land; a bank cell still shows the river's edge as a faint tick
-        return bg(236) + fg(240) + (". " if c.get("bank") else "  ") + RESET
-    hazy = detail == 1  # satellite only: a rough, low-confidence read for invasion
     if cov == "invasive":
-        if st >= 3:  # dense stands are the only invasion satellite can resolve
-            return bg(236) + fg(133) + "▒▒" + RESET if hazy else bg(90) + fg(219) + "##" + RESET
-        if st == 2:
-            return bg(130) + fg(214) + "**" + RESET     # established (drone+ only)
-        return bg(100) + fg(191) + "vv" + RESET         # seedling (drone+ only)
-    return _clear_tile(c, hazy, is_bare=(cov == "bare"))
+        return bg(90) + fg(219) + "##" + RESET
+    return _clear_tile(c, hazy=False, is_bare=(cov == "bare"))
 
 
 def _clear_tile(c: dict, hazy: bool, is_bare: bool) -> str:
@@ -70,7 +64,7 @@ def _clear_tile(c: dict, hazy: bool, is_bare: bool) -> str:
         return bg(236) + fg(137 if is_bare else 65) + "▒▒" + RESET
     if is_bare:
         return bg(137) + fg(223) + "░ " + RESET
-    return bg(22) + fg(65) + (":." if c.get("bank") else "  ") + RESET
+    return bg(22) + fg(65) + "  " + RESET
 
 
 def render_board(view: dict, fire: frozenset = frozenset(), overlay: dict = None) -> str:
@@ -132,28 +126,25 @@ def render_status(view: dict) -> str:
 
 
 def render_legend() -> str:
-    """Categorised, aligned. Base covers are solid 2-wide squares; overlays (hill,
-    road, risk) are hollow (no fill) since they sit on top of a base cover."""
+    """Eight tiles, three rows. Everything on this legend appears on the board
+    and everything on the board is on this legend."""
     def item(square, label):
         return f"{square} {fg(250)}{label:<12}{RESET}"
 
     def cat(name):
-        return f"{fg(245)}{name:<9}{RESET}{fg(240)}│{RESET} "
+        return f"{fg(245)}{name:<10}{RESET}{fg(240)}|{RESET} "
 
-    covers = {
+    C = {k: v + RESET for k, v in {
         "forest": bg(22) + fg(65) + "  ", "water": bg(24) + fg(45) + "~~",
-        "bare": bg(137) + fg(223) + "░░", "unknown": bg(236) + fg(240) + "  ",
-        "sapling": bg(100) + fg(191) + "vv", "established": bg(130) + fg(214) + "**",
-        "dense": bg(90) + fg(219) + "##", "village": bg(131) + fg(231) + "HH",
+        "bare": bg(137) + fg(223) + "..", "hill": fg(101) + "^^",
+        "lantana": bg(90) + fg(219) + "##",
+        "village": bg(131) + fg(231) + "HH", "road": fg(250) + "==",
         "fire line": bg(236) + fg(51) + "++",
-    }
-    overlays = {"hill": fg(101) + "^^", "road": fg(250) + "==", "risk zone": bg(52) + fg(210) + "::"}
-    C = {k: v + RESET for k, v in {**covers, **overlays}.items()}
+    }.items()}
     return "\n".join([
-        cat("LANDSCAPE") + "".join(item(C[k], k) for k in ("forest", "hill", "water", "bare")),
-        cat("INVASIVE") + "".join(item(C[k], k) for k in ("sapling", "established", "dense")),
-        cat("HUMAN") + "".join(item(C[k], k) for k in ("village", "road", "fire line")),
-        cat("OTHER") + "".join(item(C[k], k) for k in ("unknown", "risk zone")),
+        cat("LAND") + "".join(item(C[k], k) for k in ("forest", "hill", "water", "bare")),
+        cat("LANTANA") + item(C["lantana"], "lantana"),
+        cat("PEOPLE") + "".join(item(C[k], k) for k in ("village", "road", "fire line")),
     ])
 
 

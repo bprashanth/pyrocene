@@ -16,9 +16,13 @@ python3 -m stage2.server          # prints the three addresses
 2. Open the **game master** address on your own laptop.
 3. Read out the **players** address. Everyone joins and types their name.
 4. Press **Start game**. Roles appear on phones. Nobody else sees them.
-5. Run the night as you always do. Mark who was eliminated in the table.
-6. Ask the room for their one choice: **hunt lantana** or **resilience**.
-7. Press **Resolve night**. The projector plays it out. Repeat.
+5. Run the night as you always do. If lantana took someone, mark them, then
+   press **Finish night**.
+6. The projector puts up one card explaining what happened. Read it out, then
+   press **Show what happened** and the map animates that one change.
+7. Ask the room for their one choice: **hunt lantana** or **resilience**. Mark
+   the vote if they hunted, then press **Finish vote**.
+8. Card, show, card, show, through the vote, the spread and the fire. Repeat.
 
 Rehearsing alone: press **Seed** to add fake players, then Start.
 
@@ -33,8 +37,9 @@ Every night the room makes exactly one choice. That is the whole tension.
 | Hunt lantana | The room votes. Mark the elimination. |
 | Resilience | No vote. The crew prepares for fire instead. |
 
-Then, in order, visible on the projector: eliminations land on the map, the
-resilience action happens, lantana grows, fire runs, Ember explains.
+The night and the day are separate moments. Each change gets one card the room
+reads and then one animation, and the game master presses through them, so
+nothing important flashes past.
 
 **Eliminations.** A lantana player out leaves their ground bare, and bare
 ground goes to whatever is next to it. A native player out lets lantana take
@@ -50,9 +55,16 @@ presses Resolve and lets the system choose.
 | Water | Tonight's fire is held to a few squares whatever the fuel. |
 | Early warning | A forecast of tomorrow night. Changes nothing tonight. |
 
-**Fire.** Severity comes from the largest connected stand of dense lantana, so
-what Ember says and what the map does always agree. Early nights are small
-sparks. Later nights, an unchecked map carries fire a long way.
+**Fire.** Severity comes from the largest connected stand of thick lantana,
+fixed against the map the room debated over, so what Ember says and what the map
+does always agree. Early nights are small sparks. By the middle of the game
+separate patches have met, and one fire runs through all of them.
+
+**What the animations say.** Standing lantana blinks first, so the room knows
+where to look. The ground it is pressing on glows. Then it fills in a few
+squares at a time. A fire starts at one square, spreads outward wave by wave,
+and if it meets a trench those cells flash and the ground behind them is
+untouched.
 
 ## How it ends
 
@@ -83,15 +95,16 @@ Everything tunable is in `stage2/config.py`.
 | `lantana_core` | 4 | Cells of a lantana player's ground that start infested |
 | `native_loss_core` | 4 | Cells lantana takes at once when a native is out |
 | `owned_fraction` | 0.66 | Share of land split into patches; the rest is commons |
-| `growth_established` / `growth_dense` | 0.20 / 0.28 | How fast lantana spreads per neighbour |
+| `growth_established` / `growth_dense` | 0.30 / 0.42 | How fast lantana spreads per neighbour |
 | `reinvade_p` / `regen_p` | 0.55 / 0.22 | What bare ground becomes |
-| `sev_t1` / `sev_t2` | 6 / 14 | Dense cluster sizes that push fire to severity 2 and 3 |
+| `sev_t1` / `sev_t2` | 7 / 13 | Thick-stand sizes that push fire to severity 2 and 3 |
 | `fire_cells` | 3 / 12 / 38 | Squares a fire of each severity can take |
 | `fire_round_ramp` | 0.22 | Extra reach per night as the season dries |
 | `line_cells` | 10 | Trench dug per resilience night |
 | `bare_on_removal` | True | False turns a cleared lantana patch straight to forest |
 | `team_loss` | False | True ends the game when ecologist and ranger are both out |
-| `hold_ms` | various | How long the projector holds each beat |
+| `village_defend_range` | 8 | Only trench the homes if fuel is this close |
+| `hold_ms` | various | How long the projector holds each animation frame |
 
 ## Testing
 
@@ -103,4 +116,13 @@ python3 -m stage2.sim --games 250                    # balance, whole games in m
 python3 -m stage2.sim --trace 7
 ```
 
-`STAGE2_FAST=1` removes every beat delay, which is what the tests use.
+`STAGE2_FAST=1` removes every animation delay, which is what the tests use.
+
+## The event log
+
+Every round is written to `stage2/logs/game-<when>-seed<n>.json` as it happens,
+and `stage2/logs/index.json` names the latest. One record per round: who went
+out, every square that changed and what it changed from and to, the resilience
+action and its cells, and the fire with its ignition square, cause, severity,
+burned squares and the trench edges it pushed against. Enough to build a
+post-game sequence without reading any of this code.

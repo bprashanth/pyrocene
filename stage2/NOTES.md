@@ -103,3 +103,44 @@ warning earns its slot given it changes nothing mechanically.
 Target was five or six nights and about twenty minutes. Games run 5.4 nights on
 average, 8 at the outside. Beat holds are in `config.py` under `hold_ms` and
 `STAGE2_FAST=1` zeroes them, so the tests run the whole suite in 34 seconds.
+
+## Second pass: one card, one animation
+
+Resolving a whole round in one press did too much at once. The night and the day
+are now separate (`Finish night`, `Finish vote`), and inside each one every
+change gets a full-screen card the room reads, then one animation. The game
+master presses through, so the pace is the room's.
+
+The animations tell the room where to look: standing lantana blinks, the ground
+it is pressing on glows, then it fills in a few squares at a time. Cells that
+changed blink as whatever they now are, which matters more than it sounds. The
+first version forced a lantana glyph on every pulsing cell, so a freshly dug
+trench blinked as lantana and a cleared patch blinked as the thing that had just
+been removed.
+
+One real bug came out of testing the console by hand: each button rendered the
+reply to its own POST, and that reply is a snapshot from before the projector
+finished animating. It overwrote the live update and the console sat there
+looking stuck. The event stream is the only thing that paints now.
+
+The map lost the three lantana stages. Stage 2 has no fog and no drone, so
+sapling, established and dense did no visual work and the legend asked the room
+to decode a colour that told them nothing. Lantana is one tile. How thick it is
+comes through in what Ember says. The legend is three rows and everything on it
+appears on the board.
+
+Lantana also grows about twice as fast as it did (0.30 and 0.42 per neighbour,
+cores of five). Separate patches now meet by the middle of the game, which is
+what the doc wanted and what the first pass never delivered: severity-3 fires
+happen in about one round in ten and cost a mean of eleven points of forest
+health, up to twenty-seven. With that in place the balance finally sits where it
+should:
+
+| Policy | Win | Nights | End health | Lost the homes |
+|---|---|---|---|---|
+| warden, shelters when the homes are threatened | 60% | 5.3 | 55% | 6% |
+| hunter, never shelters | 59% | 4.9 | 57% | 25% |
+| turtle, only shelters | 0% | 7.0 | 59% | 1% |
+
+Sheltering at the right moment is now the better play, and it got there by
+making fire bigger rather than by making hunting worse.

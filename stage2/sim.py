@@ -30,39 +30,30 @@ def play(seed: int, policy: str, n_players: int = 12, skill: float = 0.35) -> di
     g.start()
     while g.phase == "playing":
         r = g.round
+        # night: lantana takes someone unless the ranger guessed right
+        alive = [p for p in g.players.values() if p.alive]
+        prey = [p for p in alive if p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+        if prey and rng.random() > 0.25:
+            g.eliminate(rng.choice(prey).id)
+        g.resolve_night()
+        if g.phase != "playing":
+            break
+
+        # day: one choice
         if policy == "warden":
-            # Hunt, unless the fire is close enough to the homes to take them.
-            # Losing the village ends the game outright, so this is the one
-            # threat worth spending a night on.
-            near = g.village_at_risk()
-            shelter = near
+            shelter = g.village_at_risk()
         elif policy == "triage":
-            # Hunt relentlessly, but when the next fire would take the forest
-            # below the line, spend the night saving it instead. This is the
-            # call the stage is actually teaching.
             sev, _ = g.severity()
             land = sum(1 for c in g.state.cells if c.cover != "water")
             ramp = 1 + g.cfg["fire_round_ramp"] * (r - 1)
             cost = 100 * g.cfg["fire_cells"].get(sev, 0) * ramp / max(land, 1)
             shelter = sev >= 2 and (g.view()["health"] - cost) <= g.cfg["loss_health"] + 4
         elif policy == "guard":
-            # Hunt almost always, but drop everything when the fuel is about to
-            # carry a catastrophic fire. This is the habit the stage is teaching.
             sev, _ = g.severity()
             shelter = sev >= 3
-        elif policy == "reader":
-            # What the room is meant to learn: spend the turn on whichever threat
-            # is bigger tonight. Shelter when the fuel has built up enough to
-            # carry a real fire, hunt the rest of the time.
-            sev, _ = g.severity()
-            shelter = sev >= 2
         else:
             shelter = {"balanced": r % 3 == 0, "hunter": False, "turtle": True}[policy]
-        # every night lantana takes someone, unless the ranger guesses right
-        alive = [p for p in g.players.values() if p.alive]
-        prey = [p for p in alive if p.role in (NATIVE_P, ECOLOGIST, RANGER)]
-        if prey and rng.random() > 0.25:
-            g.eliminate(rng.choice(prey).id)
+
         if shelter:
             g.choose("resilience", None)
         else:
@@ -73,12 +64,14 @@ def play(seed: int, policy: str, n_players: int = 12, skill: float = 0.35) -> di
             elif pool:
                 g.eliminate(rng.choice(pool).id)
             g.choose("hunt", None)
-        g.resolve()
+        g.resolve_vote()
+
     e = g.ending or {}
-    return {"rounds": len(g.history), "result": e.get("result"), "reason": e.get("reason"),
-            "health": e.get("health"), "lows": min(h["health"] for h in g.history),
-            "burned": sum(len(h["fire"]["cells"]) for h in g.history),
-            "sev": [h["fire"]["severity"] for h in g.history]}
+    hist = g.history or [{"health": g.view()["health"], "fire": {"severity": 0, "burned_cells": []}}]
+    return {"rounds": len(hist), "result": e.get("result"), "reason": e.get("reason"),
+            "health": e.get("health"), "lows": min(h["health"] for h in hist),
+            "burned": sum(len((h["fire"] or {}).get("burned_cells", [])) for h in hist),
+            "sev": [(h["fire"] or {}).get("severity", 0) for h in hist]}
 
 
 def report(policy: str, games: int, players: int, skill: float):
@@ -116,7 +109,7 @@ def main():
     if args.trace is not None:
         return trace(args.trace, "balanced", args.players)
     print(f"{args.games} games, {args.players} players, room skill {args.skill}")
-    for pol in ("warden", "triage", "hunter", "turtle"):
+    for pol in ("warden", "hunter", "turtle"):
         report(pol, args.games, args.players, args.skill)
 
 

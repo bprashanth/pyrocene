@@ -26,7 +26,7 @@
   .status { text-align:center; font-weight: 700; padding: 10px; border-radius: 10px; background:#16201b; }
   .status.out { color: #ffb3b3; background: #2a1616; }
   .muted { color: var(--muted); text-align:center; font-size: 14px; }
-  .secret { color: var(--muted); font-size: 13px; text-align:center; }
+  .status:empty { display: none; }
 </style>
 </head>
 <body>
@@ -43,20 +43,17 @@
       <div class="name" id="rolename">waiting for the game master</div>
       <div class="blurb" id="blurb"></div>
     </div>
-    <div style="height:12px"></div>
+    <div style="height:14px"></div>
     <div id="status" class="status"></div>
-    <div style="height:10px"></div>
-    <p class="secret" id="secret">Keep your role to yourself.</p>
-    <p class="muted" id="endnote"></p>
   </div>
 </div>
 <script>
   const $ = (s) => document.querySelector(s);
   const ROLE = {
-    lantana:   ["Lantana", "You are the invasion. Every night you wake and pick a native to take. Stay hidden."],
-    native:    ["Native forest", "You are the forest. Find the lantana by day. Your patch on the map is yours to keep alive."],
-    ecologist: ["Ecologist", "Each night you wake and point at one player. The game master tells you if they are lantana."],
-    ranger:    ["Ranger", "Each night you wake and point at one player to protect. If lantana picks them, they survive."],
+    lantana:   ["Lantana", "Every night you wake and choose a native to take."],
+    native:    ["Native forest", "Find the lantana by day."],
+    ecologist: ["Ecologist", "Each night you wake and point at one player."],
+    ranger:    ["Ranger", "Each night you wake and point at one player to protect."],
   };
   let token = null;
   try { token = localStorage.getItem("pyro_token"); } catch (e) {}
@@ -66,12 +63,11 @@
     const rc = $("#rolecard");
     rc.className = "role " + (me.role || "");
     if (me.role) { $("#rolename").textContent = ROLE[me.role][0]; $("#blurb").textContent = ROLE[me.role][1]; }
-    else { $("#rolename").textContent = "waiting for the game master"; $("#blurb").textContent = "The game has not started."; }
+    else { $("#rolename").textContent = "waiting for the game master"; $("#blurb").textContent = ""; }
     const st = $("#status");
-    if (me.phase === "lobby") { st.textContent = "In the lobby"; st.className = "status"; }
-    else if (me.alive) { st.textContent = "In the game"; st.className = "status"; }
-    else { st.textContent = `Out of the game since night ${me.out_round}. Watch the map.`; st.className = "status out"; }
-    $("#endnote").textContent = me.ending ? me.ending.text : "";
+    if (me.phase === "lobby") { st.textContent = ""; st.className = "status"; }
+    else if (me.alive) { st.textContent = "Alive"; st.className = "status"; }
+    else { st.textContent = "Eliminated"; st.className = "status out"; }
   }
   function listen() {
     const es = new EventSource("/events?ch=phone&token=" + encodeURIComponent(token));

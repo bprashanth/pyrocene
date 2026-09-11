@@ -27,7 +27,7 @@ def status_lines(view: dict) -> list:
 
 
 def header(view: dict, subtitle: str = "") -> str:
-    left = f"{FG(208)}  {T('ui', 'projector.title')} {R.RESET}"
+    left = f"{FG(208)}  {T('ui', 'projector.title')}  {R.RESET}"
     mid = f"{FG(245)}  {T('ui', 'projector.round', r=view['round'], max=view['max_rounds'])}{R.RESET}"
     return left + mid + (f"   {FG(245)}{subtitle}{R.RESET}" if subtitle else "")
 
@@ -48,35 +48,73 @@ def render_beat(beat: dict) -> str:
     view = beat["view"]
     kind = beat["kind"]
     fire = frozenset(beat.get("fire") or [])
-    # The cells where the fire met a line: the one moment the room must not miss,
-    # so they blink bright white against the fire rather than sitting in the
-    # ordinary fire-line cyan.
-    held = beat.get("held") or []
-    overlay = {i: R.BLINK + R.bg(51) + R.fg(17) + "++" + R.RESET for i in held}
-    sub = {"ignite": "fire", "spread": "fire", "burn": "fire"}.get(kind, "")
-    subtitle = f"{FG(196)}*** WILDFIRE ***{R.RESET}" if sub else ""
+    overlay = {}
+    grid = {c["index"]: c for c in view["cells"]}
+    # Cells worth looking at blink as whatever they now are, so a cleared patch
+    # blinks as bare ground and a fresh trench blinks as a trench. Forcing one
+    # glyph on all of them told the room the wrong thing.
+    for i in beat.get("pulse") or []:
+        if i in grid:
+            overlay[i] = R.BLINK + R.cell_str(grid[i])
+    # Ground lantana is pressing on glows: it has not changed yet, it might.
+    for i in beat.get("halo") or []:
+        overlay.setdefault(i, R.bg(53) + R.fg(213) + ".." + R.RESET)
+    # Where the fire met a trench: the one moment nobody should miss.
+    for i in beat.get("held") or []:
+        overlay[i] = R.BLINK + R.bg(51) + R.fg(17) + "++" + R.RESET
+    subtitle = (f"{FG(196)}FIRE{R.RESET}"
+                if kind in ("ignite", "spread", "burn", "blocked") else "")
     lines = [header(view, subtitle), ""]
     lines += status_lines(view)
     lines.append("")
     lines.append(R.render_board(view, fire=fire, overlay=overlay or None))
     lines.append("")
     lines.append(R.render_legend())
-    lines.append("")
     if kind == "ending":
-        big = beat["text"]
-        lines.append(f"  {FG(220)}{'THE SEASON ENDS':<}{R.RESET}")
-        lines += ember_block(big, col=220)
-    else:
-        lines += ember_block(beat.get("text", ""))
+        lines.append("")
+        lines += ember_block(beat["text"], col=220)
     return "\n".join(lines)
+
+
+def render_card(title: str, text: str, view: dict | None = None, cells=None) -> str:
+    """The explanation the room reads before anything moves. Full screen, one
+    idea, and the squares it is about so people know where to look."""
+    width = 62
+    body = R._wrap(text, width)
+    where = ""
+    if cells:
+        shown = ", ".join(cells[:8]) + (" and more" if len(cells) > 8 else "")
+        where = f"at {shown}"
+    inner = max([len(title)] + [len(b) for b in body] + [len(where)]) + 6
+    inner = min(max(inner, 44), 74)
+    top = "  " + FG(240) + "+" + "-" * inner + "+" + R.RESET
+    blank = "  " + FG(240) + "|" + " " * inner + "|" + R.RESET
+
+    def row(txt, col):
+        pad = inner - len(txt) - 4
+        return ("  " + FG(240) + "|  " + R.RESET + FG(col) + txt + R.RESET
+                + " " * max(0, pad) + FG(240) + "  |" + R.RESET)
+
+    out = []
+    if view:
+        out.append(header(view))
+        out.append("")
+        out += status_lines(view)
+    out += ["", "", top, blank, row(title.upper(), 220), blank]
+    for b in body:
+        out.append(row(b, 252))
+    if where:
+        out += [blank, row(where, 45)]
+    out += [blank, top, "",
+            f"       {FG(240)}{T('cards', 'prompt.show')}{R.RESET}"]
+    return "\n".join(out)
 
 
 def render_lobby(n_players: int, seed: int) -> str:
-    v = {"round": 0, "max_rounds": 0}
-    lines = [f"{FG(208)}  {T('ui', 'projector.title')} {R.RESET}", "", "",
-             f"  {FG(250)}{T('ui', 'projector.lobby', n=n_players)}{R.RESET}", "",
-             f"  {FG(240)}map seed {seed}{R.RESET}"]
-    return "\n".join(lines)
+    return "\n".join([
+        f"{FG(208)}  {T('ui', 'projector.title')}{R.RESET}", "", "", "",
+        f"       {FG(250)}{T('ui', 'projector.lobby')}{R.RESET}",
+    ])
 
 
 def frame_bytes(text: str) -> str:

@@ -4,45 +4,46 @@ CONFIG = {
     # --- the room ---------------------------------------------------------
     "min_players": 6,          # 2 lantana + ecologist + ranger + 2 natives
     "lantana_ratio": 4,        # one lantana per this many players, minimum 2
-    "max_rounds": 8,
-    "team_loss": False,        # losing both ecologist and ranger ends stage 1, but here
-                               # the room plays on blind: fire and time decide it           # reaching this is a loss: sheltering forever is not a win
-    "loss_health": 35,
+    "max_rounds": 8,           # reaching this is a loss: sheltering forever never wins
+    "loss_health": 35,         # forest health below this loses the game
+    "team_loss": False,        # losing both specialists ends stage 1; here the room
+                               # plays on blind and fire or time decides it
+
+    # --- the homes, the one thing worth spending a night on ---------------
+    "village_loss": True,      # fire reaching the homes ends the game
     "village_clearance": 5,    # keep homes this far from the starting infestation
     "village_defend_range": 8, # only trench around the homes if fuel is this close
-    "village_loss": True,      # fire reaching the homes ends it: the one thing the room
-                               # must spend a night defending rather than out-hunt         # forest health below this is a loss
 
     # --- the map ----------------------------------------------------------
-    "owned_fraction": 0.66,    # share of land split into player patches; the rest is commons
-    "native_loss_core": 4,     # cells of a lost native stand that lantana takes at once;
-                               # the rest it has to grow into
-    "lantana_core": 4,         # cells of a lantana player's territory that start infested;
-                               # the rest is forest they have to grow into
-    "initial_stage_age": (0, 1),   # staggers when each core goes dense
+    "owned_fraction": 0.66,    # land split into player patches; the rest is commons
+    "lantana_core": 5,         # cells of a lantana player's ground that start infested
+    "native_loss_core": 4,     # cells lantana takes at once when a native goes out
+    "initial_stage_age": (0, 1),   # staggers when each core thickens
 
     # --- lantana growth (per neighbouring cell, per round) ----------------
-    "growth_established": 0.16,
-    "growth_dense": 0.24,
+    # Fast enough that separate patches meet by the middle of the game, which is
+    # what turns small scattered fires into one connected run.
+    "growth_established": 0.30,
+    "growth_dense": 0.42,
     "growth_wind_mult": 1.6,   # downwind neighbour
     "growth_bare_mult": 1.7,   # bare ground is taken fastest
-    "orphan_mult": 0.6,        # lantana with no living owner grows slower
+    "orphan_mult": 0.7,        # lantana whose player is out grows a little slower
     "age_to_established": 1,
     "age_to_dense": 2,
 
-    # --- bare ground after a removal or a burn -----------------------------
-    "bare_on_removal": True,   # False: an eliminated lantana patch turns straight to native
+    # --- bare ground, after a removal or a burn ---------------------------
+    "bare_on_removal": True,   # False: a cleared lantana patch turns straight to forest
     "reinvade_p": 0.55,        # bare cell next to lantana: chance it is retaken
-    "regen_p": 0.22,            # bare cell with no lantana nearby: chance it regrows native
+    "regen_p": 0.22,           # bare cell with nothing near it: chance forest returns
 
     # --- fire ---------------------------------------------------------------
-    # severity comes from the size of the largest connected dense cluster
-    "sev_t1": 7,               # below this: severity 1
-    "sev_t2": 18,              # below this: severity 2, else 3
-    "spark_p": 0.6,            # with no dense lantana at all, chance of a small fire anyway
-    "fire_cells": {1: 3, 2: 12, 3: 38},
-    "fire_round_ramp": 0.22,   # each round past the first adds this much to the cap:
-                               # a dry season wearing on, so late fires run further   # max cells burned per severity
+    # Severity comes from the largest connected stand of dense lantana, so what
+    # Ember says and what the map does always agree.
+    "sev_t1": 7,               # smaller than this: severity 1
+    "sev_t2": 13,              # smaller than this: severity 2, else 3
+    "spark_p": 0.6,            # with no dense lantana, chance of a small fire anyway
+    "fire_cells": {1: 3, 2: 12, 3: 38},   # squares each severity can take
+    "fire_round_ramp": 0.22,   # extra reach per night as the season dries out
     "fire_iters": 12,
     "fire_p_invasive": 0.85,
     "fire_p_native": 0.40,
@@ -50,16 +51,19 @@ CONFIG = {
     "fire_wind_mult": 1.4,
 
     # --- resilience ---------------------------------------------------------
-    "line_reach": 3,           # how far beyond a dense cluster a line looks for something to protect
-    "line_gap": 1,
-    "line_cells": 10,         # trench cells dug per resilience night, hugging the asset             # cells between the cluster edge and the line
-    "early_warning_caps_next_fire": False,   # discuss before turning on
+    "line_reach": 3,           # how far out a line looks for something to protect
+    "line_gap": 1,             # cells between the fuel and the trench
+    "line_cells": 10,          # trench cells dug per resilience night
+    "early_warning_caps_next_fire": False,   # discuss before turning this on
 
-    # --- projector pacing (ms per beat kind); STAGE2_FAST=1 zeroes all of these
+    # --- projector pacing, milliseconds per animation frame ---------------
+    # The game master controls the gaps between one explanation and the next, so
+    # these only pace what moves. STAGE2_FAST=1 zeroes all of them.
     "hold_ms": {
-        "round": 1200, "elimination": 2200, "line": 2600, "water": 1800,
-        "warn": 2600, "growth": 2000, "ignite": 900, "spread": 380, "burn": 1200, "blocked": 2800,
-        "aftermath": 3200, "quiet": 2200, "forecast": 3200, "ending": 0,
+        "elimination": 620, "line": 620, "water": 1400, "quiet": 1200,
+        "pulse": 900, "halo": 1100, "creep": 520, "settle": 900,
+        "ignite": 900, "spread": 380, "burn": 900, "blocked": 2600,
+        "forecast": 2200, "ending": 0,
     },
 
     # --- the copied engine's own knobs we override for this stage ---------

@@ -220,3 +220,4 @@ web/py/
 
 # Local design prompts
 .prompt/
+stage2/logs/

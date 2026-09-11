@@ -7,6 +7,8 @@ Round order (see .prompt/stage2.md section 3):
   eliminations -> resilience -> lantana growth -> fire -> Ember -> ending check
 """
 from __future__ import annotations
+import datetime
+import os
 import random
 import secrets
 from copy import deepcopy
@@ -52,15 +54,24 @@ class Game:
         self.state: State | None = None
         self.owner: dict[int, str] = {}       # cell -> player id
         self.line_round: dict[int, int] = {}  # fireline cell -> round it was dug
-        self.pending = {"eliminations": [], "choice": None, "action": None}
+        # The room's night and its day are two separate moments, and each one
+        # gets its own explanation and its own animation on the projector.
+        self.pending = {"night_kill": None, "vote": None, "choice": None, "action": None}
+        self.step = "night"          # night -> day -> night ...
         self.forecast = None
         self.water_round = 0
         self.last_line = None          # {"round", "cluster", "dir"} of the newest fire line
         self.locked_sev, self.locked_cluster = 0, []   # tonight's fire, fixed at the top
         self.village_lost = False
         self.history: list = []
+        self.events: list = []         # the event log, one record per round
+        self._log_rec = None
+        started = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.log_meta = {"started": started, "seed": self.seed, "ending": None,
+                         "file": f"game-{started}-seed{self.seed}.json",
+                         "cols": 0, "rows": 0, "players": []}
         self.ending = None
-        self.last_beats: list = []
+        self.last_steps: list = []
         self.lantana_override: int | None = None
 
     # ---- lobby -----------------------------------------------------------
@@ -100,9 +111,14 @@ class Game:
             c.obs = GROUND            # the projector shows the whole map
             c.last_seen = 0
         self._allocate(rng)
+        self.log_meta["cols"] = self.state.cols
+        self.log_meta["rows"] = self.state.rows
+        self.log_meta["players"] = [{"player_id": p.id, "name": p.name, "role": p.role}
+                                    for p in self.players.values()]
         self.phase = "playing"
         self.round = 1
-        self.pending = {"eliminations": [], "choice": None, "action": None}
+        self.step = "night"
+        self.pending = {"night_kill": None, "vote": None, "choice": None, "action": None}
 
     def _allocate(self, rng: random.Random):
         """Split about two thirds of the land into contiguous patches, one per
@@ -228,14 +244,18 @@ class Game:
 
     # ---- what the game master records -----------------------------------
     def eliminate(self, pid: str):
+        """Mark who went out. During the night that is lantana's pick; during the
+        day it is the room's vote. One person per moment."""
         p = self.players[pid]
-        if not p.alive or pid in self.pending["eliminations"]:
+        if not p.alive:
             return
-        self.pending["eliminations"].append(pid)
+        key = "night_kill" if self.step == "night" else "vote"
+        self.pending[key] = pid
 
     def uneliminate(self, pid: str):
-        if pid in self.pending["eliminations"]:
-            self.pending["eliminations"].remove(pid)
+        for key in ("night_kill", "vote"):
+            if self.pending.get(key) == pid:
+                self.pending[key] = None
 
     def choose(self, choice: str | None, action: str | None = None):
         if choice not in (None, "hunt", "resilience"):
@@ -244,127 +264,236 @@ class Game:
             raise ValueError("unknown resilience action")
         self.pending["choice"] = choice
         self.pending["action"] = action if choice == "resilience" else None
+        if choice == "resilience":
+            self.pending["vote"] = None      # no vote on a resilience night
 
-    # ---- resolve one round -----------------------------------------------
-    def resolve(self) -> list:
-        if self.phase != "playing":
-            raise ValueError("no round to resolve")
-        s = self.state
+    # ---- resolving, one moment at a time ---------------------------------
+    # Each returned step is an explanation the room reads, then one animation
+    # that shows it happening. The game master presses through them.
+    def resolve_night(self) -> list:
+        if self.phase != "playing" or self.step != "night":
+            raise ValueError("not waiting on a night")
         r = self.round
-        rng = self._rng(r)
-        beats: list = []
-        record = {"round": r, "choice": self.pending["choice"], "action": None,
-                  "eliminations": [], "auto": False, "fire": None}
-        # Lock the fire in against the map the room actually debated over. The
-        # lantana that grows tonight is tomorrow's fire, not tonight's, so what
-        # Ember warns about and what the room sees always agree.
-        self.locked_sev, self.locked_cluster = self.severity()
-        self._beat(beats, "round", T("ember", "round.open", r=r))
-
-        # a. eliminations
-        for pid in self.pending["eliminations"]:
+        steps: list = []
+        self.log_open(r)
+        pid = self.pending["night_kill"]
+        if pid:
             p = self.players[pid]
             p.alive = False
             p.out_round = r
-            record["eliminations"].append({"id": pid, "role": p.role})
-            self._beat(beats, "elimination", self._apply_elimination(p), player=p.public())
+            self.log_player(pid, p.role, "removed")
+            cells, text = self._apply_elimination(p)
+            steps.append(self._step(
+                "night", T("cards", "night.title"),
+                T("cards", f"night.{p.role}", name=p.name) + " " + text,
+                self._change_beats(cells, kind="elimination"), cells=cells))
+        else:
+            steps.append(self._step(
+                "night", T("cards", "night.title"), T("cards", "night.saved"),
+                [self._frame("quiet", "")]))
+        self.step = "day"
+        self.pending["night_kill"] = None
+        end = self._check_end(r)
+        if end:
+            steps.append(self._ending_step(end))
+        return steps
 
-        # b. resilience
-        if self.pending["choice"] == "resilience":
+    def resolve_vote(self) -> list:
+        if self.phase != "playing" or self.step != "day":
+            raise ValueError("not waiting on a day")
+        if self.pending["choice"] is None:
+            raise ValueError("choose hunt or resilience first")
+        r = self.round
+        rng = self._rng(r)
+        steps: list = []
+        self.locked_sev, self.locked_cluster = self.severity()
+        rec = self.log_current()
+        rec["choice"] = self.pending["choice"]
+
+        if self.pending["choice"] == "hunt":
+            pid = self.pending["vote"]
+            if pid and self.players[pid].alive:
+                p = self.players[pid]
+                p.alive = False
+                p.out_round = r
+                self.log_player(pid, p.role, "removed")
+                cells, text = self._apply_elimination(p)
+                steps.append(self._step(
+                    "vote", T("cards", "vote.title"),
+                    T("cards", f"vote.{p.role}", name=p.name) + " " + text,
+                    self._change_beats(cells, kind="elimination"), cells=cells))
+            else:
+                steps.append(self._step(
+                    "vote", T("cards", "vote.title"), T("cards", "vote.nobody"),
+                    [self._frame("quiet", "")]))
+        else:
             action = self.pending["action"]
             reason = ""
             if not action:
                 action, reason = self._auto_action()
-                record["auto"] = True
-            record["action"] = action
+                rec["auto"] = True
+            rec["resilience"] = {"type": {FIRELINE: "fire_line", WATER_ACT: "water",
+                                          EWS: "early_warning"}[action], "cells": []}
             if action == FIRELINE:
                 text = self._dig_line(r)
+                cells = list(self.last_line["cells"]) if self.last_line else []
+                rec["resilience"]["cells"] = [self.cell_name(i) for i in cells]
+                steps.append(self._step(
+                    "line", T("cards", "line.title"),
+                    (reason + " " if reason else "") + text,
+                    self._change_beats(cells, kind="line"), cells=cells))
             elif action == WATER_ACT:
                 self.water_round = r
-                text = T("ember", "water.ready")
+                steps.append(self._step(
+                    "water", T("cards", "water.title"),
+                    (reason + " " if reason else "") + T("ember", "water.ready"),
+                    [self._frame("water", T("ember", "water.ready"))]))
             else:
-                text = None   # the forecast is shown after tonight's fire
-            if text:
-                self._beat(beats, "line" if action == FIRELINE else "water",
-                           (reason + " " if reason else "") + text)
-            elif reason:
-                self._beat(beats, "water", reason)
+                steps.append(self._step(
+                    "ews", T("cards", "ews.title"),
+                    (reason + " " if reason else "") + T("cards", "ews.body"),
+                    [self._frame("quiet", "")]))
 
-        # c. growth
-        grown = self._grow(rng)
+        # lantana takes ground
+        grown, halo = self._grow(rng)
         self._leak(rng)
-        advance(s, self.cfg, [])
-        self._beat(beats, "growth", T("ember", "growth", n=grown) if grown else T("ember", "growth.none"))
+        advance(s_ := self.state, self.cfg, [])
+        steps.append(self._step(
+            "growth", T("cards", "growth.title"),
+            T("ember", "growth.one") if len(grown) == 1 else
+            T("ember", "growth", n=len(grown)) if grown else T("ember", "growth.none"),
+            self._growth_beats(grown, halo), cells=grown))
 
-        # d. fire
-        record["fire"] = self._fire(rng, beats)
-        if record["fire"].get("village") and record["fire"]["severity"] >= 2:
-            self.village_lost = True
+        # fire
+        fire_beats, fire_rec, fire_text = self._fire(rng)
+        rec["fire"] = fire_rec
+        steps.append(self._step(
+            "fire", T("cards", "fire.title") if fire_rec["severity"]
+            else T("cards", "fire.none_title"), fire_text, fire_beats,
+            cells=fire_rec.get("cells", [])))
 
-        # early warning: forecast next night, computed on a copy with next round's rng
-        if record["action"] == EWS:
+        if (rec.get("resilience") or {}).get("type") == "early_warning":
             self.forecast = self._forecast(r + 1)
-            self._beat(beats, "forecast", T("ember", "forecast",
-                                            level=T("ember", f"forecast.{self.forecast['level']}"),
-                                            wind=self.forecast["wind"]))
+            steps.append(self._step(
+                "forecast", T("cards", "forecast.title"),
+                T("ember", "forecast", level=T("ember", f"forecast.{self.forecast['level']}"),
+                  wind=self.forecast["wind"]),
+                [self._frame("forecast", "")]))
         else:
             self.forecast = None
 
-        if self.village_at_risk() and not self.village_lost:
-            self._beat(beats, "warn", T("ember", "warn.village"))
-        record["health"] = health_pct(s)
-        self.history.append(record)
+        self.history.append({"round": r, "choice": rec["choice"], "action": rec.get("action"),
+                             "auto": rec.get("auto", False), "fire": rec.get("fire") or {"severity": 0},
+                             "health": health_pct(self.state),
+                             "eliminations": rec.get("player_changes", [])})
+        self.log_close()
 
-        # e. ending
-        self.ending = self._check_end(r)
-        if self.ending:
-            self.phase = "ended"
-            self._beat(beats, "ending", self.ending["text"])
+        end = self._check_end(r)
+        if end:
+            steps.append(self._ending_step(end))
         else:
             self.round += 1
+            self.step = "night"
             if rng.random() < 0.3:
-                s.wind = rng.choice(("N", "S", "E", "W"))
-        self.pending = {"eliminations": [], "choice": None, "action": None}
-        self.last_beats = beats
-        return beats
+                self.state.wind = rng.choice(("N", "S", "E", "W"))
+        self.pending = {"night_kill": None, "vote": None, "choice": None, "action": None}
+        self.last_steps = steps
+        return steps
+
+    # ---- step and frame helpers -------------------------------------------
+    def _step(self, key: str, title: str, text: str, beats: list, cells=None) -> dict:
+        return {"key": key, "title": title, "text": text, "beats": beats,
+                "cells": [self.cell_name(i) for i in (cells or [])]}
+
+    def _frame(self, kind: str, text: str, **extra) -> dict:
+        f = {"kind": kind, "text": text, "fire": [], "pulse": [], "halo": [],
+             "held": [], "view": self.view(),
+             "hold_ms": self.cfg["hold_ms"].get(kind, 900)}
+        f.update(extra)
+        return f
+
+    def _change_beats(self, cells: list, kind: str) -> list:
+        """Flash the cells that changed, then settle. The room needs to see where
+        to look before the map goes quiet again."""
+        if not cells:
+            return [self._frame("quiet", "")]
+        out = [self._frame(kind, "", pulse=list(cells)) for _ in range(2)]
+        out.append(self._frame("settle", ""))
+        return out
+
+    def _growth_beats(self, grown: list, halo: list) -> list:
+        """Lantana pulses, the ground it could take glows, then it fills in a few
+        cells at a time so the room watches it move rather than blink."""
+        if not grown:
+            return [self._frame("quiet", "")]
+        s = self.state
+        standing = [c.index for c in s.cells
+                    if c.cover == INVASIVE and c.index not in set(grown)]
+        out = [self._frame("pulse", "", pulse=standing),
+               self._frame("halo", "", pulse=standing, halo=list(halo))]
+        order = sorted(grown, key=lambda i: (s.cells[i].r, s.cells[i].c))
+        chunk = max(1, len(order) // 4)
+        shown: list = []
+        for k in range(0, len(order), chunk):
+            shown = shown + order[k:k + chunk]
+            out.append(self._frame("creep", "", pulse=list(shown)))
+        out.append(self._frame("settle", ""))
+        return out
+
+    def _ending_step(self, end: dict) -> dict:
+        self.phase = "ended"
+        self.ending = end
+        self.log_ending(end)
+        return {"key": "ending", "title": T("cards", "end.title"), "text": end["text"],
+                "beats": [self._frame("ending", end["text"])], "cells": []}
+
+    def cell_name(self, i: int) -> str:
+        c = self.state.cells[i]
+        return f"{chr(65 + c.c)}{c.r + 1}"
 
     def _rng(self, r: int) -> random.Random:
         return random.Random(self.seed * 1000 + r)
 
     # ---- the pieces --------------------------------------------------------
-    def _apply_elimination(self, p: Player) -> str:
+    def _apply_elimination(self, p: Player):
+        """Returns (changed cells, what Ember says). The map only moves for a
+        lantana or a native; the specialists own no ground."""
         s = self.state
         cells = [i for i, o in self.owner.items() if o == p.id]
         if p.role == LANTANA:
             for i in cells:
                 c = s.cells[i]
+                was = c.cover
                 if self.cfg["bare_on_removal"]:
                     c.cover, c.stage, c.stage_age, c.seedbank = BARE, 0, 0, False
                 else:
                     c.cover, c.stage, c.stage_age = NATIVE, 0, 0
+                self.log_cell(i, was, c.cover, c.stage)
                 del self.owner[i]
             key = "elim.lantana" if self.cfg["bare_on_removal"] else "elim.lantana_native"
-            return T("ember", key, dir=self._dir_of(cells))
+            return cells, T("ember", key, dir=self._dir_of(cells))
         if p.role == NATIVE_P:
-            # Lantana moves into the stand, it does not appear everywhere at
-            # once. A core takes hold and spreads from there, so losing a native
-            # is a wound that widens rather than a patch flipping colour.
             core_n = self.cfg["native_loss_core"]
             free = [i for i in cells if s.cells[i].cover in (NATIVE, BARE)]
+            lant = [c.index for c in s.cells if c.cover == INVASIVE]
             near = sorted(free, key=lambda i: min(
                 (abs(s.cells[i].r - s.cells[j].r) + abs(s.cells[i].c - s.cells[j].c)
-                 for j in range(len(s.cells)) if s.cells[j].cover == INVASIVE), default=0))
-            for i in near[:core_n]:
+                 for j in lant), default=0))
+            taken = near[:core_n]
+            for i in taken:
                 c = s.cells[i]
+                was = c.cover
                 c.cover, c.stage, c.stage_age = INVASIVE, ESTABLISHED, 0
+                self.log_cell(i, was, c.cover, c.stage)
             for i in cells:
-                del self.owner[i]           # orphan ground: nobody's to remove
-            return T("ember", "elim.native", dir=self._dir_of(cells))
-        return T("ember", f"elim.{p.role}")
+                del self.owner[i]
+            return taken, T("ember", "elim.native", dir=self._dir_of(cells or taken))
+        return [], T("ember", f"elim.{p.role}")
 
-    def _grow(self, rng: random.Random) -> int:
+    def _grow(self, rng: random.Random):
         s, cfg = self.state, self.cfg
         new: dict[int, str | None] = {}
+        candidates: set = set()          # ground lantana is pressing on, for the halo
         for c in s.cells:
             if c.cover != INVASIVE or c.stage < ESTABLISHED:
                 continue
@@ -377,6 +506,7 @@ class Game:
                 n = s.cells[ni]
                 if n.cover not in (NATIVE, BARE) or n.fireline or ni in new:
                     continue
+                candidates.add(ni)
                 p = base
                 if d == s.wind:
                     p *= cfg["growth_wind_mult"]
@@ -386,12 +516,14 @@ class Game:
                     new[ni] = own
         for ni, own in new.items():
             n = s.cells[ni]
+            was = n.cover
             n.cover, n.stage, n.stage_age = INVASIVE, SEEDLING, 0
+            self.log_cell(ni, was, n.cover, n.stage)
             if own is not None:
                 self.owner[ni] = own
             else:
                 self.owner.pop(ni, None)
-        return len(new)
+        return sorted(new), sorted(candidates - set(new))
 
     def _leak(self, rng: random.Random):
         """Bare ground goes to whoever is next to it: lantana if any, else forest."""
@@ -409,6 +541,7 @@ class Game:
                 changes.append((c.index, NATIVE, None))
         for i, cover, own in changes:
             c = s.cells[i]
+            was = c.cover
             if cover == INVASIVE:
                 c.cover, c.stage, c.stage_age = INVASIVE, SEEDLING, 0
                 if own is not None:
@@ -417,6 +550,7 @@ class Game:
                     self.owner.pop(i, None)
             else:
                 c.cover, c.seedbank = NATIVE, False
+            self.log_cell(i, was, c.cover, c.stage)
 
     # fire ---------------------------------------------------------------
     def dense_clusters(self) -> list:
@@ -453,22 +587,25 @@ class Game:
             return 2, biggest
         return 3, biggest
 
-    def _fire(self, rng: random.Random, beats: list) -> dict:
+    def _fire(self, rng: random.Random):
+        """Returns (animation frames, log record, what Ember says)."""
         s, cfg = self.state, self.cfg
         sev, cluster = self.locked_sev, self.locked_cluster
         cluster = [i for i in cluster
                    if s.cells[i].cover == INVASIVE and s.cells[i].stage == DENSE]
-        capped = False
+        quiet = ([self._frame("quiet", "")], {"severity": 0, "burned_cells": []},
+                 T("ember", "fire.quiet"))
         if sev == 0:
-            self._beat(beats, "quiet", T("ember", "fire.quiet"))
-            return {"severity": 0, "cells": []}
+            return quiet
         if sev == 1 and not cluster and rng.random() >= cfg["spark_p"]:
-            self._beat(beats, "quiet", T("ember", "fire.quiet"))
-            return {"severity": 0, "cells": []}
+            return quiet
+        capped = False
         if self.water_round == self.round and sev > 1:
             sev, capped = 1, True
+
         push = None
         forced_path: list = []
+        target = None
         fresh = self.last_line and self.last_line["round"] == self.round
         if fresh and self.last_line.get("cells"):
             fenced = [i for i in self.last_line["cluster"]
@@ -480,66 +617,83 @@ class Game:
                     igniter, forced_path = got
                     push = self.last_line["dir"]
         if push is None:
-            # The fuel that set tonight's severity can be gone by now: cleared by
-            # an elimination, dug through by a trench, or burned last night.
             pool = cluster or [c.index for c in s.cells
                                if c.cover == INVASIVE and c.stage >= ESTABLISHED]
             if not pool:
-                self._beat(beats, "quiet", T("ember", "fire.quiet"))
-                return {"severity": 0, "cells": []}
+                return quiet
             igniter = rng.choice(pool)
-        forced = forced_path if push else []
-        # The season dries out: the same fuel carries fire further in night 6
-        # than in night 1, so neglect compounds instead of holding steady.
+
         ramp = 1 + cfg["fire_round_ramp"] * (self.round - 1)
         cap = round(cfg["fire_cells"][sev] * ramp)
-        # The run at a fresh line comes out of the same budget. Giving it extra
-        # cells made digging a trench increase the burn, which is backwards.
-        forced = forced[:max(0, cap - 1)]
+        forced = forced_path[:max(0, cap - 1)] if push else []
         order, blocked = self._spread_fire(rng, igniter, cap, push=push, forced=forced)
-        # animate: ignition, then each wave, then the burn
-        self._beat(beats, "ignite", "", fire=[igniter])
+
+        frames = [self._frame("ignite", "", fire=[igniter])]
         shown = [igniter]
         for wave in order[1:]:
             shown = shown + wave
-            self._beat(beats, "spread", "", fire=list(shown))
+            frames.append(self._frame("spread", "", fire=list(shown)))
         burned = list(shown)
+        frames.append(self._frame("burn", "", fire=list(burned)))
+
         village_hit = False
         for i in burned:
             c = s.cells[i]
+            was = c.cover
             c.cover, c.stage, c.stage_age, c.seedbank = BARE, 0, 0, True
+            self.log_cell(i, was, c.cover, c.stage)
             if any(s.cells[ni].cover == VILLAGE for ni, _ in neighbors(s, i)):
                 village_hit = True
+
         d = self._dir_of(burned)
-        # If the room paid for a response team, say so even when the fire turned
-        # out small. They should always see what their night bought.
         if self.water_round == self.round:
             text = T("ember", "fire.water", dir=d, n=len(burned))
         elif sev == 1:
-            text = T("ember", "fire.spark", dir=d, n=len(burned))
+            text = T("ember", "fire.spark.one" if len(burned) == 1 else "fire.spark",
+                     dir=d, n=len(burned))
         else:
             text = T("ember", f"fire.sev{sev}", dir=d, n=len(burned))
         if blocked:
-            text += " " + T("ember", "fire.blocked", r=min(self.line_round.get(i, self.round) for i in blocked))
+            text += " " + T("ember", "fire.blocked",
+                            r=min(self.line_round.get(i, self.round) for i in blocked))
+            frames.append(self._frame("blocked", "", fire=list(burned),
+                                      held=sorted(blocked)))
         if village_hit:
             text += " " + T("ember", "fire.village")
         if sev >= 2 and not blocked:
             text += " " + T("ember", "fire.cost")
-        self._beat(beats, "burn", "", fire=list(burned))
-        if blocked:
-            self._beat(beats, "blocked", T("ember", "fire.held"),
-                       fire=list(burned), held=sorted(blocked))
-        self._beat(beats, "aftermath", text)
-        return {"severity": sev, "cells": burned, "blocked": sorted(blocked),
-                "capped": capped, "village": village_hit, "igniter": igniter}
+        frames.append(self._frame("settle", ""))
+
+        c0 = s.cells[igniter]
+        cause = "road_human" if c0.road else "dense_lantana" if sev > 1 else "spark"
+        rec = {"ignition_cell": self.cell_name(igniter), "ignition_cause": cause,
+               "severity": sev, "capped_by_water": capped,
+               "burned_cells": [self.cell_name(i) for i in burned],
+               "blocked_edges": self._blocked_edges(burned, blocked),
+               "village_reached": village_hit}
+        if village_hit and sev >= 2:
+            self.village_lost = True
+        return frames, rec, text
+
+    def _blocked_edges(self, burned: list, blocked) -> list:
+        """Which trench cells the fire actually pushed against, as the pair of
+        cells the edge sits between."""
+        s = self.state
+        bset = set(burned)
+        out = []
+        for b in sorted(blocked):
+            for ni, _ in neighbors(s, b):
+                if ni in bset:
+                    out.append([self.cell_name(ni), self.cell_name(b)])
+        return out
 
     def _run_to_line(self, fuel: list, lines: list):
         """Find the shortest burnable run from any of `fuel` to any of `lines`.
 
-        A breadth-first search outward from the line, through land the fire can
-        actually cross, so the run goes around the river instead of giving up at
-        it. Returns (igniter, path) where path is the cells between the two, or
-        None if the fire could never get there.
+        Breadth-first outward from the line, through ground the fire can cross,
+        so the run goes around the river instead of giving up at it. Returns
+        (igniter, path) where path is the cells between the two, or None if the
+        fire could never get there.
         """
         s = self.state
         fuelset = set(fuel)
@@ -569,7 +723,6 @@ class Game:
             frontier = nxt
         if hit is None:
             return None
-        # walk back from the fuel toward the line, stopping before the line itself
         path, cur = [], prev.get(hit)
         while cur is not None and cur not in lines:
             path.append(cur)
@@ -812,12 +965,6 @@ class Game:
         return {"cols": s.cols, "rows": s.rows, "cells": cells, "health": health_pct(s),
                 "round": self.round, "max_rounds": self.cfg["max_rounds"], "wind": s.wind}
 
-    def _beat(self, beats: list, kind: str, text: str, fire: list | None = None, **extra):
-        b = {"kind": kind, "text": text, "fire": fire or [], "view": self.view(),
-             "hold_ms": self.cfg["hold_ms"].get(kind, 1000)}
-        b.update(extra)
-        beats.append(b)
-
     def _dir_of(self, cells: list) -> str:
         s = self.state
         if not cells:
@@ -827,6 +974,71 @@ class Game:
         ns = "north" if r < s.rows * 0.38 else "south" if r > s.rows * 0.62 else ""
         ew = "west" if c < s.cols * 0.38 else "east" if c > s.cols * 0.62 else ""
         return (ns + (" " if ns and ew else "") + ew) or "middle"
+
+    # ---- event log ---------------------------------------------------------
+    # One record per round, written to stage2/logs so a post-game sequence can
+    # be built from it without reading any of this code.
+    def log_open(self, turn: int):
+        self._log_rec = {"turn": turn, "choice": None, "auto": False,
+                         "player_changes": [], "landscape_changes": [],
+                         "resilience": None, "fire": None,
+                         "health_before": health_pct(self.state)}
+
+    def log_current(self) -> dict:
+        if not getattr(self, "_log_rec", None):
+            self.log_open(self.round)
+        return self._log_rec
+
+    def log_player(self, pid: str, role: str, to: str):
+        self.log_current()["player_changes"].append(
+            {"player_id": pid, "from": role, "to": to})
+
+    def log_cell(self, i: int, was: str, now: str, stage: int = 0):
+        if was == now:
+            return
+        name = {1: "invasive_young", 2: "invasive_spreading", 3: "invasive_thick"}
+        to = name.get(stage, now) if now == INVASIVE else now
+        frm = was
+        self.log_current()["landscape_changes"].append(
+            {"cell": self.cell_name(i), "from": frm, "to": to})
+
+    def log_close(self):
+        rec = self.log_current()
+        rec["health"] = health_pct(self.state)
+        rec["health_loss"] = max(0, rec["health_before"] - rec["health"])
+        self.events.append(rec)
+        self._log_rec = None
+        self._write_log()
+
+    def log_ending(self, end: dict):
+        self.log_meta["ending"] = end
+        self._write_log()
+
+    def _write_log(self):
+        """Rewrite this game's log file and point index.json at it. Cheap enough
+        to do every round, and it means an interrupted game still leaves a log."""
+        import json
+        d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+        os.makedirs(d, exist_ok=True)
+        body = {"game": self.log_meta, "rounds": self.events}
+        path = os.path.join(d, self.log_meta["file"])
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(body, f, indent=2)
+        idx_path = os.path.join(d, "index.json")
+        idx = {"latest": self.log_meta["file"], "games": []}
+        if os.path.exists(idx_path):
+            try:
+                idx = json.load(open(idx_path, encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+        idx["latest"] = self.log_meta["file"]
+        games = [g for g in idx.get("games", []) if g.get("file") != self.log_meta["file"]]
+        games.append({"file": self.log_meta["file"], "started": self.log_meta["started"],
+                      "seed": self.seed, "rounds": len(self.events),
+                      "ending": (self.log_meta.get("ending") or {}).get("reason")})
+        idx["games"] = games[-50:]
+        with open(idx_path, "w", encoding="utf-8") as f:
+            json.dump(idx, f, indent=2)
 
     def gm_state(self) -> dict:
         alive = [p for p in self.players.values() if p.alive]
@@ -841,6 +1053,7 @@ class Game:
                       "ecologist": any(p.role == ECOLOGIST for p in alive),
                       "ranger": any(p.role == RANGER for p in alive)},
             "forecast": self.forecast, "ending": self.ending,
-            "last": [{"kind": b["kind"], "text": b["text"]} for b in self.last_beats if b["text"]],
+            "village_at_risk": self.village_at_risk() if self.state else False,
+            "log": self.log_meta["file"],
             "history": self.history[-3:],
         }

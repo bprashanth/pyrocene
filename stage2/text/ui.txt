@@ -7,7 +7,7 @@ P Y R O C E N E
 Night {r} of {max}
 
 [projector.lobby]
-Waiting for the game master to start. {n} players in.
+Waiting for the game master
 
 [role.lantana]
 Lantana
@@ -22,22 +22,22 @@ Ecologist
 Ranger
 
 [role.lantana.blurb]
-You are the invasion. Every night you wake and choose a native to take. Stay hidden.
+Every night you wake and choose a native to take.
 
 [role.native.blurb]
-You are the forest. Find the lantana by day. Your patch on the map is yours to keep alive.
+Find the lantana by day.
 
 [role.ecologist.blurb]
-Each night you wake and point at one player. The game master tells you if they are lantana.
+Each night you wake and point at one player.
 
 [role.ranger.blurb]
-Each night you wake and point at one player to protect. If lantana picks them, they survive.
+Each night you wake and point at one player to protect.
 
 [phone.alive]
-In the game
+Alive
 
 [phone.out]
-Out of the game. Watch the map.
+Eliminated
 
 [gm.hunt]
 Hunt lantana
