@@ -221,3 +221,4 @@ web/py/
 # Local design prompts
 .prompt/
 stage2/logs/
+stage2/maps/out/
