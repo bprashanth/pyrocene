@@ -129,7 +129,7 @@
 
   <div class="card">
     <div class="row">
-      <button id="reset" class="danger">Reset to lobby</button>
+      <button id="reset" class="danger">Reset</button>
       <label class="muted">seed <input id="rseed" type="text" placeholder="random"></label>
       <span id="err"></span>
     </div>
@@ -225,7 +225,7 @@
   $("#finishvote").onclick = async () => { await post("/api/gm/vote"); };
   $("#advance").onclick = async () => { await post("/api/gm/advance"); };
   $("#reset").onclick = async () => {
-    if (!confirm("Reset the whole game back to the lobby?")) return;
+    if (!confirm("Reset the game and send everyone back to the lobby?")) return;
     await post("/api/gm/reset", { seed: $("#rseed").value || null });
   };
   const es = new EventSource("/events?ch=gm");

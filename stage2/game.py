@@ -282,14 +282,20 @@ class Game:
             p.alive = False
             p.out_round = r
             self.log_player(pid, p.role, "removed")
-            cells, text = self._apply_elimination(p)
+            before = self.view()
+            cells, _ = self._apply_elimination(p)
+            after = self.view()
+            # The card never names anyone. A night with no map change reads the
+            # same whether the ranger saved someone or a specialist was taken,
+            # so the room stays guessing and lantana can lie about it.
+            key = "night.ground" if cells else "night.nothing"
             steps.append(self._step(
                 "night", T("cards", "night.title"),
-                T("cards", f"night.{p.role}", name=p.name) + " " + text,
-                self._change_beats(cells, kind="elimination"), cells=cells))
+                T("cards", key, dir=self._dir_of(cells)) if cells else T("cards", key),
+                self._transition(before, after, cells, "elimination"), cells=cells))
         else:
             steps.append(self._step(
-                "night", T("cards", "night.title"), T("cards", "night.saved"),
+                "night", T("cards", "night.title"), T("cards", "night.nothing"),
                 [self._frame("quiet", "")]))
         self.step = "day"
         self.pending["night_kill"] = None
@@ -317,14 +323,18 @@ class Game:
                 p.alive = False
                 p.out_round = r
                 self.log_player(pid, p.role, "removed")
-                cells, text = self._apply_elimination(p)
+                before = self.view()
+                cells, _ = self._apply_elimination(p)
+                after = self.view()
+                key = ("vote.cleared" if p.role == LANTANA else
+                       "vote.lost" if p.role == NATIVE_P else "vote.nothing")
                 steps.append(self._step(
                     "vote", T("cards", "vote.title"),
-                    T("cards", f"vote.{p.role}", name=p.name) + " " + text,
-                    self._change_beats(cells, kind="elimination"), cells=cells))
+                    T("cards", key, dir=self._dir_of(cells)) if cells else T("cards", key),
+                    self._transition(before, after, cells, "elimination"), cells=cells))
             else:
                 steps.append(self._step(
-                    "vote", T("cards", "vote.title"), T("cards", "vote.nobody"),
+                    "vote", T("cards", "vote.title"), T("cards", "vote.nothing"),
                     [self._frame("quiet", "")]))
         else:
             action = self.pending["action"]
@@ -335,13 +345,15 @@ class Game:
             rec["resilience"] = {"type": {FIRELINE: "fire_line", WATER_ACT: "water",
                                           EWS: "early_warning"}[action], "cells": []}
             if action == FIRELINE:
+                before = self.view()
                 text = self._dig_line(r)
+                after = self.view()
                 cells = list(self.last_line["cells"]) if self.last_line else []
                 rec["resilience"]["cells"] = [self.cell_name(i) for i in cells]
                 steps.append(self._step(
                     "line", T("cards", "line.title"),
                     (reason + " " if reason else "") + text,
-                    self._change_beats(cells, kind="line"), cells=cells))
+                    self._transition(before, after, cells, "line"), cells=cells))
             elif action == WATER_ACT:
                 self.water_round = r
                 steps.append(self._step(
@@ -355,14 +367,17 @@ class Game:
                     [self._frame("quiet", "")]))
 
         # lantana takes ground
+        before = self.view()
         grown, halo = self._grow(rng)
-        self._leak(rng)
-        advance(s_ := self.state, self.cfg, [])
+        leaked = self._leak(rng)
+        advance(self.state, self.cfg, [])
+        after = self.view()
+        moved = sorted(set(grown) | set(leaked))
         steps.append(self._step(
             "growth", T("cards", "growth.title"),
-            T("ember", "growth.one") if len(grown) == 1 else
-            T("ember", "growth", n=len(grown)) if grown else T("ember", "growth.none"),
-            self._growth_beats(grown, halo), cells=grown))
+            T("ember", "growth.one") if len(moved) == 1 else
+            T("ember", "growth", n=len(moved)) if moved else T("ember", "growth.none"),
+            self._transition(before, after, moved, "creep", halo=halo), cells=moved))
 
         # fire
         fire_beats, fire_rec, fire_text = self._fire(rng)
@@ -405,39 +420,46 @@ class Game:
         return {"key": key, "title": title, "text": text, "beats": beats,
                 "cells": [self.cell_name(i) for i in (cells or [])]}
 
-    def _frame(self, kind: str, text: str, **extra) -> dict:
-        f = {"kind": kind, "text": text, "fire": [], "pulse": [], "halo": [],
-             "held": [], "view": self.view(),
+    def _frame(self, kind: str, text: str, view: dict | None = None, **extra) -> dict:
+        f = {"kind": kind, "text": text, "fire": [], "focus": [], "halo": [],
+             "held": [], "haze": False, "view": view or self.view(),
              "hold_ms": self.cfg["hold_ms"].get(kind, 900)}
         f.update(extra)
         return f
 
-    def _change_beats(self, cells: list, kind: str) -> list:
-        """Flash the cells that changed, then settle. The room needs to see where
-        to look before the map goes quiet again."""
-        if not cells:
-            return [self._frame("quiet", "")]
-        out = [self._frame(kind, "", pulse=list(cells)) for _ in range(2)]
-        out.append(self._frame("settle", ""))
+    @staticmethod
+    def _blend(before: dict, after: dict, reveal) -> dict:
+        """The board as it was, with `reveal` squares already turned over. This
+        is what makes a change visible. Without it every frame of a step drew
+        the finished map and the only motion was a blink."""
+        rev = set(reveal)
+        post = {c["index"]: c for c in after["cells"]}
+        out = dict(after)
+        out["cells"] = [post[c["index"]] if c["index"] in rev else c
+                        for c in before["cells"]]
         return out
 
-    def _growth_beats(self, grown: list, halo: list) -> list:
-        """Lantana pulses, the ground it could take glows, then it fills in a few
-        cells at a time so the room watches it move rather than blink."""
-        if not grown:
-            return [self._frame("quiet", "")]
-        s = self.state
-        standing = [c.index for c in s.cells
-                    if c.cover == INVASIVE and c.index not in set(grown)]
-        out = [self._frame("pulse", "", pulse=standing),
-               self._frame("halo", "", pulse=standing, halo=list(halo))]
-        order = sorted(grown, key=lambda i: (s.cells[i].r, s.cells[i].c))
-        chunk = max(1, len(order) // 4)
+    def _transition(self, before: dict, after: dict, cells: list, kind: str,
+                    halo: list | None = None) -> list:
+        """Haze the rest of the board, hold on the squares about to change, turn
+        them over a few at a time, then bring the whole map back at full weight.
+        About four seconds, so a room can follow it."""
+        cells = list(cells)
+        if not cells:
+            return [self._frame("quiet", "", before)]
+        out = [self._frame("focus", "", before, focus=cells, haze=True)]
+        if halo:
+            out.append(self._frame("halo", "", before, focus=cells,
+                                   halo=list(halo), haze=True))
+        st = self.state
+        order = sorted(cells, key=lambda i: (st.cells[i].r, st.cells[i].c))
+        size = max(1, -(-len(order) // 4))
         shown: list = []
-        for k in range(0, len(order), chunk):
-            shown = shown + order[k:k + chunk]
-            out.append(self._frame("creep", "", pulse=list(shown)))
-        out.append(self._frame("settle", ""))
+        for k in range(0, len(order), size):
+            shown = shown + order[k:k + size]
+            out.append(self._frame(kind, "", self._blend(before, after, shown),
+                                   focus=list(shown), haze=True))
+        out.append(self._frame("settle", "", after))
         return out
 
     def _ending_step(self, end: dict) -> dict:
@@ -539,9 +561,11 @@ class Game:
                     changes.append((c.index, INVASIVE, self.owner.get(src)))
             elif rng.random() < cfg["regen_p"]:
                 changes.append((c.index, NATIVE, None))
+        touched = []
         for i, cover, own in changes:
             c = s.cells[i]
             was = c.cover
+            touched.append(i)
             if cover == INVASIVE:
                 c.cover, c.stage, c.stage_age = INVASIVE, SEEDLING, 0
                 if own is not None:
@@ -551,6 +575,7 @@ class Game:
             else:
                 c.cover, c.seedbank = NATIVE, False
             self.log_cell(i, was, c.cover, c.stage)
+        return touched
 
     # fire ---------------------------------------------------------------
     def dense_clusters(self) -> list:
@@ -628,7 +653,7 @@ class Game:
         forced = forced_path[:max(0, cap - 1)] if push else []
         order, blocked = self._spread_fire(rng, igniter, cap, push=push, forced=forced)
 
-        frames = [self._frame("ignite", "", fire=[igniter])]
+        frames = [self._frame("ignite", "", None, fire=[igniter])]
         shown = [igniter]
         for wave in order[1:]:
             shown = shown + wave
@@ -644,6 +669,7 @@ class Game:
             self.log_cell(i, was, c.cover, c.stage)
             if any(s.cells[ni].cover == VILLAGE for ni, _ in neighbors(s, i)):
                 village_hit = True
+        burnt_view = self.view()
 
         d = self._dir_of(burned)
         if self.water_round == self.round:
@@ -662,7 +688,10 @@ class Game:
             text += " " + T("ember", "fire.village")
         if sev >= 2 and not blocked:
             text += " " + T("ember", "fire.cost")
-        frames.append(self._frame("settle", ""))
+        # What it left behind. The frames above still showed the ground as it was
+        # under the flames, so without this the room never sees the cost.
+        frames.append(self._frame("scorch", "", burnt_view, focus=list(burned), haze=True))
+        frames.append(self._frame("settle", "", burnt_view))
 
         c0 = s.cells[igniter]
         cause = "road_human" if c0.road else "dense_lantana" if sev > 1 else "spark"

@@ -48,20 +48,28 @@ def render_beat(beat: dict) -> str:
     view = beat["view"]
     kind = beat["kind"]
     fire = frozenset(beat.get("fire") or [])
-    overlay = {}
+    focus = list(beat.get("focus") or [])
     grid = {c["index"]: c for c in view["cells"]}
-    # Cells worth looking at blink as whatever they now are, so a cleared patch
-    # blinks as bare ground and a fresh trench blinks as a trench. Forcing one
-    # glyph on all of them told the room the wrong thing.
-    for i in beat.get("pulse") or []:
+    overlay = {}
+
+    # Hold on the squares that are changing and push the rest of the board back,
+    # then hand the whole map back at normal weight. Without this the room has
+    # no idea where on a 22 by 12 grid to look.
+    if beat.get("haze"):
+        keep = set(focus) | set(beat.get("halo") or [])
+        for i, c in grid.items():
+            if i not in keep:
+                overlay[i] = R.hazed(c)
+    for i in focus:
         if i in grid:
             overlay[i] = R.BLINK + R.cell_str(grid[i])
-    # Ground lantana is pressing on glows: it has not changed yet, it might.
+    # Ground lantana is pressing on: it has not changed yet, it might.
     for i in beat.get("halo") or []:
         overlay.setdefault(i, R.bg(53) + R.fg(213) + ".." + R.RESET)
-    # Where the fire met a trench: the one moment nobody should miss.
+    # Where the fire met a trench, the one moment nobody should miss.
     for i in beat.get("held") or []:
         overlay[i] = R.BLINK + R.bg(51) + R.fg(17) + "++" + R.RESET
+
     subtitle = (f"{FG(196)}FIRE{R.RESET}"
                 if kind in ("ignite", "spread", "burn", "blocked") else "")
     lines = [header(view, subtitle), ""]
@@ -77,16 +85,11 @@ def render_beat(beat: dict) -> str:
 
 
 def render_card(title: str, text: str, view: dict | None = None, cells=None) -> str:
-    """The explanation the room reads before anything moves. Full screen, one
-    idea, and the squares it is about so people know where to look."""
+    """What the room reads before anything moves. One idea, no square numbers:
+    the map itself shows which squares, by holding on them."""
     width = 62
     body = R._wrap(text, width)
-    where = ""
-    if cells:
-        shown = ", ".join(cells[:8]) + (" and more" if len(cells) > 8 else "")
-        where = f"at {shown}"
-    inner = max([len(title)] + [len(b) for b in body] + [len(where)]) + 6
-    inner = min(max(inner, 44), 74)
+    inner = min(max(max([len(title)] + [len(b) for b in body]) + 6, 44), 74)
     top = "  " + FG(240) + "+" + "-" * inner + "+" + R.RESET
     blank = "  " + FG(240) + "|" + " " * inner + "|" + R.RESET
 
@@ -103,8 +106,6 @@ def render_card(title: str, text: str, view: dict | None = None, cells=None) -> 
     out += ["", "", top, blank, row(title.upper(), 220), blank]
     for b in body:
         out.append(row(b, 252))
-    if where:
-        out += [blank, row(where, 45)]
     out += [blank, top, "",
             f"       {FG(240)}{T('cards', 'prompt.show')}{R.RESET}"]
     return "\n".join(out)

@@ -1,41 +1,30 @@
 # The full-screen explanation the room reads before each animation.
-# One card, then one animation. Keep these to a sentence or two.
+# One card, then one animation. Plain words, no names, no roles.
+#
+# Nothing here says who went out or what they were. A night that changes nothing
+# on the map reads the same whether the ranger saved someone or a specialist was
+# taken, so the room keeps guessing and lantana can lie about it.
 
 [night.title]
 The night
 
-[night.lantana]
-{name} was lantana, and the room lost them anyway.
+[night.ground]
+Lantana took ground in the {dir} during the night.
 
-[night.native]
-Lantana took {name} in the night.
-
-[night.ecologist]
-Lantana took {name}, the ecologist.
-
-[night.ranger]
-Lantana took {name}, the ranger.
-
-[night.saved]
-Nobody was lost. The ranger guessed right.
+[night.nothing]
+The land is the same as it was.
 
 [vote.title]
 The vote
 
-[vote.lantana]
-The room voted out {name}. They were lantana.
+[vote.cleared]
+A lantana patch in the {dir} was pulled out. It is bare ground now.
 
-[vote.native]
-The room voted out {name}. They were native forest.
+[vote.lost]
+A stand in the {dir} was lost. Lantana is moving into it.
 
-[vote.ecologist]
-The room voted out {name}, their own ecologist.
-
-[vote.ranger]
-The room voted out {name}, their own ranger.
-
-[vote.nobody]
-The room could not agree. Nobody went out.
+[vote.nothing]
+The land is the same as it was.
 
 [line.title]
 The crew digs
@@ -47,16 +36,16 @@ A response team stands by
 A lookout goes up
 
 [ews.body]
-No trench, no water. Tonight the crew watches the wind and reads the ground.
+No trench and no water tonight. The crew watches the wind and reads the ground.
 
 [growth.title]
-Lantana moves
+Lantana spreads
 
 [fire.title]
 Fire
 
 [fire.none_title]
-A quiet night
+No fire
 
 [forecast.title]
 Tomorrow night
@@ -64,6 +53,5 @@ Tomorrow night
 [end.title]
 The season ends
 
-# --- the small print on the projector -----------------------------------------
 [prompt.show]
 the game master will show you

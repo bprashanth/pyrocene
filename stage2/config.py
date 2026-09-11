@@ -60,8 +60,10 @@ CONFIG = {
     # The game master controls the gaps between one explanation and the next, so
     # these only pace what moves. STAGE2_FAST=1 zeroes all of them.
     "hold_ms": {
-        "elimination": 620, "line": 620, "water": 1400, "quiet": 1200,
-        "pulse": 900, "halo": 1100, "creep": 520, "settle": 900,
+        # A transition runs about four seconds: hold on the squares, turn them
+        # over a few at a time, then hand the whole map back.
+        "focus": 1200, "halo": 950, "elimination": 400, "line": 400,
+        "creep": 400, "scorch": 1500, "settle": 1100, "water": 1600, "quiet": 1600,
         "ignite": 900, "spread": 380, "burn": 900, "blocked": 2600,
         "forecast": 2200, "ending": 0,
     },

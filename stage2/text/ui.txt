@@ -25,7 +25,7 @@ Ranger
 Every night you wake and choose a native to take.
 
 [role.native.blurb]
-Find the lantana by day.
+Find the lantana in the day.
 
 [role.ecologist.blurb]
 Each night you wake and point at one player.

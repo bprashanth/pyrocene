@@ -50,6 +50,24 @@ def cell_str(c: dict) -> str:
     return _clear_tile(c, hazy=False, is_bare=(cov == "bare"))
 
 
+def hazed(c: dict) -> str:
+    """The same tile pushed into the background. Used while the projector holds
+    on a handful of squares, so the rest of the map stays legible as shape but
+    the eye goes where it is meant to."""
+    cov = c.get("cover")
+    if c.get("fireline"):
+        return bg(234) + fg(239) + "++" + RESET
+    if cov == "village":
+        return bg(235) + fg(241) + "HH" + RESET
+    if cov == "water":
+        return bg(234) + fg(238) + "~ " + RESET
+    if cov == "invasive":
+        return bg(236) + fg(240) + "##" + RESET
+    if cov == "bare":
+        return bg(235) + fg(239) + ".." + RESET
+    return bg(233) + fg(236) + "  " + RESET
+
+
 def _clear_tile(c: dict, hazy: bool, is_bare: bool) -> str:
     """Clear ground. Landscape covariates and the DSS risk zone are revealed by
     satellite, so they take priority over the plain 'unconfirmed' haze."""

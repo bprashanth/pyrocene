@@ -231,7 +231,8 @@ class Handler(BaseHTTPRequestHandler):
                                                        ROOM.game.view(), st["cells"]),
                             "frames": [frames.render_beat(b) for b in st["beats"]],
                             "fire": [b["fire"] for b in st["beats"]],
-                            "held": [b.get("held") or [] for b in st["beats"]]})
+                            "held": [b.get("held") or [] for b in st["beats"]],
+                            "hold_ms": [b["hold_ms"] for b in st["beats"]]})
             return self._json(200, {"steps": out, "cursor": ROOM.cursor, "mode": ROOM.mode})
         if p == "/api/frame":
             return self._json(200, {"frame": ROOM.frame})

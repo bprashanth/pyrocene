@@ -81,6 +81,12 @@ def plain(frame: str) -> str:
     return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", frame)
 
 
+def plain_board(frame: str) -> str:
+    """Just the board rows, colour kept, so two frames can be compared."""
+    return "\n".join(l for l in frame.split("\n")
+                     if re.match(r"^(\x1b\[[0-9;]*m)*\s*\d+ ", l))
+
+
 def steps_on_deck():
     """The steps queued for the projector, with their cards and frames."""
     return api("/api/steps")["steps"]
@@ -236,14 +242,13 @@ class J03_Eliminations(unittest.TestCase):
     def test_lantana_out_leaves_bare_and_native_out_lets_lantana_in(self):
         state = fresh(seed=33)
         r = roles(state)
-        api("/api/gm/night", {})     # nobody taken tonight
+        api("/api/gm/night", {})
         drain()
         before = cover_counts()
         api("/api/gm/eliminate", {"id": r["lantana"][0]})
         st = play_vote("hunt")
         v = step(st, "vote")
-        self.assertIn("were lantana", v["text"])
-        self.assertIn("pulled out", v["text"])
+        self.assertIn("bare ground", v["text"])
         self.assertGreater(cover_counts()["bare"], before["bare"],
                            "an eliminated lantana patch should leave bare ground")
 
@@ -252,19 +257,45 @@ class J03_Eliminations(unittest.TestCase):
         api("/api/gm/eliminate", {"id": nat})
         st = play_night()
         n = step(st, "night")
-        self.assertIn("Lantana moves in", n["text"])
-        self.assertTrue(n["cells"], "the room should be told which squares changed")
+        self.assertIn("took ground", n["text"])
         drain()
 
-    def test_losing_a_specialist_does_not_change_the_map(self):
+    def test_losing_a_specialist_reads_like_a_quiet_night(self):
+        """The room must not learn from the projector whether the ecologist or
+        the ranger is still in. A night that changes nothing looks identical
+        either way, so lantana can lie about it."""
         state = fresh(seed=34)
         r = roles(state)
         api("/api/gm/eliminate", {"id": r["ecologist"][0]})
-        st = play_night()
-        n = step(st, "night")
-        self.assertIn("ecologist", n["text"])
-        self.assertIn("map does not change", n["text"])
-        self.assertEqual(n["cells"], [])
+        quiet_specialist = step(play_night(), "night")["text"]
+
+        state = fresh(seed=34)
+        st = step(play_night(), "night")      # nobody taken at all
+        self.assertEqual(quiet_specialist, st["text"],
+                         "a taken specialist and a saved night must read the same")
+
+    def test_no_card_ever_names_a_player_or_a_role(self):
+        state = fresh(seed=35)
+        names = [p["name"] for p in state["players"]]
+        roles_words = ("lantana player", "ecologist", "ranger", "native player",
+                       "villager", "was lantana", "were lantana")
+        seen = 0
+        for _ in range(4):
+            if api("/api/state")["phase"] != "playing":
+                break
+            alive = [p for p in api("/api/state")["players"] if p["alive"]]
+            if alive:
+                api("/api/gm/eliminate", {"id": alive[0]["id"]})
+            for st in play_round("hunt"):
+                seen += 1
+                blob = (st["title"] + " " + st["text"]).lower()
+                for nm in names:
+                    self.assertNotIn(nm.lower(), blob, f"card named a player: {st['text']}")
+                for w in roles_words:
+                    self.assertNotIn(w, blob, f"card gave away a role: {st['text']}")
+                self.assertNotIn("at ", plain(st["card"]).split("THE")[0].lower() + " ",
+                                 "the card should not list squares; the map shows them")
+        self.assertGreater(seen, 6, "not enough cards checked")
 
 
 class J04_NightRunsAndEmberMatches(unittest.TestCase):
@@ -298,19 +329,48 @@ class J04_NightRunsAndEmberMatches(unittest.TestCase):
                 return
         self.skipTest("no sized fire in the seeds tried")
 
-    def test_growth_animation_pulses_then_creeps(self):
+    def test_growth_holds_then_turns_the_squares_over(self):
         for seed in (41, 42, 43, 44):
             fresh(seed=seed)
             st = play_round("hunt")
             g = step(st, "growth")
             if g and "creep" in g["kinds"]:
-                self.assertEqual(g["kinds"][0], "pulse",
-                                 "standing lantana pulses before anything moves")
-                self.assertEqual(g["kinds"][1], "halo",
-                                 "the ground it could take glows next")
-                self.assertEqual(g["kinds"][-1], "settle")
+                self.assertEqual(g["kinds"][0], "focus",
+                                 "the board hazes and holds on the squares first")
+                self.assertEqual(g["kinds"][-1], "settle",
+                                 "the whole map comes back at full weight last")
+                boards = [plain_board(f) for f in g["frames"]]
+                self.assertGreater(len(set(boards)), 2,
+                                   "the map has to actually change, not just blink")
+                self.assertNotEqual(boards[0], boards[-1],
+                                    "the last frame must differ from the first")
                 return
         self.skipTest("no growth in the seeds tried")
+
+    def test_a_transition_runs_long_enough_to_follow(self):
+        fresh(seed=41)
+        st = play_round("hunt")
+        g = step(st, "growth")
+        if not g or "creep" not in g["kinds"]:
+            self.skipTest("no growth this seed")
+        self.assertGreaterEqual(sum(g["hold_ms"]), 3200, "too quick to read")
+        self.assertLessEqual(sum(g["hold_ms"]), 7000, "too slow, the room will drift")
+
+    def test_the_fire_shows_what_it_left_behind(self):
+        for seed in (41, 43, 45, 47, 49):
+            fresh(seed=seed)
+            for _ in range(3):
+                if api("/api/state")["phase"] != "playing":
+                    break
+                st = play_round("hunt")
+                f = step(st, "fire")
+                if f and "scorch" in f["kinds"]:
+                    i = f["kinds"].index("scorch")
+                    self.assertNotEqual(plain_board(f["frames"][0]),
+                                        plain_board(f["frames"][i]),
+                                        "burned ground must look different afterwards")
+                    return
+        self.skipTest("no fire in the seeds tried")
 
 class J05_FireLineHolds(unittest.TestCase):
     def test_fire_runs_into_the_line_and_stops(self):

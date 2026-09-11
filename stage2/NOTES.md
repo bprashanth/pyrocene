@@ -144,3 +144,29 @@ should:
 
 Sheltering at the right moment is now the better play, and it got there by
 making fire bigger rather than by making hunting worse.
+
+## Third pass: making the change actually visible
+
+The room could not see what changed, and the reason was dull: every frame in a
+step called `view()` after the state had already been mutated, so all of them
+drew the finished map. The only motion was a blink overlay. Ten frames, two
+distinct boards.
+
+Frames now carry the board they should draw. A step captures the view before the
+change and after it, and `_blend` hands back the old board with a subset of
+squares already turned over. On top of that the rest of the board is greyed out
+while the projector holds on the squares that are moving, then the full map
+comes back at normal weight. That is four to five seconds per change, and the
+growth step now has seven distinct boards across seven frames instead of two.
+
+The fire had the same bug at its end: the frames were built before the burn was
+applied, so the room never saw the bare ground it left. There is a `scorch`
+frame now, on the burnt board, holding on what went.
+
+The cards stopped naming people. They name the land instead. This matters for
+the room game rather than the map: a night that changes nothing reads identically
+whether the ranger saved someone or the ecologist was taken, so nobody can read
+the projector to find out who is still in, and lantana can lie about it. A test
+walks four rounds of cards and fails if any of them contains a player name or a
+role word. Square references came off the cards too, since the map now points at
+them far better than a list of coordinates.

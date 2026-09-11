@@ -19,7 +19,8 @@ python3 -m stage2.server          # prints the three addresses
 5. Run the night as you always do. If lantana took someone, mark them, then
    press **Finish night**.
 6. The projector puts up one card explaining what happened. Read it out, then
-   press **Show what happened** and the map animates that one change.
+   press **Show what happened**. The board greys out except the squares that
+   change, they turn over, and the whole map comes back. About four seconds.
 7. Ask the room for their one choice: **hunt lantana** or **resilience**. Mark
    the vote if they hunted, then press **Finish vote**.
 8. Card, show, card, show, through the vote, the spread and the fire. Repeat.
@@ -60,11 +61,17 @@ fixed against the map the room debated over, so what Ember says and what the map
 does always agree. Early nights are small sparks. By the middle of the game
 separate patches have met, and one fire runs through all of them.
 
-**What the animations say.** Standing lantana blinks first, so the room knows
-where to look. The ground it is pressing on glows. Then it fills in a few
-squares at a time. A fire starts at one square, spreads outward wave by wave,
-and if it meets a trench those cells flash and the ground behind them is
-untouched.
+**What the animations say.** Every change greys out the rest of the board and
+holds on the squares that are about to move, so a room knows where to look on a
+22 by 12 grid. Then those squares turn over a few at a time and the full map
+comes back. A fire starts at one square, spreads wave by wave, and shows the
+bare ground it left. If it meets a trench, those cells flash and the ground
+behind them is untouched.
+
+**The cards never name anyone.** They say what happened to the land, not who
+went out or what they were. A night that changes nothing on the map reads the
+same whether the ranger saved someone or a specialist was taken, so the room
+keeps guessing and lantana can lie about it.
 
 ## How it ends
 
