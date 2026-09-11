@@ -56,7 +56,10 @@ def render(scene) -> str:
         """A dug edge. People work in straight lines."""
         return region_path(cells, scene.cols, scene.rows, u, rad, x0, y0)
 
-    def mute(colour, amount=0.84):
+    def mute(colour, amount=0.58):
+        """Push a colour toward the ground while the projector holds on a few
+        squares. Not all the way: at 0.84 the map went black and the room lost
+        every landmark it needed to place the change."""
         if not hazed:
             return colour
         c = colour.lstrip("#")
@@ -65,11 +68,19 @@ def render(scene) -> str:
         return "#%02x%02x%02x" % (int(r + (0x0d - r) * f), int(g + (0x13 - g) * f),
                                   int(b + (0x1b - b) * f))
 
-    B = [f'<defs><clipPath id="bd"><rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" rx="4"/></clipPath></defs>',
+    B = [f'<defs><clipPath id="bd"><rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" rx="4"/></clipPath>'
+         f'<pattern id="canopy" width="{u*0.5:.1f}" height="{u*0.5:.1f}" patternUnits="userSpaceOnUse">'
+         f'<circle cx="{u*0.14:.1f}" cy="{u*0.14:.1f}" r="{u*0.045:.1f}" fill="#2a5236" opacity=".55"/>'
+         f'<circle cx="{u*0.36:.1f}" cy="{u*0.34:.1f}" r="{u*0.035:.1f}" fill="#2a5236" opacity=".4"/>'
+         f'</pattern></defs>',
          f'<g clip-path="url(#bd)">']
 
     # the whole board is forest until something takes it
     B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" fill="{mute(FOREST)}"/>')
+    # A little canopy grain, so the forest reads as ground rather than as the
+    # empty space around the lantana.
+    B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" fill="url(#canopy)" '
+             f'opacity="{0.18 if hazed else 0.7}"/>')
 
     # relief: slope hatching inside the hills, no outline
     # Relief as nested contours, which is how a printed map carries height and
@@ -149,14 +160,17 @@ def render(scene) -> str:
 
     if scene.focus:
         d = cut(scene.focus, 0.24)
-        B.append(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="11" opacity=".16" fill-rule="evenodd"/>')
-        B.append(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="3" fill-rule="evenodd"/>')
+        B.append(f'<path d="{d}" fill="#ffffff" opacity=".10" fill-rule="evenodd"/>')
+        B.append(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="14" opacity=".14" fill-rule="evenodd"/>')
+        B.append(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="3.2" fill-rule="evenodd"/>')
     B.append("</g>")
     B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" rx="4" fill="none" '
              f'stroke="#25303f" stroke-width="1.5"/>')
 
-    head = (f'<text x="{base.PAD}" y="56" class="ttl" fill="{LANTANA}">P Y R O C E N E</text>'
-            f'<text x="{base.PAD}" y="84" class="rnd" fill="{DIM}">'
+    head = (f'<text x="{base.PAD}" y="50" class="ttl" fill="{LANTANA}">P Y R O C E N E</text>'
+            f'<line x1="{base.PAD}" y1="62" x2="{base.PAD+252}" y2="62" stroke="{LANTANA}" '
+            f'stroke-width="1.4" opacity=".45"/>'
+            f'<text x="{base.PAD}" y="86" class="rnd" fill="{DIM}">'
             f'NIGHT {scene.round} OF {scene.max_rounds}</text>')
     bar = base.health_bar(base.W - base.PAD - 330, 46, 240, scene.health,
                           DIM, "#3fc97f", LANTANA, FIRE, "#1b2431")
