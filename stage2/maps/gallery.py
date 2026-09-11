@@ -15,6 +15,7 @@ import sys
 
 from ..game import Game
 from .model import from_view
+from .scenes import all_scenes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
@@ -104,9 +105,14 @@ def moments(seed=3, players=14):
     return out
 
 
-def build(styles, keys=None):
+def build(styles, keys=None, real=False):
     os.makedirs(OUT, exist_ok=True)
-    scenes = moments()
+    # Hand-built scenes first: every style judged on identical, well-formed
+    # content. Real games are appended for a sanity check that nothing in a
+    # style falls over on whatever the dice actually produce.
+    scenes = all_scenes()
+    if real:
+        scenes.update({f"game-{k}": v for k, v in moments().items()})
     if keys:
         scenes = {k: v for k, v in scenes.items() if k in keys}
     mods = []
@@ -155,8 +161,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("styles", nargs="*", default=None)
     ap.add_argument("--moment", action="append")
+    ap.add_argument("--real", action="store_true", help="also render moments from a played game")
     a = ap.parse_args()
-    build(a.styles or STYLES, a.moment)
+    build(a.styles or STYLES, a.moment, a.real)
 
 
 if __name__ == "__main__":

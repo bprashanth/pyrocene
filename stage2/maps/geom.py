@@ -146,3 +146,119 @@ def distance_field(seeds, blocked, cols: int, rows: int, limit: int = 6) -> dict
             dist[n] = dist[i] + 1
             q.append(n)
     return dist
+
+
+# ---- organic edges -------------------------------------------------------
+# Rounding the corners of a 22 by 12 grid still reads as a grid: every bend
+# happens on the same lattice. These build the region on a finer grid first,
+# from a smooth field sampled off the coarse one plus a little noise, so the
+# boundary wanders the way a real edge does. The noise is keyed on position, so
+# the same board always draws the same coastline and only squares near a change
+# move between one frame and the next.
+
+def _hash2(x: int, y: int, seed: int) -> float:
+    h = (x * 374761393 + y * 668265263 + seed * 1442695040888963407) & 0xFFFFFFFF
+    h = (h ^ (h >> 13)) * 1274126177 & 0xFFFFFFFF
+    return ((h ^ (h >> 16)) & 0xFFFF) / 65535.0
+
+
+def _value_noise(x: float, y: float, seed: int) -> float:
+    xi, yi = int(x // 1), int(y // 1)
+    fx, fy = x - xi, y - yi
+    sx = fx * fx * (3 - 2 * fx)
+    sy = fy * fy * (3 - 2 * fy)
+    a = _hash2(xi, yi, seed)
+    b = _hash2(xi + 1, yi, seed)
+    c = _hash2(xi, yi + 1, seed)
+    d = _hash2(xi + 1, yi + 1, seed)
+    return (a + (b - a) * sx) + ((c + (d - c) * sx) - (a + (b - a) * sx)) * sy
+
+
+def organic(cells, cols: int, rows: int, scale: int = 5,
+            wobble: float = 0.16, freq: float = 1.5, seed: int = 1701):
+    """The same region on a `scale` times finer grid, with a wandering edge.
+
+    Returns (fine_cells, fine_cols, fine_rows) ready for outlines().
+    """
+    inside = set(cells)
+    if not inside:
+        return set(), cols * scale, rows * scale
+    fc_, fr_ = cols * scale, rows * scale
+
+    def at(r, c):
+        return 1.0 if (0 <= r < rows and 0 <= c < cols and r * cols + c in inside) else 0.0
+
+    out = set()
+    for fr in range(fr_):
+        # coarse coordinates of this fine cell's centre, offset so that sampling
+        # lands between cell centres rather than on them
+        y = (fr + 0.5) / scale - 0.5
+        r0 = int(y // 1)
+        ty = y - r0
+        ty = ty * ty * (3 - 2 * ty)
+        for fc in range(fc_):
+            x = (fc + 0.5) / scale - 0.5
+            c0 = int(x // 1)
+            tx = x - c0
+            tx = tx * tx * (3 - 2 * tx)
+            top = at(r0, c0) + (at(r0, c0 + 1) - at(r0, c0)) * tx
+            bot = at(r0 + 1, c0) + (at(r0 + 1, c0 + 1) - at(r0 + 1, c0)) * tx
+            v = top + (bot - top) * ty
+            if wobble:
+                v += (_value_noise(fc / scale * freq, fr / scale * freq, seed) - 0.5) * 2 * wobble
+            if v >= 0.5:
+                out.add(fr * fc_ + fc)
+    return out, fc_, fr_
+
+
+def organic_path(cells, cols: int, rows: int, unit: float, scale: int = 5,
+                 wobble: float = 0.16, radius: float = 0.5,
+                 ox: float = 0.0, oy: float = 0.0, seed: int = 1701) -> str:
+    """An SVG path for a region with a wandering, non-gridded edge."""
+    fine, fcols, frows = organic(cells, cols, rows, scale, wobble, seed=seed)
+    if not fine:
+        return ""
+    return " ".join(rounded_path(lp, unit / scale, radius, ox, oy)
+                    for lp in outlines(fine, fcols, frows))
+
+
+def chaikin(loop: list, iterations: int = 3) -> list:
+    """Corner cutting. Each pass replaces every corner with two points a quarter
+    of the way along each side, which turns a staircase into a curve. Three
+    passes is enough to lose the lattice without losing the shape."""
+    pts = loop
+    for _ in range(iterations):
+        if len(pts) < 4:
+            break
+        out = []
+        n = len(pts)
+        for k in range(n):
+            a, b = pts[k], pts[(k + 1) % n]
+            out.append((a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25))
+            out.append((a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75))
+        pts = out
+    return pts
+
+
+def smooth_path(loop: list, unit: float, ox: float = 0.0, oy: float = 0.0,
+                iterations: int = 3) -> str:
+    pts = chaikin(simplify(loop), iterations)
+    if len(pts) < 3:
+        return ""
+    d = [f"M{ox + pts[0][0]*unit:.1f},{oy + pts[0][1]*unit:.1f}"]
+    for x, y in pts[1:]:
+        d.append(f"L{ox + x*unit:.1f},{oy + y*unit:.1f}")
+    d.append("Z")
+    return "".join(d)
+
+
+def coast(cells, cols: int, rows: int, unit: float, scale: int = 4,
+          wobble: float = 0.16, ox: float = 0.0, oy: float = 0.0,
+          seed: int = 1701, smoothing: int = 3) -> str:
+    """The whole pipeline: build the region on a finer grid with a wandering
+    edge, trace it, then cut the corners until it reads as a coastline."""
+    fine, fcols, frows = organic(cells, cols, rows, scale, wobble, seed=seed)
+    if not fine:
+        return ""
+    return " ".join(smooth_path(lp, unit / scale, ox, oy, smoothing)
+                    for lp in outlines(fine, fcols, frows) if len(lp) > 5)
