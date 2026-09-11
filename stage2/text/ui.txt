@@ -1,0 +1,49 @@
+# Labels for the game master console, the phone card, and the projector.
+
+[projector.title]
+P Y R O C E N E
+
+[projector.round]
+Night {r} of {max}
+
+[projector.lobby]
+Waiting for the game master to start. {n} players in.
+
+[role.lantana]
+Lantana
+
+[role.native]
+Native forest
+
+[role.ecologist]
+Ecologist
+
+[role.ranger]
+Ranger
+
+[role.lantana.blurb]
+You are the invasion. Every night you wake and choose a native to take. Stay hidden.
+
+[role.native.blurb]
+You are the forest. Find the lantana by day. Your patch on the map is yours to keep alive.
+
+[role.ecologist.blurb]
+Each night you wake and point at one player. The game master tells you if they are lantana.
+
+[role.ranger.blurb]
+Each night you wake and point at one player to protect. If lantana picks them, they survive.
+
+[phone.alive]
+In the game
+
+[phone.out]
+Out of the game. Watch the map.
+
+[gm.hunt]
+Hunt lantana
+
+[gm.resilience]
+Resilience
+
+[gm.resolve]
+Resolve night

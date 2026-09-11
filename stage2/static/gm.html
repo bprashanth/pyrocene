@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pyrocene — game master</title>
+<style>
+  :root { --bg:#0f1613; --card:#16201b; --ink:#d9e5da; --muted:#8aa392; --hair:#26332a;
+          --green:#4dbd79; --orange:#ff8a3d; --red:#ff5a5f; --blue:#4fb3ff; --purple:#c58cf0; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin:0; background:var(--bg); color:var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 18px 16px 60px; display:grid; gap: 16px; }
+  h1 { margin:0; font-size: 20px; letter-spacing:.04em; color: var(--orange); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .card { background: var(--card); border:1px solid var(--hair); border-radius: 10px; padding: 14px 16px; }
+  .card h2 { margin:0 0 10px; font-size: 12px; letter-spacing:.14em; text-transform: uppercase; color: var(--muted); }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border:1px solid var(--hair);
+           background:#1d2a23; color: var(--ink); cursor:pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--green); color:#062; border-color: transparent; font-weight: 700; }
+  button.danger { background:#3a1d1d; color: #ffb3b3; }
+  button:disabled { opacity:.45; cursor:default; }
+  input[type=number], input[type=text] { font: inherit; padding: 7px 9px; border-radius: 8px;
+           border:1px solid var(--hair); background:#0e1512; color: var(--ink); width: 90px; }
+  table { width:100%; border-collapse: collapse; }
+  td, th { text-align:left; padding: 7px 8px; border-bottom: 1px solid var(--hair); }
+  th { font-size: 11px; letter-spacing:.12em; text-transform: uppercase; color: var(--muted); }
+  tr.out td { opacity: .45; text-decoration: line-through; }
+  tr.pending td { background: #2a1d10; }
+  .role { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+  .role.lantana { color: var(--purple); } .role.native { color: var(--green); }
+  .role.ecologist { color: var(--blue); } .role.ranger { color: var(--orange); }
+  .stat { font-size: 26px; font-weight: 800; }
+  .muted { color: var(--muted); }
+  .choice label { display:flex; gap:8px; align-items:center; padding:8px 12px; border:1px solid var(--hair);
+                  border-radius:8px; cursor:pointer; }
+  .choice input:checked + span { color: var(--orange); font-weight: 700; }
+  .log p { margin: 4px 0; } .log .k { color: var(--muted); font-size: 12px; margin-right: 6px; }
+  #err { color: var(--red); min-height: 1.4em; }
+  .ending { font-size: 18px; color: #ffd23f; }
+  .hint { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="justify-content:space-between">
+    <h1>PYROCENE · game master</h1>
+    <div class="row">
+      <span id="phase" class="muted"></span>
+      <a href="/projector" target="_blank" class="muted" style="font-size:13px">open projector ↗</a>
+    </div>
+  </div>
+
+  <div id="lobby" class="card">
+    <h2>Lobby</h2>
+    <div class="row">
+      <span id="count" class="stat">0</span><span class="muted">players in</span>
+      <span style="flex:1"></span>
+      <label class="muted">lantana <input id="lantana" type="number" min="1" placeholder="auto"></label>
+      <label class="muted">seed test players <input id="seedn" type="number" value="12" min="1" max="20"></label>
+      <button id="seed">Seed</button>
+      <button id="start" class="primary">Start game</button>
+    </div>
+    <p class="hint">Players join at this laptop's address. Seed adds fake players so you can rehearse alone.</p>
+  </div>
+
+  <div id="game" class="card" hidden>
+    <div class="row" style="justify-content:space-between">
+      <div class="row"><span class="muted">Night</span><span id="round" class="stat"></span>
+        <span class="muted">of <span id="maxr"></span></span></div>
+      <div class="row"><span class="muted">Forest</span><span id="health" class="stat"></span></div>
+      <div class="row muted" id="alive"></div>
+    </div>
+    <div id="ending" class="ending"></div>
+    <div id="forecast" class="hint"></div>
+  </div>
+
+  <div id="night" class="card" hidden>
+    <h2>This night</h2>
+    <div class="row choice">
+      <label><input type="radio" name="choice" value="hunt"><span>Hunt lantana</span></label>
+      <label><input type="radio" name="choice" value="resilience"><span>Resilience</span></label>
+      <span id="actions" class="row" hidden>
+        <label><input type="radio" name="action" value="" checked><span>let the system pick</span></label>
+        <label><input type="radio" name="action" value="fireline"><span>fire line</span></label>
+        <label><input type="radio" name="action" value="water"><span>water</span></label>
+        <label><input type="radio" name="action" value="ews"><span>early warning</span></label>
+      </span>
+    </div>
+    <p class="hint">Mark who was eliminated tonight in the table, pick the room's choice, then resolve.
+      The projector plays the night out.</p>
+    <div class="row">
+      <button id="resolve" class="primary">Resolve night</button>
+      <button id="replay">Replay last night</button>
+      <span id="playing" class="muted" hidden>projector is playing the night…</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Players</h2>
+    <table><thead><tr><th>#</th><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <tbody id="players"></tbody></table>
+  </div>
+
+  <div id="last" class="card log" hidden>
+    <h2>Last night, as Ember told it</h2>
+    <div id="lastlines"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="reset" class="danger">Reset to lobby</button>
+      <label class="muted">seed <input id="rseed" type="text" placeholder="random"></label>
+      <span id="err"></span>
+    </div>
+  </div>
+</div>
+<script>
+  const $ = (s) => document.querySelector(s);
+  let S = null;
+  async function post(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                                   body: JSON.stringify(body || {}) });
+    const d = await r.json();
+    $("#err").textContent = r.ok ? "" : (d.error || "error");
+    return d;
+  }
+  function render(s) {
+    S = s;
+    const lobby = s.phase === "lobby";
+    $("#phase").textContent = s.phase === "lobby" ? "lobby" : s.phase === "ended" ? "game over" : "in play";
+    $("#lobby").hidden = !lobby;
+    $("#game").hidden = lobby;
+    $("#night").hidden = s.phase !== "playing";
+    $("#count").textContent = s.players.length;
+    $("#round").textContent = s.round;
+    $("#maxr").textContent = s.max_rounds;
+    $("#health").textContent = s.health == null ? "" : s.health + "%";
+    $("#alive").textContent = s.phase === "lobby" ? "" :
+      `lantana ${s.alive.lantana} · natives ${s.alive.native} · ecologist ${s.alive.ecologist ? "in" : "out"} · ranger ${s.alive.ranger ? "in" : "out"}`;
+    $("#ending").textContent = s.ending ? s.ending.text : "";
+    $("#forecast").textContent = s.forecast ? `Forecast for night ${s.forecast.round}: ${s.forecast.level} fire, wind from the ${s.forecast.wind}` : "";
+    $("#playing").hidden = !s.playing;
+    $("#resolve").disabled = s.playing;
+    $("#replay").disabled = s.playing || !s.last || !s.last.length;
+    const tb = $("#players"); tb.innerHTML = "";
+    s.players.forEach((p, i) => {
+      const pend = s.pending.eliminations.includes(p.id);
+      const tr = document.createElement("tr");
+      tr.className = !p.alive ? "out" : pend ? "pending" : "";
+      tr.dataset.id = p.id;
+      tr.innerHTML = `<td class="muted">${i + 1}</td><td>${p.name}</td>
+        <td>${p.role ? `<span class="role ${p.role}">${p.role}</span>` : '<span class="muted">—</span>'}</td>
+        <td>${!p.alive ? `out, night ${p.out_round}` : pend ? "eliminated tonight" : "in"}</td>
+        <td style="text-align:right">${s.phase !== "playing" || !p.alive ? "" :
+          pend ? `<button data-un="${p.id}">undo</button>` : `<button data-elim="${p.id}">eliminate</button>`}</td>`;
+      tb.appendChild(tr);
+    });
+    const last = s.last || [];
+    $("#last").hidden = !last.length;
+    $("#lastlines").innerHTML = last.map(b => `<p><span class="k">${b.kind}</span>${b.text}</p>`).join("");
+    // reflect the pending choice
+    const c = s.pending.choice;
+    document.querySelectorAll('input[name=choice]').forEach(r => r.checked = r.value === c);
+    $("#actions").hidden = c !== "resilience";
+    const a = s.pending.action || "";
+    document.querySelectorAll('input[name=action]').forEach(r => r.checked = r.value === a);
+  }
+  document.addEventListener("click", async (e) => {
+    const t = e.target;
+    if (t.dataset.elim) return render(await post("/api/gm/eliminate", { id: t.dataset.elim }));
+    if (t.dataset.un) return render(await post("/api/gm/uneliminate", { id: t.dataset.un }));
+  });
+  document.addEventListener("change", async (e) => {
+    if (e.target.name === "choice" || e.target.name === "action") {
+      const choice = document.querySelector('input[name=choice]:checked')?.value || null;
+      const action = document.querySelector('input[name=action]:checked')?.value || null;
+      render(await post("/api/gm/choice", { choice, action: action || null }));
+    }
+  });
+  $("#seed").onclick = async () => { await post("/api/gm/seed", { n: +$("#seedn").value || 12 }); };
+  $("#start").onclick = async () => { render(await post("/api/gm/start", { lantana: +$("#lantana").value || null })); };
+  $("#resolve").onclick = async () => { render(await post("/api/gm/resolve")); };
+  $("#replay").onclick = async () => { render(await post("/api/gm/replay")); };
+  $("#reset").onclick = async () => {
+    if (!confirm("Reset the whole game back to the lobby?")) return;
+    render(await post("/api/gm/reset", { seed: $("#rseed").value || null }));
+  };
+  const es = new EventSource("/events?ch=gm");
+  es.addEventListener("state", (e) => render(JSON.parse(e.data)));
+</script>
+</body>
+</html>

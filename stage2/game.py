@@ -1,0 +1,845 @@
+"""Stage 2 game: the room's Mafia state mirrored onto a Pyrocene map, with fire.
+
+Pure logic, no I/O. The server owns a Game, feeds it what the game master
+records, and turns the beats that resolve() returns into projector frames.
+
+Round order (see .prompt/stage2.md section 3):
+  eliminations -> resilience -> lantana growth -> fire -> Ember -> ending check
+"""
+from __future__ import annotations
+import random
+import secrets
+from copy import deepcopy
+from dataclasses import dataclass, field
+from collections import deque
+
+from .engine import content as C
+from .engine.model import (State, NATIVE, INVASIVE, BARE, WATER, VILLAGE,
+                           SEEDLING, ESTABLISHED, DENSE, GROUND)
+from .engine.rules import neighbors, neighbors8, health_pct, advance
+from .config import CONFIG
+from .text import T
+
+LANTANA, NATIVE_P, ECOLOGIST, RANGER = "lantana", "native", "ecologist", "ranger"
+FIRELINE, WATER_ACT, EWS = "fireline", "water", "ews"
+ACTIONS = (FIRELINE, WATER_ACT, EWS)
+
+
+@dataclass
+class Player:
+    id: str
+    name: str
+    token: str
+    role: str = ""
+    alive: bool = True
+    patch: list = field(default_factory=list)   # cells owned at the start
+    out_round: int = 0
+
+    def public(self) -> dict:
+        return {"id": self.id, "name": self.name, "alive": self.alive,
+                "role": self.role, "out_round": self.out_round}
+
+
+class Game:
+    def __init__(self, seed: int | None = None, config: dict | None = None):
+        self.cfg = deepcopy(CONFIG)
+        if config:
+            self.cfg.update(config)
+        self.seed = seed if seed is not None else random.randrange(1_000_000_000)
+        self.players: dict[str, Player] = {}
+        self.phase = "lobby"          # lobby | playing | ended
+        self.round = 0
+        self.state: State | None = None
+        self.owner: dict[int, str] = {}       # cell -> player id
+        self.line_round: dict[int, int] = {}  # fireline cell -> round it was dug
+        self.pending = {"eliminations": [], "choice": None, "action": None}
+        self.forecast = None
+        self.water_round = 0
+        self.last_line = None          # {"round", "cluster", "dir"} of the newest fire line
+        self.locked_sev, self.locked_cluster = 0, []   # tonight's fire, fixed at the top
+        self.village_lost = False
+        self.history: list = []
+        self.ending = None
+        self.last_beats: list = []
+        self.lantana_override: int | None = None
+
+    # ---- lobby -----------------------------------------------------------
+    def add_player(self, name: str) -> Player:
+        if self.phase != "lobby":
+            raise ValueError("the game has started")
+        name = (name or "").strip()[:24] or f"Player {len(self.players) + 1}"
+        pid = f"p{len(self.players) + 1:02d}"
+        p = Player(id=pid, name=name, token=secrets.token_hex(8))
+        self.players[pid] = p
+        return p
+
+    def by_token(self, token: str) -> Player | None:
+        return next((p for p in self.players.values() if p.token == token), None)
+
+    def lantana_count(self, n: int | None = None) -> int:
+        n = len(self.players) if n is None else n
+        if self.lantana_override:
+            return max(1, min(self.lantana_override, n - 3))
+        return max(2, n // self.cfg["lantana_ratio"])
+
+    def start(self):
+        n = len(self.players)
+        if n < self.cfg["min_players"]:
+            raise ValueError(f"need at least {self.cfg['min_players']} players, have {n}")
+        rng = random.Random(self.seed)
+        k = self.lantana_count()
+        ids = list(self.players)
+        rng.shuffle(ids)
+        roles = [ECOLOGIST, RANGER] + [LANTANA] * k + [NATIVE_P] * (n - 2 - k)
+        for pid, role in zip(ids, roles):
+            self.players[pid].role = role
+
+        ecfg = dict(self.cfg["engine"])
+        self.state = C.new_state(ecfg, self.seed)
+        for c in self.state.cells:
+            c.obs = GROUND            # the projector shows the whole map
+            c.last_seen = 0
+        self._allocate(rng)
+        self.phase = "playing"
+        self.round = 1
+        self.pending = {"eliminations": [], "choice": None, "action": None}
+
+    def _allocate(self, rng: random.Random):
+        """Split about two thirds of the land into contiguous patches, one per
+        native and lantana player, and leave the rest as commons. Lantana patches
+        are chosen to be far apart so early fires stay small and separate."""
+        s = self.state
+        land = [c.index for c in s.cells if c.cover in (NATIVE, BARE)]
+        owners = [p for p in self.players.values() if p.role in (NATIVE_P, LANTANA)]
+        P = len(owners)
+        size = max(4, int(len(land) * self.cfg["owned_fraction"]) // P)
+
+        # farthest-point seeds so patches are spread over the map
+        seeds = [rng.choice(land)]
+        pos = {i: (s.cells[i].r, s.cells[i].c) for i in land}
+        while len(seeds) < P:
+            best = max(land, key=lambda i: min(abs(pos[i][0] - pos[q][0]) + abs(pos[i][1] - pos[q][1])
+                                               for q in seeds) + rng.random() * 0.5)
+            seeds.append(best)
+
+        claimed: dict[int, int] = {}
+        queues = [deque([q]) for q in seeds]
+        patches = [[] for _ in seeds]
+        for k, q in enumerate(seeds):
+            claimed[q] = k
+        grew = True
+        while grew:
+            grew = False
+            for k, q in enumerate(queues):
+                if len(patches[k]) >= size:
+                    continue
+                while q:
+                    i = q.popleft()
+                    if claimed.get(i) != k or i in patches[k]:
+                        continue
+                    patches[k].append(i)
+                    grew = True
+                    nb = [ni for ni, _ in neighbors(s, i) if ni in pos and ni not in claimed]
+                    rng.shuffle(nb)
+                    for ni in nb:
+                        claimed[ni] = k
+                        q.append(ni)
+                    break
+
+        # which patches are lantana: farthest-first among patch centroids
+        cent = [(sum(pos[i][0] for i in p) / len(p), sum(pos[i][1] for i in p) / len(p))
+                for p in patches]
+        k_l = sum(1 for p in owners if p.role == LANTANA)
+
+        def dist(a, b):
+            return abs(cent[a][0] - cent[b][0]) + abs(cent[a][1] - cent[b][1])
+
+        # Random patches that keep a minimum separation, so lantana is spread out
+        # but not always in the same corners. Relax the gap until it fits.
+        picked: list = []
+        for sep in (8, 7, 6, 5, 4, 0):
+            for _ in range(200):
+                order = list(range(P))
+                rng.shuffle(order)
+                trial: list = []
+                for j in order:
+                    if all(dist(j, q) >= sep for q in trial):
+                        trial.append(j)
+                    if len(trial) == k_l:
+                        break
+                if len(trial) == k_l:
+                    picked = trial
+                    break
+            if picked:
+                break
+        lant_players = [p for p in owners if p.role == LANTANA]
+        nat_players = [p for p in owners if p.role == NATIVE_P]
+        rng.shuffle(nat_players)
+        rest = [j for j in range(P) if j not in picked]
+        # A lantana player owns a territory but starts with only a small core of
+        # it infested. The rest is forest they grow into, so night one has small
+        # separate fires and the later nights have big connected ones.
+        core_n = self.cfg["lantana_core"]
+        lo, hi = self.cfg["initial_stage_age"]
+        self._starting_clusters = []
+        for pl, j in zip(lant_players, picked):
+            cells = patches[j]
+            self._give(pl, cells)
+            centre = s.cells[cells[0]]
+            core = sorted(cells, key=lambda i: (abs(s.cells[i].r - centre.r)
+                                                + abs(s.cells[i].c - centre.c)))[:core_n]
+            for i in cells:
+                c = s.cells[i]
+                if c.cover == BARE:
+                    c.cover = NATIVE
+            for i in core:
+                c = s.cells[i]
+                c.cover, c.stage, c.stage_age = INVASIVE, ESTABLISHED, rng.randint(lo, hi)
+            self._starting_clusters.append(list(core))
+        # Homes must not start next to an infestation: the threat to them has to
+        # build over the game, so the room has time to see it and act.
+        cores = [c.index for c in s.cells if c.cover == INVASIVE]
+        safe = self.cfg["village_clearance"]
+        for c in s.cells:
+            if c.cover != VILLAGE:
+                continue
+            if all(abs(c.r - s.cells[k].r) + abs(c.c - s.cells[k].c) > safe for k in cores):
+                continue
+            far = [x for x in s.cells
+                   if x.cover == NATIVE and not self.owner.get(x.index)
+                   and all(abs(x.r - s.cells[k].r) + abs(x.c - s.cells[k].c) > safe for k in cores)]
+            if far:
+                new_home = max(far, key=lambda x: min(
+                    abs(x.r - s.cells[k].r) + abs(x.c - s.cells[k].c) for k in cores))
+                new_home.cover = VILLAGE
+                c.cover = NATIVE
+
+        for pl, j in zip(nat_players, rest):
+            self._give(pl, patches[j])
+            for i in patches[j]:
+                c = s.cells[i]
+                if c.cover == BARE:
+                    c.cover = NATIVE
+
+    def _give(self, p: Player, cells: list):
+        p.patch = list(cells)
+        for i in cells:
+            self.owner[i] = p.id
+
+    # ---- what the game master records -----------------------------------
+    def eliminate(self, pid: str):
+        p = self.players[pid]
+        if not p.alive or pid in self.pending["eliminations"]:
+            return
+        self.pending["eliminations"].append(pid)
+
+    def uneliminate(self, pid: str):
+        if pid in self.pending["eliminations"]:
+            self.pending["eliminations"].remove(pid)
+
+    def choose(self, choice: str | None, action: str | None = None):
+        if choice not in (None, "hunt", "resilience"):
+            raise ValueError("choice must be hunt or resilience")
+        if action not in (None, *ACTIONS):
+            raise ValueError("unknown resilience action")
+        self.pending["choice"] = choice
+        self.pending["action"] = action if choice == "resilience" else None
+
+    # ---- resolve one round -----------------------------------------------
+    def resolve(self) -> list:
+        if self.phase != "playing":
+            raise ValueError("no round to resolve")
+        s = self.state
+        r = self.round
+        rng = self._rng(r)
+        beats: list = []
+        record = {"round": r, "choice": self.pending["choice"], "action": None,
+                  "eliminations": [], "auto": False, "fire": None}
+        # Lock the fire in against the map the room actually debated over. The
+        # lantana that grows tonight is tomorrow's fire, not tonight's, so what
+        # Ember warns about and what the room sees always agree.
+        self.locked_sev, self.locked_cluster = self.severity()
+        self._beat(beats, "round", T("ember", "round.open", r=r))
+
+        # a. eliminations
+        for pid in self.pending["eliminations"]:
+            p = self.players[pid]
+            p.alive = False
+            p.out_round = r
+            record["eliminations"].append({"id": pid, "role": p.role})
+            self._beat(beats, "elimination", self._apply_elimination(p), player=p.public())
+
+        # b. resilience
+        if self.pending["choice"] == "resilience":
+            action = self.pending["action"]
+            reason = ""
+            if not action:
+                action, reason = self._auto_action()
+                record["auto"] = True
+            record["action"] = action
+            if action == FIRELINE:
+                text = self._dig_line(r)
+            elif action == WATER_ACT:
+                self.water_round = r
+                text = T("ember", "water.ready")
+            else:
+                text = None   # the forecast is shown after tonight's fire
+            if text:
+                self._beat(beats, "line" if action == FIRELINE else "water",
+                           (reason + " " if reason else "") + text)
+            elif reason:
+                self._beat(beats, "water", reason)
+
+        # c. growth
+        grown = self._grow(rng)
+        self._leak(rng)
+        advance(s, self.cfg, [])
+        self._beat(beats, "growth", T("ember", "growth", n=grown) if grown else T("ember", "growth.none"))
+
+        # d. fire
+        record["fire"] = self._fire(rng, beats)
+        if record["fire"].get("village") and record["fire"]["severity"] >= 2:
+            self.village_lost = True
+
+        # early warning: forecast next night, computed on a copy with next round's rng
+        if record["action"] == EWS:
+            self.forecast = self._forecast(r + 1)
+            self._beat(beats, "forecast", T("ember", "forecast",
+                                            level=T("ember", f"forecast.{self.forecast['level']}"),
+                                            wind=self.forecast["wind"]))
+        else:
+            self.forecast = None
+
+        if self.village_at_risk() and not self.village_lost:
+            self._beat(beats, "warn", T("ember", "warn.village"))
+        record["health"] = health_pct(s)
+        self.history.append(record)
+
+        # e. ending
+        self.ending = self._check_end(r)
+        if self.ending:
+            self.phase = "ended"
+            self._beat(beats, "ending", self.ending["text"])
+        else:
+            self.round += 1
+            if rng.random() < 0.3:
+                s.wind = rng.choice(("N", "S", "E", "W"))
+        self.pending = {"eliminations": [], "choice": None, "action": None}
+        self.last_beats = beats
+        return beats
+
+    def _rng(self, r: int) -> random.Random:
+        return random.Random(self.seed * 1000 + r)
+
+    # ---- the pieces --------------------------------------------------------
+    def _apply_elimination(self, p: Player) -> str:
+        s = self.state
+        cells = [i for i, o in self.owner.items() if o == p.id]
+        if p.role == LANTANA:
+            for i in cells:
+                c = s.cells[i]
+                if self.cfg["bare_on_removal"]:
+                    c.cover, c.stage, c.stage_age, c.seedbank = BARE, 0, 0, False
+                else:
+                    c.cover, c.stage, c.stage_age = NATIVE, 0, 0
+                del self.owner[i]
+            key = "elim.lantana" if self.cfg["bare_on_removal"] else "elim.lantana_native"
+            return T("ember", key, dir=self._dir_of(cells))
+        if p.role == NATIVE_P:
+            # Lantana moves into the stand, it does not appear everywhere at
+            # once. A core takes hold and spreads from there, so losing a native
+            # is a wound that widens rather than a patch flipping colour.
+            core_n = self.cfg["native_loss_core"]
+            free = [i for i in cells if s.cells[i].cover in (NATIVE, BARE)]
+            near = sorted(free, key=lambda i: min(
+                (abs(s.cells[i].r - s.cells[j].r) + abs(s.cells[i].c - s.cells[j].c)
+                 for j in range(len(s.cells)) if s.cells[j].cover == INVASIVE), default=0))
+            for i in near[:core_n]:
+                c = s.cells[i]
+                c.cover, c.stage, c.stage_age = INVASIVE, ESTABLISHED, 0
+            for i in cells:
+                del self.owner[i]           # orphan ground: nobody's to remove
+            return T("ember", "elim.native", dir=self._dir_of(cells))
+        return T("ember", f"elim.{p.role}")
+
+    def _grow(self, rng: random.Random) -> int:
+        s, cfg = self.state, self.cfg
+        new: dict[int, str | None] = {}
+        for c in s.cells:
+            if c.cover != INVASIVE or c.stage < ESTABLISHED:
+                continue
+            base = cfg["growth_dense"] if c.stage == DENSE else cfg["growth_established"]
+            own = self.owner.get(c.index)
+            if own is None or not self.players[own].alive:
+                base *= cfg["orphan_mult"]
+            nbrs = neighbors8(s, c.index) if c.stage == DENSE else neighbors(s, c.index)
+            for ni, d in nbrs:
+                n = s.cells[ni]
+                if n.cover not in (NATIVE, BARE) or n.fireline or ni in new:
+                    continue
+                p = base
+                if d == s.wind:
+                    p *= cfg["growth_wind_mult"]
+                if n.cover == BARE:
+                    p *= cfg["growth_bare_mult"]
+                if rng.random() < p:
+                    new[ni] = own
+        for ni, own in new.items():
+            n = s.cells[ni]
+            n.cover, n.stage, n.stage_age = INVASIVE, SEEDLING, 0
+            if own is not None:
+                self.owner[ni] = own
+            else:
+                self.owner.pop(ni, None)
+        return len(new)
+
+    def _leak(self, rng: random.Random):
+        """Bare ground goes to whoever is next to it: lantana if any, else forest."""
+        s, cfg = self.state, self.cfg
+        changes = []
+        for c in s.cells:
+            if c.cover != BARE or c.fireline:
+                continue
+            lant = [ni for ni, _ in neighbors8(s, c.index) if s.cells[ni].cover == INVASIVE]
+            if lant:
+                if rng.random() < cfg["reinvade_p"]:
+                    src = rng.choice(lant)
+                    changes.append((c.index, INVASIVE, self.owner.get(src)))
+            elif rng.random() < cfg["regen_p"]:
+                changes.append((c.index, NATIVE, None))
+        for i, cover, own in changes:
+            c = s.cells[i]
+            if cover == INVASIVE:
+                c.cover, c.stage, c.stage_age = INVASIVE, SEEDLING, 0
+                if own is not None:
+                    self.owner[i] = own
+                else:
+                    self.owner.pop(i, None)
+            else:
+                c.cover, c.seedbank = NATIVE, False
+
+    # fire ---------------------------------------------------------------
+    def dense_clusters(self) -> list:
+        s = self.state
+        seen, out = set(), []
+        for c in s.cells:
+            if c.cover != INVASIVE or c.stage != DENSE or c.index in seen:
+                continue
+            comp, q = [], deque([c.index])
+            seen.add(c.index)
+            while q:
+                i = q.popleft()
+                comp.append(i)
+                for ni, _ in neighbors8(s, i):
+                    n = s.cells[ni]
+                    if ni not in seen and n.cover == INVASIVE and n.stage == DENSE:
+                        seen.add(ni)
+                        q.append(ni)
+            out.append(comp)
+        out.sort(key=len, reverse=True)
+        return out
+
+    def severity(self) -> tuple[int, list]:
+        """0 nothing to burn, else 1..3 from the largest connected dense cluster."""
+        clusters = self.dense_clusters()
+        fuel = any(c.cover == INVASIVE and c.stage >= ESTABLISHED for c in self.state.cells)
+        if not fuel and not clusters:
+            return 0, []
+        biggest = clusters[0] if clusters else []
+        n = len(biggest)
+        if n < self.cfg["sev_t1"]:
+            return 1, biggest
+        if n < self.cfg["sev_t2"]:
+            return 2, biggest
+        return 3, biggest
+
+    def _fire(self, rng: random.Random, beats: list) -> dict:
+        s, cfg = self.state, self.cfg
+        sev, cluster = self.locked_sev, self.locked_cluster
+        cluster = [i for i in cluster
+                   if s.cells[i].cover == INVASIVE and s.cells[i].stage == DENSE]
+        capped = False
+        if sev == 0:
+            self._beat(beats, "quiet", T("ember", "fire.quiet"))
+            return {"severity": 0, "cells": []}
+        if sev == 1 and not cluster and rng.random() >= cfg["spark_p"]:
+            self._beat(beats, "quiet", T("ember", "fire.quiet"))
+            return {"severity": 0, "cells": []}
+        if self.water_round == self.round and sev > 1:
+            sev, capped = 1, True
+        push = None
+        forced_path: list = []
+        fresh = self.last_line and self.last_line["round"] == self.round
+        if fresh and self.last_line.get("cells"):
+            fenced = [i for i in self.last_line["cluster"]
+                      if s.cells[i].cover == INVASIVE and s.cells[i].stage >= ESTABLISHED]
+            lines = [i for i in self.last_line["cells"] if s.cells[i].fireline]
+            if fenced and lines:
+                got = self._run_to_line(fenced, lines)
+                if got:
+                    igniter, forced_path = got
+                    push = self.last_line["dir"]
+        if push is None:
+            # The fuel that set tonight's severity can be gone by now: cleared by
+            # an elimination, dug through by a trench, or burned last night.
+            pool = cluster or [c.index for c in s.cells
+                               if c.cover == INVASIVE and c.stage >= ESTABLISHED]
+            if not pool:
+                self._beat(beats, "quiet", T("ember", "fire.quiet"))
+                return {"severity": 0, "cells": []}
+            igniter = rng.choice(pool)
+        forced = forced_path if push else []
+        # The season dries out: the same fuel carries fire further in night 6
+        # than in night 1, so neglect compounds instead of holding steady.
+        ramp = 1 + cfg["fire_round_ramp"] * (self.round - 1)
+        cap = round(cfg["fire_cells"][sev] * ramp)
+        # The run at a fresh line comes out of the same budget. Giving it extra
+        # cells made digging a trench increase the burn, which is backwards.
+        forced = forced[:max(0, cap - 1)]
+        order, blocked = self._spread_fire(rng, igniter, cap, push=push, forced=forced)
+        # animate: ignition, then each wave, then the burn
+        self._beat(beats, "ignite", "", fire=[igniter])
+        shown = [igniter]
+        for wave in order[1:]:
+            shown = shown + wave
+            self._beat(beats, "spread", "", fire=list(shown))
+        burned = list(shown)
+        village_hit = False
+        for i in burned:
+            c = s.cells[i]
+            c.cover, c.stage, c.stage_age, c.seedbank = BARE, 0, 0, True
+            if any(s.cells[ni].cover == VILLAGE for ni, _ in neighbors(s, i)):
+                village_hit = True
+        d = self._dir_of(burned)
+        # If the room paid for a response team, say so even when the fire turned
+        # out small. They should always see what their night bought.
+        if self.water_round == self.round:
+            text = T("ember", "fire.water", dir=d, n=len(burned))
+        elif sev == 1:
+            text = T("ember", "fire.spark", dir=d, n=len(burned))
+        else:
+            text = T("ember", f"fire.sev{sev}", dir=d, n=len(burned))
+        if blocked:
+            text += " " + T("ember", "fire.blocked", r=min(self.line_round.get(i, self.round) for i in blocked))
+        if village_hit:
+            text += " " + T("ember", "fire.village")
+        if sev >= 2 and not blocked:
+            text += " " + T("ember", "fire.cost")
+        self._beat(beats, "burn", "", fire=list(burned))
+        if blocked:
+            self._beat(beats, "blocked", T("ember", "fire.held"),
+                       fire=list(burned), held=sorted(blocked))
+        self._beat(beats, "aftermath", text)
+        return {"severity": sev, "cells": burned, "blocked": sorted(blocked),
+                "capped": capped, "village": village_hit, "igniter": igniter}
+
+    def _run_to_line(self, fuel: list, lines: list):
+        """Find the shortest burnable run from any of `fuel` to any of `lines`.
+
+        A breadth-first search outward from the line, through land the fire can
+        actually cross, so the run goes around the river instead of giving up at
+        it. Returns (igniter, path) where path is the cells between the two, or
+        None if the fire could never get there.
+        """
+        s = self.state
+        fuelset = set(fuel)
+        prev: dict[int, int] = {}
+        seen = set(lines)
+        frontier = list(lines)
+        hit = None
+        for _ in range(12):
+            nxt = []
+            for i in frontier:
+                for ni, _ in neighbors(s, i):
+                    if ni in seen:
+                        continue
+                    n = s.cells[ni]
+                    if n.cover in (WATER, VILLAGE) or n.fireline:
+                        continue
+                    seen.add(ni)
+                    prev[ni] = i
+                    if ni in fuelset:
+                        hit = ni
+                        break
+                    nxt.append(ni)
+                if hit:
+                    break
+            if hit or not nxt:
+                break
+            frontier = nxt
+        if hit is None:
+            return None
+        # walk back from the fuel toward the line, stopping before the line itself
+        path, cur = [], prev.get(hit)
+        while cur is not None and cur not in lines:
+            path.append(cur)
+            cur = prev.get(cur)
+        return hit, path
+
+    def _spread_fire(self, rng: random.Random, igniter: int, cap: int,
+                     push: str | None = None, forced: list | None = None):
+        """Breadth-first fire from the igniter. Returns the waves in order and the
+        set of fire-line cells the fire ran into. `push` leans the fire in one
+        direction, the way wind does, used the night a line is dug."""
+        s, cfg = self.state, self.cfg
+        lean = push or s.wind
+        seen = {igniter}
+        waves = [[igniter]]
+        blocked = set()
+
+        # The run at a fresh fire line goes first, one cell per wave. Without
+        # this the fire fills its own patch, hits the cell cap, and never gets
+        # to the line the room just paid for.
+        for i in (forced or []):
+            if i in seen:
+                continue
+            seen.add(i)
+            waves.append([i])
+        for i in list(seen):
+            for ni, _ in neighbors(s, i):
+                if s.cells[ni].fireline:
+                    blocked.add(ni)
+
+        frontier = list(seen)
+        for _ in range(cfg["fire_iters"]):
+            nxt = []
+            for i in frontier:
+                for ni, d in neighbors(s, i):
+                    if ni in seen or len(seen) >= cap:
+                        continue
+                    n = s.cells[ni]
+                    if n.cover in (WATER, VILLAGE):
+                        continue
+                    if n.fireline:
+                        blocked.add(ni)
+                        continue
+                    pp = (cfg["fire_p_invasive"] if n.cover == INVASIVE
+                          else cfg["fire_p_native"] if n.cover == NATIVE else cfg["fire_p_bare"])
+                    if d == lean:
+                        pp *= cfg["fire_wind_mult"]
+                    if rng.random() < pp:
+                        seen.add(ni)
+                        nxt.append(ni)
+            if not nxt:
+                break
+            waves.append(nxt)
+            frontier = nxt
+        return waves, blocked
+
+    # resilience -----------------------------------------------------------
+    def village_at_risk(self) -> bool:
+        """Is there dense lantana close enough to the homes to reach them?"""
+        s = self.state
+        clusters = self.dense_clusters()
+        if not clusters:
+            return False
+        near = self._near(clusters[0], self.cfg["line_reach"] + 1)
+        return any(s.cells[i].cover == VILLAGE for i in near)
+
+    def _auto_action(self) -> tuple[str, str]:
+        """Pick the most useful action for the map as it stands. A forecast is
+        the last resort: spending the room's one choice on information while a
+        dense stand sits next to the village teaches the wrong lesson."""
+        s = self.state
+        clusters = self.dense_clusters()
+        sev = self.locked_sev
+        # A fire this big will run past any single break, so the answer is
+        # people and water, not a trench.
+        if sev >= 3:
+            return WATER_ACT, T("ember", "auto.big")
+        if clusters:
+            near = self._near(clusters[0], self.cfg["line_reach"])
+            if any(s.cells[i].cover == VILLAGE for i in near):
+                return FIRELINE, T("ember", "auto.village")
+            return FIRELINE, T("ember", "auto.native")
+        if sev >= 2:
+            return WATER_ACT, T("ember", "auto.big")
+        return EWS, T("ember", "auto.watch")
+
+    def _near(self, cells: list, reach: int) -> set:
+        s = self.state
+        out, frontier, seen = set(), list(cells), set(cells)
+        for _ in range(reach):
+            nxt = []
+            for i in frontier:
+                for ni, _ in neighbors(s, i):
+                    if ni not in seen:
+                        seen.add(ni)
+                        nxt.append(ni)
+                        out.add(ni)
+            frontier = nxt
+        return out
+
+    def _asset(self, fuel: list | None = None) -> tuple[list, str]:
+        """What the crew defends: the homes when the fire could actually reach
+        them, otherwise the largest unbroken block of native forest next to the
+        fuel. Lines hug this, so each night the room spends on resilience
+        extends the same sanctuary instead of chasing whichever stand happens to
+        be worst tonight."""
+        s = self.state
+        vill = [c.index for c in s.cells if c.cover == VILLAGE]
+        if vill and fuel:
+            # Only defend the homes if the fire is near enough to threaten them.
+            # A trench across the map from the fuel teaches nothing tonight.
+            reach = self.cfg["village_defend_range"]
+            close = min(abs(s.cells[v].r - s.cells[f].r) + abs(s.cells[v].c - s.cells[f].c)
+                        for v in vill for f in fuel)
+            if close > reach:
+                vill = []
+        if vill:
+            ring = set(vill)
+            for i in vill:
+                for ni, _ in neighbors8(s, i):
+                    if s.cells[ni].cover == NATIVE:
+                        ring.add(ni)
+            return sorted(ring), "village"
+        seen, best, best_key = set(), [], None
+        for c in s.cells:
+            if c.cover != NATIVE or c.index in seen:
+                continue
+            comp, q = [], deque([c.index])
+            seen.add(c.index)
+            while q:
+                i = q.popleft()
+                comp.append(i)
+                for ni, _ in neighbors(s, i):
+                    if ni not in seen and s.cells[ni].cover == NATIVE:
+                        seen.add(ni)
+                        q.append(ni)
+            # Prefer a big block, but a big block the fire can actually reach.
+            if fuel:
+                near = min(abs(s.cells[i].r - s.cells[f].r) + abs(s.cells[i].c - s.cells[f].c)
+                           for i in comp for f in fuel[:12])
+            else:
+                near = 0
+            key = (len(comp) >= 8, -near, len(comp))
+            if best_key is None or key > best_key:
+                best, best_key = comp, key
+        return best, "native forest"
+
+    def _dig_line(self, r: int) -> str:
+        """Dig a break around what needs protecting, on the side the fire will
+        come from. Lines are permanent, so repeated nights of resilience close
+        the ring a bit further each time."""
+        s, cfg = self.state, self.cfg
+        clusters = self.dense_clusters()
+        fuel = clusters[0] if clusters else [
+            c.index for c in s.cells if c.cover == INVASIVE and c.stage >= ESTABLISHED]
+        if not fuel:
+            return T("ember", "growth.none")
+        asset, asset_name = self._asset(fuel)
+        if not asset:
+            return T("ember", "line.none_room")
+
+        aset = set(asset)
+        # the ring of land just outside the asset: candidate trench cells
+        rim = []
+        for i in asset:
+            for ni, _ in neighbors8(s, i):
+                if ni in aset:
+                    continue
+                n = s.cells[ni]
+                if n.cover in (WATER, VILLAGE) or n.fireline:
+                    continue
+                rim.append(ni)
+        rim = sorted(set(rim))
+        if len(rim) < 3:
+            return T("ember", "line.none_room")
+
+        # dig the stretch of that rim nearest the fuel: the side fire comes from
+        def near_fuel(i):
+            return min(abs(s.cells[i].r - s.cells[f].r) + abs(s.cells[i].c - s.cells[f].c)
+                       for f in fuel)
+
+        rim.sort(key=near_fuel)
+        chosen = rim[:cfg["line_cells"]]
+        for i in chosen:
+            c = s.cells[i]
+            if c.cover == INVASIVE:
+                c.cover, c.stage, c.stage_age = BARE, 0, 0
+            c.fireline = True
+            self.line_round[c.index] = r
+        self.last_line = {"round": r, "cluster": list(fuel), "dir": "-",
+                          "cells": list(chosen)}
+        key = "line.placed" if clusters else "line.none"
+        return T("ember", key, dir=self._dir_of(chosen), asset=asset_name)
+
+    def _forecast(self, next_round: int) -> dict:
+        """Dry-run next round's growth on a copy, with next round's rng, and read
+        the severity off it. Exact if the room changes nothing before then."""
+        g = deepcopy(self)
+        g.round = next_round
+        rng = g._rng(next_round)
+        g._grow(rng)
+        g._leak(rng)
+        advance(g.state, g.cfg, [])
+        sev, cluster = g.severity()
+        if sev == 1 and not cluster and rng.random() >= g.cfg["spark_p"]:
+            sev = 0
+        level = {0: "none", 1: "small", 2: "medium", 3: "large"}[sev]
+        names = {"N": "north", "S": "south", "E": "east", "W": "west"}
+        return {"round": next_round, "severity": sev, "level": level, "wind": names[self.state.wind]}
+
+    # endings ------------------------------------------------------------------
+    def _check_end(self, r: int) -> dict | None:
+        alive = [p for p in self.players.values() if p.alive]
+        h = health_pct(self.state)
+        if self.cfg["village_loss"] and self.village_lost:
+            return {"result": "lose", "reason": "village", "health": h,
+                    "text": T("ember", "end.lose.village")}
+        if not any(p.role == LANTANA for p in alive):
+            key = "end.win" if h >= 60 else "end.win_low"
+            return {"result": "win", "reason": "lantana", "health": h, "text": T("ember", key, health=h)}
+        if h < self.cfg["loss_health"]:
+            return {"result": "lose", "reason": "fire", "health": h, "text": T("ember", "end.lose.fire", health=h)}
+        if not any(p.role == NATIVE_P for p in alive):
+            return {"result": "lose", "reason": "natives", "health": h, "text": T("ember", "end.lose.natives")}
+        if self.cfg["team_loss"] and not any(p.role in (ECOLOGIST, RANGER) for p in alive):
+            return {"result": "lose", "reason": "team", "health": h, "text": T("ember", "end.lose.team")}
+        if r >= self.cfg["max_rounds"]:
+            return {"result": "lose", "reason": "time", "health": h, "text": T("ember", "end.lose.time", r=r)}
+        return None
+
+    # views ----------------------------------------------------------------------
+    def view(self) -> dict:
+        """A full-detail map view in the shape render.py expects."""
+        s = self.state
+        cells = [{"index": c.index, "r": c.r, "c": c.c, "known": True, "cover": c.cover,
+                  "stage": c.stage, "detail": 3, "bank": c.corridor, "fireline": c.fireline,
+                  "hill": c.hill, "road": c.road, "risk": 0, "hotspot": False,
+                  "monitored": False, "last_seen": 0} for c in s.cells]
+        return {"cols": s.cols, "rows": s.rows, "cells": cells, "health": health_pct(s),
+                "round": self.round, "max_rounds": self.cfg["max_rounds"], "wind": s.wind}
+
+    def _beat(self, beats: list, kind: str, text: str, fire: list | None = None, **extra):
+        b = {"kind": kind, "text": text, "fire": fire or [], "view": self.view(),
+             "hold_ms": self.cfg["hold_ms"].get(kind, 1000)}
+        b.update(extra)
+        beats.append(b)
+
+    def _dir_of(self, cells: list) -> str:
+        s = self.state
+        if not cells:
+            return "middle"
+        r = sum(s.cells[i].r for i in cells) / len(cells)
+        c = sum(s.cells[i].c for i in cells) / len(cells)
+        ns = "north" if r < s.rows * 0.38 else "south" if r > s.rows * 0.62 else ""
+        ew = "west" if c < s.cols * 0.38 else "east" if c > s.cols * 0.62 else ""
+        return (ns + (" " if ns and ew else "") + ew) or "middle"
+
+    def gm_state(self) -> dict:
+        alive = [p for p in self.players.values() if p.alive]
+        return {
+            "phase": self.phase, "round": self.round, "max_rounds": self.cfg["max_rounds"],
+            "seed": self.seed, "lantana_count": self.lantana_count() if self.players else 0,
+            "players": [p.public() for p in self.players.values()],
+            "pending": dict(self.pending),
+            "health": health_pct(self.state) if self.state else None,
+            "alive": {"lantana": sum(p.role == LANTANA for p in alive),
+                      "native": sum(p.role == NATIVE_P for p in alive),
+                      "ecologist": any(p.role == ECOLOGIST for p in alive),
+                      "ranger": any(p.role == RANGER for p in alive)},
+            "forecast": self.forecast, "ending": self.ending,
+            "last": [{"kind": b["kind"], "text": b["text"]} for b in self.last_beats if b["text"]],
+            "history": self.history[-3:],
+        }
