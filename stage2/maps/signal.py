@@ -84,6 +84,9 @@ def render(scene) -> str:
         body.append(f'<path d="{p(scene.focus, 0.34)}" fill="none" stroke="{INK}" '
                     f'stroke-width="3.5" fill-rule="evenodd"/>')
 
+    body.append(base.annotate(scene, x0, y0, u, {
+        "halo": PAPER, "place": INK, "alarm": FIRE, "fuel": LANTANA, "work": TRENCH}))
+
     head = (f'<text x="{base.PAD}" y="62" class="ttl" fill="{INK}">P Y R O C E N E</text>'
             f'<text x="{base.PAD}" y="92" class="rnd" fill="{DIM}">NIGHT {scene.round} OF {scene.max_rounds}</text>')
     bar = base.health_bar(base.W - base.PAD - 340, 52, 250, scene.health,

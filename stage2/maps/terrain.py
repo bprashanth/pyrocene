@@ -142,6 +142,9 @@ def render(scene) -> str:
         B.append(f'<path d="{nat(scene.focus, 0.0, 3, 3)}" fill="none" stroke="#fff" '
                  f'stroke-width="3.2" fill-rule="evenodd"/>')
     B.append("</g>")
+    B.append(base.annotate(scene, x0, y0, u, {
+        "halo": "#0b1410", "place": "#eaf3ec", "alarm": EMBER,
+        "fuel": LANT_HI, "work": TRENCH}))
     B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" rx="3" fill="none" '
              f'stroke="#1d2a24" stroke-width="1.5"/>')
 

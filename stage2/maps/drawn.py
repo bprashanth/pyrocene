@@ -171,6 +171,11 @@ def render(scene) -> str:
         B.append(f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="3.4" '
                  f'filter="url(#rough)" fill-rule="evenodd"/>')
     B.append("</g>")
+    # Names, so nobody has to talk over the map. Drawn after the clip so a label
+    # near the edge is never cut in half.
+    B.append(base.annotate(scene, x0, y0, u, {
+        "halo": PAPER, "place": INK, "alarm": FIRE_INK,
+        "fuel": LANT_INK, "work": TRENCH}))
     B.append(f'<rect x="0" y="0" width="{base.W}" height="{base.H}" filter="url(#grain)" opacity=".55"/>')
 
     # --- editorial chrome ---------------------------------------------------

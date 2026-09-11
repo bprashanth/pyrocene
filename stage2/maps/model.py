@@ -66,3 +66,77 @@ def from_view(view: dict, **overlay) -> Scene:
         haze=bool(overlay.get("haze")),
         title=overlay.get("title", ""), note=overlay.get("note", ""),
     )
+
+
+def clusters(cells, cols: int, rows: int) -> list:
+    """Connected groups within a set of cells, biggest first."""
+    from collections import deque
+    left = set(cells)
+    out = []
+    while left:
+        i = left.pop()
+        comp, q = [i], deque([i])
+        while q:
+            j = q.popleft()
+            r, c = divmod(j, cols)
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+                rr, cc = r + dr, c + dc
+                k = rr * cols + cc
+                if 0 <= rr < rows and 0 <= cc < cols and k in left:
+                    left.discard(k)
+                    comp.append(k)
+                    q.append(k)
+        out.append(comp)
+    out.sort(key=len, reverse=True)
+    return out
+
+
+def annotations(scene) -> list:
+    """What to write on the map, and where.
+
+    A map that has to be explained is not finished. These are the few labels
+    that let a room read the picture without anyone talking over it. They name
+    things, never squares: a grid reference sends people hunting for coordinates
+    instead of looking at the land.
+
+    Returns dicts of {r, c, text, kind} in grid coordinates, already thinned so
+    the map never carries more than a handful at once.
+    """
+    out = []
+
+    def centroid(cells):
+        rs = [scene.rc(i)[0] for i in cells]
+        cs = [scene.rc(i)[1] for i in cells]
+        return sum(rs) / len(rs), sum(cs) / len(cs)
+
+    # The one thing whose loss ends the game.
+    vill = scene.of("village")
+    if vill:
+        for comp in clusters(vill, scene.cols, scene.rows)[:2]:
+            r, c = centroid(comp)
+            out.append({"r": r, "c": c, "text": "homes", "kind": "place"})
+
+    # The fire, and whether it is being held.
+    if scene.held:
+        r, c = centroid(list(scene.held))
+        out.append({"r": r, "c": c, "text": "the line holds", "kind": "alarm"})
+    elif scene.fire:
+        r, c = centroid(list(scene.fire))
+        out.append({"r": r, "c": c, "text": "fire", "kind": "alarm"})
+
+    # The stand that is about to matter, named only when it is worth naming.
+    if not scene.haze:
+        thick = {i for i, s in scene.stage.items() if s >= 3
+                 and scene.cover.get(i) == "lantana"}
+        big = [cl for cl in clusters(thick, scene.cols, scene.rows) if len(cl) >= 6]
+        for comp in big[:1]:
+            r, c = centroid(comp)
+            out.append({"r": r, "c": c, "text": "thick lantana", "kind": "fuel"})
+
+    # A trench, once, so nobody has to ask what the dashed band is.
+    if scene.fireline and not scene.held:
+        comp = clusters(scene.fireline, scene.cols, scene.rows)[0]
+        if len(comp) >= 3:
+            r, c = centroid(comp)
+            out.append({"r": r, "c": c, "text": "fire line", "kind": "work"})
+    return out

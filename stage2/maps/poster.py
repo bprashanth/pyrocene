@@ -167,6 +167,9 @@ def render(scene) -> str:
         B.append(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="14" opacity=".14" fill-rule="evenodd"/>')
         B.append(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="3.2" fill-rule="evenodd"/>')
     B.append("</g>")
+    B.append(base.annotate(scene, x0, y0, u, {
+        "halo": INK, "place": "#e8eef6", "alarm": FIRE_HI,
+        "fuel": LANTANA_EDGE, "work": TRENCH}))
     B.append(f'<rect x="{x0}" y="{y0}" width="{W}" height="{Hh}" rx="4" fill="none" '
              f'stroke="#25303f" stroke-width="1.5"/>')
 

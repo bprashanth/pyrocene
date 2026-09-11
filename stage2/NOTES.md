@@ -170,3 +170,40 @@ the projector to find out who is still in, and lantana can lie about it. A test
 walks four rounds of cards and fails if any of them contains a player name or a
 role word. Square references came off the cards too, since the map now points at
 them far better than a list of coordinates.
+
+## The maps
+
+`stage2/maps/` holds six ways to draw the same board. Nothing there changes the
+game, and `STAGE2_STYLE` defaults to `ansi`, the terminal board that shipped, so
+the projector is unchanged unless you ask for something else. The baseline is
+tagged `stage2-ansi-baseline`.
+
+Three findings that mattered more than any colour choice.
+
+**Dissolving the grid.** A 22 by 12 board drawn as squares reads as a
+spreadsheet, and rounding the corners does not fix it because every bend still
+happens on the same lattice. `geom.coast` rebuilds a region on a finer grid from
+a smooth field plus position-keyed noise, traces it, and cuts the corners until
+it reads as a coastline. Keyed on position, so the same board always draws the
+same edge and only squares near a change move between frames.
+
+**Judging on designed scenes.** The first fire-meets-trench frame I judged a
+style on turned out to be a two-square fire enclosed on three sides by its own
+trench. The render was accurate and the situation was nonsense. `scenes.py` holds
+four hand-built situations as ASCII, so every style is compared on the same
+well-formed content, and real games are still rendered afterwards as a check that
+nothing falls over on what the dice actually produce.
+
+**The map has to speak.** The thing that separated these from a nice game board
+was not rendering, it was annotation. `model.annotations` picks the few labels
+that let a room read the picture with nobody talking over it: the homes, the
+fire or the line holding it, a thick stand once it is worth naming. They name
+things and never squares, because a grid reference sends people hunting for
+coordinates instead of looking at the land.
+
+Standing after a night on it: `drawn` reads fastest and looks like something an
+NGO would print; `poster` is the closest to the reference and carries the causal
+story in two colours, gold for fuel escalating to red for fuel that caught;
+`signal` is the most legible and the plainest; `heat` is a layer rather than a
+base map; `terrain` is handsome and slower to read; `iso` makes fuel load
+physical but spends half the canvas on the angle.
