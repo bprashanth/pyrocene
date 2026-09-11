@@ -103,7 +103,7 @@ Every lantana patch is out, but the forest stands at {health}%. It was close.
 The forest is down to {health}%. Too much of it burned.
 
 [end.lose.natives]
-There is no native forest left to defend.
+Every stand has lost its keeper. There is nobody left to hold the line, and the forest stands at {health}%.
 
 [end.lose.team]
 The ecologist and the ranger are both gone. The village cannot find the lantana now.

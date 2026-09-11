@@ -793,7 +793,8 @@ class Game:
         if h < self.cfg["loss_health"]:
             return {"result": "lose", "reason": "fire", "health": h, "text": T("ember", "end.lose.fire", health=h)}
         if not any(p.role == NATIVE_P for p in alive):
-            return {"result": "lose", "reason": "natives", "health": h, "text": T("ember", "end.lose.natives")}
+            return {"result": "lose", "reason": "natives", "health": h,
+                    "text": T("ember", "end.lose.natives", health=h)}
         if self.cfg["team_loss"] and not any(p.role in (ECOLOGIST, RANGER) for p in alive):
             return {"result": "lose", "reason": "team", "health": h, "text": T("ember", "end.lose.team")}
         if r >= self.cfg["max_rounds"]:
