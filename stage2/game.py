@@ -114,6 +114,14 @@ class Game:
         self._allocate(rng)
         self.log_meta["cols"] = self.state.cols
         self.log_meta["rows"] = self.state.rows
+        # The rounds below record only what changed, so without this a reader
+        # has no board to apply those changes to.
+        self.log_meta["terrain"] = [
+            {"cell": self.cell_name(c.index), "cover": c.cover,
+             "stage": c.stage if c.cover == INVASIVE else 0,
+             "hill": bool(c.hill), "road": bool(c.road),
+             "owner": self.owner.get(c.index)}
+            for c in self.state.cells]
         self.log_meta["players"] = [{"player_id": p.id, "name": p.name, "role": p.role}
                                     for p in self.players.values()]
         self.phase = "playing"
@@ -723,7 +731,16 @@ class Game:
 
         c0 = s.cells[igniter]
         cause = "road_human" if c0.road else "dense_lantana" if sev > 1 else "spark"
+        waves = []
+        seen_names = set()
+        for w in order:
+            step = [self.cell_name(i) for i in w if i in set(burned)]
+            step = [n for n in step if n not in seen_names]
+            seen_names.update(step)
+            if step:
+                waves.append(step)
         rec = {"ignition_cell": self.cell_name(igniter), "ignition_cause": cause,
+               "waves": waves,
                "severity": sev, "capped_by_water": capped,
                "burned_cells": [self.cell_name(i) for i in burned],
                "blocked_edges": self._blocked_edges(burned, blocked),

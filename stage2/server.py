@@ -25,6 +25,8 @@ from .maps import render as mapstyle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(HERE, "static")
+SIMS = os.path.join(HERE, "simulation")
+LOGS = os.path.join(HERE, "logs")
 FAST = os.environ.get("STAGE2_FAST") == "1"
 # Which map the projector draws. "ansi" is the terminal board the game
 # shipped with; the rest live in stage2/maps and are drawn as SVG.
@@ -88,6 +90,8 @@ class Room:
         d["style"] = STYLE
         d["stage"] = self.game.cfg["stage"]
         d["can_replay"] = len(self.game.snapshots) > 1
+        d["simulations"] = simulations()
+        d["log"] = self.game.log_meta["file"]
         d["replay_at"] = self.replay_at
         d["replay_total"] = len(self.replay)
         return d
@@ -209,6 +213,20 @@ class Room:
         }
 
 
+def simulations() -> list:
+    """Post-game replays that are actually installed, each a folder under
+    stage2/simulation with an index.html in it."""
+    out = []
+    try:
+        for name in sorted(os.listdir(SIMS)):
+            d = os.path.join(SIMS, name)
+            if os.path.isdir(d) and os.path.isfile(os.path.join(d, "index.html")):
+                out.append(name)
+    except OSError:
+        pass
+    return out
+
+
 ROOM = Room(seed=int(os.environ["STAGE2_SEED"]) if os.environ.get("STAGE2_SEED") else None)
 
 
@@ -234,6 +252,60 @@ class Handler(BaseHTTPRequestHandler):
         if not os.path.isfile(path):
             return self._json(404, {"error": "not found"})
         with open(path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _log(self, name: str):
+        """Serve one event log. Names are checked against a directory listing
+        rather than sanitised, so nothing outside those folders can be reached.
+        The sample game a replay is developed against is served too, so the same
+        code path works with or without a game in progress."""
+        path = None
+        if name == "sample-game.json":
+            cand = os.path.join(SIMS, name)
+            path = cand if os.path.isfile(cand) else None
+        else:
+            try:
+                if name in set(os.listdir(LOGS)):
+                    path = os.path.join(LOGS, name)
+            except OSError:
+                pass
+        if path is None:
+            return self._json(404, {"error": "no such log", "asked_for": name})
+        with open(path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _simulation(self, rel: str):
+        """Serve a post-game replay out of stage2/simulation/<name>/.
+
+        Each one is a self-contained static page. The path is resolved and then
+        checked to be inside that directory, so a request cannot walk out of it.
+        """
+        rel = urllib.parse.unquote(rel)
+        if not rel or rel.endswith("/"):
+            rel += "index.html"
+        target = os.path.realpath(os.path.join(SIMS, rel))
+        root = os.path.realpath(SIMS)
+        if not target.startswith(root + os.sep) or not os.path.isfile(target):
+            return self._json(404, {"error": "not found", "asked_for": rel})
+        ext = os.path.splitext(target)[1].lower()
+        ctype = {".html": "text/html; charset=utf-8", ".js": "application/javascript",
+                 ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml",
+                 ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp",
+                 ".woff2": "font/woff2", ".mp3": "audio/mpeg", ".glb": "model/gltf-binary",
+                 }.get(ext, "application/octet-stream")
+        with open(target, "rb") as f:
             body = f.read()
         self.send_response(200)
         self.send_header("Content-Type", ctype)
@@ -289,6 +361,23 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"frame": ROOM.frame})
         if p == "/api/map":
             return self._json(200, ROOM.map_facts())
+        if p == "/api/log":
+            # The event log for the game being played, or a named one from
+            # stage2/logs. This is what a post-game replay reads.
+            want = qs.get("file", [None])[0] or ROOM.game.log_meta["file"]
+            return self._log(want)
+        if p == "/api/logs":
+            try:
+                names = sorted(n for n in os.listdir(LOGS)
+                               if n.endswith(".json") and n != "index.json")
+            except OSError:
+                names = []
+            return self._json(200, {"current": ROOM.game.log_meta["file"],
+                                    "logs": names[-30:]})
+        if p == "/api/simulations":
+            return self._json(200, {"simulations": simulations()})
+        if p.startswith("/simulation/"):
+            return self._simulation(p[len("/simulation/"):])
         return self._json(404, {"error": "not found"})
 
     def do_POST(self):

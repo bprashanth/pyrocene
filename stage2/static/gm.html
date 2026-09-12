@@ -122,6 +122,13 @@
     <div id="lastlines"></div>
   </div>
 
+  <div id="animbox" class="card" hidden>
+    <h2>Show animation</h2>
+    <p class="hint">A replay of the game that just happened, built from the event
+      log. Open it on the projector screen.</p>
+    <div class="row" id="animbuttons"></div>
+  </div>
+
   <div id="replaybox" class="card" hidden>
     <h2>Replay the map</h2>
     <p class="hint">Walk the forest forward one night at a time, with no cards and
@@ -173,6 +180,16 @@
     // Stage 1 has only the vote: there is no fire to shelter from.
     $("#choicebox").hidden = s.stage === 1;
     $("#replaybox").hidden = lobby || !s.can_replay;
+    // The animation is for after a game, when there is something to replay.
+    const sims = s.simulations || [];
+    $("#animbox").hidden = lobby || !s.can_replay || !sims.length;
+    const ab = $("#animbuttons");
+    if (ab.dataset.built !== sims.join(",") + s.log) {
+      ab.dataset.built = sims.join(",") + s.log;
+      ab.innerHTML = sims.map(n =>
+        `<button class="primary" data-sim="${n}">Show animation${sims.length > 1 ? " - " + n : ""}</button>`
+      ).join("");
+    }
     // One button that walks the replay. Hiding it once the replay started left
     // the game master with no way to move it forward.
     $("#replay").textContent = replaying ? "Next night" : "Replay the map";
@@ -227,6 +244,10 @@
   }
   document.addEventListener("click", async (e) => {
     const t = e.target;
+    if (t.dataset.sim) {
+      window.open(`/simulation/${t.dataset.sim}/?log=${encodeURIComponent(S.log)}`, "_blank");
+      return;
+    }
     if (t.dataset.elim) return void post("/api/gm/eliminate", { id: t.dataset.elim });
     if (t.dataset.un) return void post("/api/gm/uneliminate", { id: t.dataset.un });
   });
