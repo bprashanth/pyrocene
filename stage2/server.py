@@ -28,7 +28,7 @@ STATIC = os.path.join(HERE, "static")
 FAST = os.environ.get("STAGE2_FAST") == "1"
 # Which map the projector draws. "ansi" is the terminal board the game
 # shipped with; the rest live in stage2/maps and are drawn as SVG.
-STYLE = os.environ.get("STAGE2_STYLE", "ansi")
+STYLE = os.environ.get("STAGE2_STYLE", "drawn")
 
 
 class Room:
@@ -39,13 +39,16 @@ class Room:
     pace is theirs and nothing important flashes past.
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, stage=2):
         self.lock = threading.RLock()
-        self.game = Game(seed=seed)
+        self.stage = stage
+        self.game = Game(seed=seed, config={"stage": stage})
         self.subs: list[tuple[str, str, queue.Queue]] = []
         self.steps: list = []
         self.cursor = 0
-        self.mode = "idle"            # idle | explain | playing
+        self.replay: list = []        # the map, round by round, for the walk-through
+        self.replay_at = 0
+        self.mode = "idle"            # idle | explain | playing | replay
         self.frame = (frames.render_lobby(0, self.game.seed) if STYLE == "ansi"
                       else mapstyle.lobby_svg(0, STYLE))
 
@@ -83,6 +86,10 @@ class Room:
         d["actions"] = list(ACTIONS)
         d["fast"] = FAST
         d["style"] = STYLE
+        d["stage"] = self.game.cfg["stage"]
+        d["can_replay"] = len(self.game.snapshots) > 1
+        d["replay_at"] = self.replay_at
+        d["replay_total"] = len(self.replay)
         return d
 
     def me_payload(self, p):
@@ -131,8 +138,34 @@ class Room:
             return self.show_map()
         self.show_card()
 
+    # --- the replay -----------------------------------------------------------
+    def start_replay(self):
+        """Walk the map forward one round at a time, with no cards and no
+        narration. For the end of a stage 1 game, when the room has played all
+        night without seeing what their voting did to the forest."""
+        self.replay = self.game.replay_beats()
+        if not self.replay:
+            return
+        self.replay_at = 0
+        self.mode = "replay"
+        self.paint(self.draw_frame(self.replay[0]), kind="replay")
+        self.broadcast_state()
+
+    def step_replay(self):
+        if self.mode != "replay":
+            return
+        self.replay_at += 1
+        if self.replay_at >= len(self.replay):
+            self.replay = []
+            self.replay_at = 0
+            return self.show_map()
+        self.paint(self.draw_frame(self.replay[self.replay_at]), kind="replay")
+        self.broadcast_state()
+
     def advance(self):
         """Play the animation for the card on screen, then put up the next card."""
+        if self.mode == "replay":
+            return self.step_replay()
         if self.mode != "explain" or self.cursor >= len(self.steps):
             return
         step = self.steps[self.cursor]
@@ -308,10 +341,24 @@ class Handler(BaseHTTPRequestHandler):
                 if p == "/api/gm/advance":
                     ROOM.advance()
                     return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/replay":
+                    if ROOM.mode in ("explain", "playing"):
+                        return self._json(409, {"error": "finish what is on screen first"})
+                    if ROOM.mode == "replay":
+                        ROOM.step_replay()
+                    else:
+                        ROOM.start_replay()
+                    return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/replay_stop":
+                    ROOM.replay, ROOM.replay_at = [], 0
+                    ROOM.show_map()
+                    return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/reset":
                     seed = body.get("seed")
-                    ROOM.game = Game(seed=int(seed) if seed else None)
+                    ROOM.game = Game(seed=int(seed) if seed else None,
+                                     config={"stage": ROOM.stage})
                     ROOM.steps, ROOM.cursor = [], 0
+                    ROOM.replay, ROOM.replay_at = [], 0
                     ROOM.show_map()
                     return self._json(200, ROOM.gm_payload())
         except (ValueError, KeyError) as e:
@@ -404,9 +451,13 @@ def main():
                     help="address to bind (default 0.0.0.0, every interface)")
     ap.add_argument("--port", type=int, default=int(os.environ.get("STAGE2_PORT", "8020")),
                     help="port to listen on (default 8020)")
-    ap.add_argument("--style", default=os.environ.get("STAGE2_STYLE", "ansi"),
+    ap.add_argument("--style", default=os.environ.get("STAGE2_STYLE", "drawn"),
                     choices=list(mapstyle.STYLES),
-                    help="what the projector draws (default ansi, the terminal board)")
+                    help="what the projector draws (default drawn; ansi is the terminal board)")
+    ap.add_argument("--stage", type=int, default=int(os.environ.get("STAGE2_STAGE", "2")),
+                    choices=(1, 2),
+                    help="1 is plain Mafia with the map kept back for a replay at "
+                         "the end; 2 adds fire and the one choice a night (default)")
     ap.add_argument("--seed", type=int, default=None, help="fix the map")
     ap.add_argument("--fast", action="store_true", help="no animation delays")
     args = ap.parse_args()
@@ -415,14 +466,14 @@ def main():
     STYLE = args.style
     if args.fast:
         FAST = True
-    if args.seed is not None:
-        ROOM = Room(seed=args.seed)
+    if args.seed is not None or args.stage != 2:
+        ROOM = Room(seed=args.seed, stage=args.stage)
 
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     srv.daemon_threads = True
     addrs = addresses()
     ip = addrs[0][0]
-    print(f"pyrocene stage 2   map style: {STYLE}")
+    print(f"pyrocene stage {args.stage}   map style: {STYLE}")
     print()
     print(f"  players      http://{ip}:{args.port}/")
     print(f"  game master  http://{ip}:{args.port}/gm")

@@ -1,6 +1,13 @@
 """Every tunable for Stage 2 in one place. See README.md for what each does."""
 
 CONFIG = {
+    # --- which stage is being played --------------------------------------
+    # 1 is plain Mafia. The map still grows behind the room, nobody sees it, and
+    # at the end the game master replays it to show what their night's voting
+    # actually did to the forest. No fire, no resilience.
+    # 2 adds fire and the one choice a night.
+    "stage": 2,
+
     # --- the room ---------------------------------------------------------
     "min_players": 6,          # 2 lantana + ecologist + ranger + 2 natives
     "lantana_ratio": 4,        # one lantana per this many players, minimum 2

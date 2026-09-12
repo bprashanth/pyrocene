@@ -41,7 +41,11 @@ def api(path, body=None):
 
 def setUpModule():
     global _server, _pw, _browser
-    env = dict(os.environ, STAGE2_FAST="1", STAGE2_PORT=str(PORT))
+    # These exercise the game and the console. Pin the projector to the terminal
+    # board so they do not move every time a map style is retuned; the styles
+    # have their own tests in stage2/tests/test_styles.py, and J13 covers the
+    # SVG path end to end.
+    env = dict(os.environ, STAGE2_FAST="1", STAGE2_PORT=str(PORT), STAGE2_STYLE="ansi")
     _server = subprocess.Popen([sys.executable, "-m", "stage2.server"], cwd=ROOT, env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(60):
@@ -543,6 +547,68 @@ class J10_SeedTestPlayers(unittest.TestCase):
             "document.querySelector('#round') && document.querySelector('#round').textContent === '2'",
             timeout=25000)
         shot(gm, "j10-gm-round2.png")
+
+
+class J12_NoScriptErrors(unittest.TestCase):
+    """The console is plain JavaScript with no build step, so a typo reaches a
+    room silently: the page half-renders and the game master sees empty boxes.
+    This has happened twice. Load every page, play a round through the real
+    buttons, and fail on any error the browser reports."""
+
+    def test_no_page_errors_anywhere(self):
+        fresh(seed=123)
+        errors = []
+        pages = {}
+        for name, path, w, h in (("gm", "/gm", 1100, 950),
+                                 ("projector", "/projector", 1280, 800),
+                                 ("phone", "/", 390, 760)):
+            pg = page(w, h)
+            pg.on("pageerror", lambda e, n=name: errors.append(f"{n}: {e}"))
+            pg.on("console", lambda m, n=name:
+                  errors.append(f"{n} console: {m.text}") if m.type == "error" else None)
+            pg.goto(BASE + path)
+            pages[name] = pg
+        gm = pages["gm"]
+        gm.wait_for_selector("#night:not([hidden])", timeout=8000)
+
+        # a whole round through the buttons a game master actually presses
+        gm.click("#finishnight")
+        gm.wait_for_selector("#advance:not([hidden])", timeout=8000)
+        gm.click("#advance")
+        gm.wait_for_selector("#day:not([hidden])", timeout=15000)
+        gm.check('input[name=choice][value=resilience]')
+        gm.wait_for_function("!document.querySelector('#finishvote').disabled", timeout=8000)
+        gm.click("#finishvote")
+        for _ in range(12):
+            if not gm.is_visible("#advance"):
+                gm.wait_for_timeout(300)
+                continue
+            gm.click("#advance")
+            gm.wait_for_timeout(300)
+        drain()
+        gm.wait_for_timeout(600)
+
+        # and the replay, which is its own mode
+        gm.wait_for_selector("#replaybox:not([hidden])", timeout=8000)
+        gm.click("#replay")                       # start it
+        gm.wait_for_timeout(400)
+        gm.click("#replay")                       # and step it forward
+        gm.wait_for_timeout(400)
+        gm.click("#replaystop")
+        gm.wait_for_timeout(300)
+        self.assertEqual(errors, [], "the browser reported script errors")
+
+    def test_the_console_actually_fills_in(self):
+        """A script error leaves the page blank rather than broken, so check the
+        boxes carry values, not just that nothing threw."""
+        fresh(seed=124)
+        play_round("hunt")
+        gm = page(1100, 950)
+        gm.goto(BASE + "/gm")
+        gm.wait_for_function("document.querySelector('#round').textContent !== ''", timeout=8000)
+        self.assertNotEqual(gm.text_content("#round").strip(), "")
+        self.assertNotEqual(gm.text_content("#health").strip(), "")
+        self.assertGreater(gm.locator("#players tr").count(), 0)
 
 
 class J11_Reset(unittest.TestCase):

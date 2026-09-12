@@ -207,3 +207,33 @@ story in two colours, gold for fuel escalating to red for fuel that caught;
 `signal` is the most legible and the plainest; `heat` is a layer rather than a
 base map; `terrain` is handsome and slower to read; `iso` makes fuel load
 physical but spends half the canvas on the angle.
+
+## Stage 1, and the replay
+
+`--stage 1` plays the room's first evening: plain Mafia, no fire, no choice. The
+map still grows behind the game and nobody is told to look at it. At the end the
+game master presses Replay the map and walks it forward one night at a time, no
+cards and no narration, and the room sees what their voting cost. In a test game
+that was 93% forest on night one and 43% by night five.
+
+The frames come from a snapshot taken at the end of every round rather than
+replayed out of the event log, because reconstructing a board from a list of
+changes is a second implementation of the rules waiting to disagree with the
+first.
+
+Two things this found. The console gave the game master no way to step the
+replay forward: the button that started it hid itself, and there was nothing
+else bound to it. And a script error in the console leaves the page half
+rendered rather than visibly broken, which had now happened twice, so there is a
+test that loads all three pages, plays a round through the real buttons, and
+fails on anything the browser reports.
+
+## The fire line, again
+
+Playing with the drawn map made two placement bugs obvious that the terminal
+board had hidden. The trench took the ten rim cells nearest the fuel, which
+scattered them around the asset, so the room saw dashes rather than a line; it
+now walks the rim from the point of greatest threat and comes out as one
+connected run, 40 times out of 40. And it was being dug beside the river, where
+water already stops fire and the night bought the room nothing. Cells next to
+water are skipped.

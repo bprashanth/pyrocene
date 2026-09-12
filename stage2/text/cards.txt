@@ -33,10 +33,10 @@ The crew digs
 A response team stands by
 
 [ews.title]
-A lookout goes up
+Early warning
 
 [ews.body]
-No trench and no water tonight. The crew watches the wind and reads the ground.
+A lookout goes up. Tomorrow night's fire will be forecast before the room decides anything.
 
 [growth.title]
 Lantana spreads

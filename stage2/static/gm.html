@@ -87,19 +87,14 @@
 
   <div id="night" class="card" hidden>
     <h2>Night</h2>
-    <p class="hint">Run the night as you always do. If lantana took someone, mark
-      them in the table below, then finish the night. The room sees one change.</p>
-    <div class="row">
-      <span id="nightpick" class="muted">nobody marked - the ranger saved them</span>
-      <button id="finishnight" class="primary">Finish night</button>
-    </div>
+    <button id="finishnight" class="primary">Finish night</button>
     <p class="hint" id="villagewarn" hidden style="color:var(--orange)">
       Dense lantana is close to the homes. If fire reaches them the game is over.</p>
   </div>
 
   <div id="day" class="card" hidden>
     <h2>Day</h2>
-    <div class="row choice">
+    <div class="row choice" id="choicebox">
       <label><input type="radio" name="choice" value="hunt"><span>Hunt lantana</span></label>
       <label><input type="radio" name="choice" value="resilience"><span>Resilience</span></label>
     </div>
@@ -127,6 +122,18 @@
     <div id="lastlines"></div>
   </div>
 
+  <div id="replaybox" class="card" hidden>
+    <h2>Replay the map</h2>
+    <p class="hint">Walk the forest forward one night at a time, with no cards and
+      no narration. For the end of a stage 1 game, when the room has played all
+      evening without seeing what their voting did.</p>
+    <div class="row">
+      <button id="replay" class="primary">Replay the map</button>
+      <button id="replaystop" hidden>Back to the game</button>
+      <span id="replaypos" class="muted"></span>
+    </div>
+  </div>
+
   <div class="card">
     <div class="row">
       <button id="reset" class="danger">Reset</button>
@@ -152,13 +159,26 @@
   function render(s) {
     S = s;
     const lobby = s.phase === "lobby";
-    const busy = s.mode !== "idle";
-    $("#phase").textContent = lobby ? "lobby" : s.phase === "ended" ? "game over" : "in play";
+    const busy = s.mode === "explain" || s.mode === "playing";
+    const replaying = s.mode === "replay";
+    $("#phase").textContent =
+      (s.stage === 1 ? "stage 1 - " : "") +
+      (replaying ? "replaying the map"
+       : lobby ? "lobby" : s.phase === "ended" ? "game over" : "in play");
     $("#lobby").hidden = !lobby;
     $("#game").hidden = lobby;
     $("#onscreen").hidden = !s.current;
     $("#night").hidden = lobby || s.phase !== "playing" || busy || s.step !== "night";
     $("#day").hidden = lobby || s.phase !== "playing" || busy || s.step !== "day";
+    // Stage 1 has only the vote: there is no fire to shelter from.
+    $("#choicebox").hidden = s.stage === 1;
+    $("#replaybox").hidden = lobby || !s.can_replay;
+    // One button that walks the replay. Hiding it once the replay started left
+    // the game master with no way to move it forward.
+    $("#replay").textContent = replaying ? "Next night" : "Replay the map";
+    $("#replaystop").hidden = !replaying;
+    $("#replaypos").textContent = replaying
+      ? `showing night ${s.replay_at} of ${s.replay_total - 1}` : "";
     $("#count").textContent = s.players.length;
     $("#round").textContent = s.round;
     $("#maxr").textContent = s.max_rounds;
@@ -181,8 +201,6 @@
     const byId = {};
     s.players.forEach(p => byId[p.id] = p);
     const nk = s.pending.night_kill, vt = s.pending.vote;
-    $("#nightpick").textContent = nk
-      ? `lantana took ${byId[nk].name}` : "nobody marked - the ranger saved them";
     $("#votepick").textContent = vt
       ? `the room voted out ${byId[vt].name}` : "mark who the room voted out";
 
@@ -203,7 +221,7 @@
     document.querySelectorAll('input[name=choice]').forEach(r => r.checked = r.value === c);
     $("#actions").hidden = c !== "resilience";
     $("#huntbox").hidden = c !== "hunt";
-    $("#finishvote").disabled = !c;
+    $("#finishvote").disabled = !c && s.stage !== 1;
     const a = s.pending.action || "";
     document.querySelectorAll('input[name=action]').forEach(r => r.checked = r.value === a);
   }
@@ -224,6 +242,8 @@
   $("#finishnight").onclick = async () => { await post("/api/gm/night"); };
   $("#finishvote").onclick = async () => { await post("/api/gm/vote"); };
   $("#advance").onclick = async () => { await post("/api/gm/advance"); };
+  $("#replay").onclick = async () => { await post("/api/gm/replay"); };
+  $("#replaystop").onclick = async () => { await post("/api/gm/replay_stop"); };
   $("#reset").onclick = async () => {
     if (!confirm("Reset the game and send everyone back to the lobby?")) return;
     await post("/api/gm/reset", { seed: $("#rseed").value || null });

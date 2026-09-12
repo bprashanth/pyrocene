@@ -9,8 +9,13 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 ## Run it in a room
 
 ```bash
-python3 -m stage2.server          # prints the three addresses
+python3 -m stage2.server --stage 1     # plain Mafia, the map kept back
+python3 -m stage2.server               # stage 2: fire and the one choice a night
+python3 -m stage2.server --help        # --host --port --style --stage --seed --fast
 ```
+
+It prints every address it answers on. Hand out the wifi one for phones in the
+room; the others are for you.
 
 1. Open the **projector** address on the big screen, full screen the browser.
 2. Open the **game master** address on your own laptop.
@@ -28,6 +33,18 @@ python3 -m stage2.server          # prints the three addresses
 Rehearsing alone: press **Seed** to add fake players, then Start.
 
 No internet needed. xterm.js is vendored, the rest is the standard library.
+
+## Stage 1 first
+
+`--stage 1` is the room's first evening. Plain Mafia, nothing else: no fire, no
+choice, the projector shows the map but nobody has been told to look at it. The
+game master records the night kill and the day vote as usual and the forest
+quietly changes behind the game.
+
+When the last lantana is out, or the room runs out of natives, press **Replay
+the map** and then **Next night** to walk the forest forward one night at a
+time. No cards, no narration, just the land changing. That is where the room
+finds out what their voting did, and it is the handover into stage 2.
 
 ## The round
 
@@ -125,13 +142,16 @@ Everything tunable is in `stage2/config.py`.
 | `bare_on_removal` | True | False turns a cleared lantana patch straight to forest |
 | `team_loss` | False | True ends the game when ecologist and ranger are both out |
 | `village_defend_range` | 8 | Only trench the homes if fuel is this close |
+| `stage` | 2 | 1 is plain Mafia with a replay at the end; 2 adds fire |
 | `hold_ms` | various | How long the projector holds each animation frame |
 
 ## Testing
 
 ```bash
 python3 -m unittest stage2.tests.test_isolation      # the live game must not move
-python3 -m unittest stage2.tests.e2e.test_journeys   # eleven journeys in a browser
+python3 -m unittest stage2.tests.e2e.test_journeys   # the game and the console
+python3 -m unittest stage2.tests.e2e.test_stages     # stage 1, the replay, the SVG map
+python3 -m unittest stage2.tests.test_styles         # every map style renders
 SHOTS=1 SHOT_DIR=/tmp/shots python3 -m unittest stage2.tests.e2e.test_journeys
 python3 -m stage2.sim --games 250                    # balance, whole games in memory
 python3 -m stage2.sim --trace 7

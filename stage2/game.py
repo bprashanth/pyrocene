@@ -65,6 +65,7 @@ class Game:
         self.village_lost = False
         self.history: list = []
         self.events: list = []         # the event log, one record per round
+        self.snapshots: list = []      # the map after each round, for the replay
         self._log_rec = None
         started = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.log_meta = {"started": started, "seed": self.seed, "ending": None,
@@ -118,6 +119,7 @@ class Game:
         self.phase = "playing"
         self.round = 1
         self.step = "night"
+        self.snapshots = [self.view()]
         self.pending = {"night_kill": None, "vote": None, "choice": None, "action": None}
 
     def _allocate(self, rng: random.Random):
@@ -258,6 +260,10 @@ class Game:
                 self.pending[key] = None
 
     def choose(self, choice: str | None, action: str | None = None):
+        if self.cfg["stage"] == 1:
+            self.pending["choice"] = "hunt"      # stage 1 has only the vote
+            self.pending["action"] = None
+            return
         if choice not in (None, "hunt", "resilience"):
             raise ValueError("choice must be hunt or resilience")
         if action not in (None, *ACTIONS):
@@ -307,8 +313,10 @@ class Game:
     def resolve_vote(self) -> list:
         if self.phase != "playing" or self.step != "day":
             raise ValueError("not waiting on a day")
-        if self.pending["choice"] is None:
+        if self.pending["choice"] is None and self.cfg["stage"] != 1:
             raise ValueError("choose hunt or resilience first")
+        if self.cfg["stage"] == 1:
+            self.pending["choice"] = "hunt"
         r = self.round
         rng = self._rng(r)
         steps: list = []
@@ -316,7 +324,8 @@ class Game:
         rec = self.log_current()
         rec["choice"] = self.pending["choice"]
 
-        if self.pending["choice"] == "hunt":
+        stage_one = self.cfg["stage"] == 1
+        if stage_one or self.pending["choice"] == "hunt":
             pid = self.pending["vote"]
             if pid and self.players[pid].alive:
                 p = self.players[pid]
@@ -379,15 +388,20 @@ class Game:
             T("ember", "growth", n=len(moved)) if moved else T("ember", "growth.none"),
             self._transition(before, after, moved, "creep", halo=halo), cells=moved))
 
-        # fire
-        fire_beats, fire_rec, fire_text = self._fire(rng)
-        rec["fire"] = fire_rec
-        steps.append(self._step(
-            "fire", T("cards", "fire.title") if fire_rec["severity"]
-            else T("cards", "fire.none_title"), fire_text, fire_beats,
-            cells=fire_rec.get("cells", [])))
+        # fire, unless this is stage 1, where the room is only playing Mafia and
+        # the map is a record of it rather than a thing that fights back
+        if not stage_one:
+            fire_beats, fire_rec, fire_text = self._fire(rng)
+            rec["fire"] = fire_rec
+            # The record carries square names for the log; the step wants indices,
+            # and the frames already hold them.
+            burned = next((f["fire"] for f in reversed(fire_beats) if f["kind"] == "burn"), [])
+            steps.append(self._step(
+                "fire", T("cards", "fire.title") if fire_rec["severity"]
+                else T("cards", "fire.none_title"), fire_text, fire_beats,
+                cells=burned))
 
-        if (rec.get("resilience") or {}).get("type") == "early_warning":
+        if not stage_one and (rec.get("resilience") or {}).get("type") == "early_warning":
             self.forecast = self._forecast(r + 1)
             steps.append(self._step(
                 "forecast", T("cards", "forecast.title"),
@@ -397,8 +411,11 @@ class Game:
         else:
             self.forecast = None
 
+        # Stage 1 has no fire, so the history says so rather than carrying an
+        # empty one that reads like a night where nothing happened to catch.
         self.history.append({"round": r, "choice": rec["choice"], "action": rec.get("action"),
-                             "auto": rec.get("auto", False), "fire": rec.get("fire") or {"severity": 0},
+                             "auto": rec.get("auto", False),
+                             "fire": None if stage_one else (rec.get("fire") or {"severity": 0}),
                              "health": health_pct(self.state),
                              "eliminations": rec.get("player_changes", [])})
         self.log_close()
@@ -468,6 +485,17 @@ class Game:
         self.log_ending(end)
         return {"key": "ending", "title": T("cards", "end.title"), "text": end["text"],
                 "beats": [self._frame("ending", end["text"])], "cells": []}
+
+    def replay_beats(self) -> list:
+        """The map at the end of every round, one frame each.
+
+        For the end of a stage 1 game: the room played Mafia all night without
+        seeing a map, and this walks them through what their voting did to the
+        forest. No cards and no narration, just the land changing.
+        """
+        return [{"kind": "settle", "text": "", "fire": [], "focus": [], "halo": [],
+                 "held": [], "haze": False, "view": v, "hold_ms": 0}
+                for v in self.snapshots]
 
     def cell_name(self, i: int) -> str:
         c = self.state.cells[i]
@@ -900,9 +928,14 @@ class Game:
         return best, "native forest"
 
     def _dig_line(self, r: int) -> str:
-        """Dig a break around what needs protecting, on the side the fire will
-        come from. Lines are permanent, so repeated nights of resilience close
-        the ring a bit further each time."""
+        """Dig one continuous break between the worst fuel and what it threatens.
+
+        Two things this has to get right. The trench must be a single connected
+        run: taking the ten cells nearest the fuel scattered them around the
+        asset and the room saw dashes, not a line. And it must not be dug beside
+        water, because a river already stops fire and a trench there buys the
+        room nothing for their night.
+        """
         s, cfg = self.state, self.cfg
         clusters = self.dense_clusters()
         fuel = clusters[0] if clusters else [
@@ -914,8 +947,13 @@ class Game:
             return T("ember", "line.none_room")
 
         aset = set(asset)
-        # the ring of land just outside the asset: candidate trench cells
-        rim = []
+        fuelset = set(fuel)
+
+        def beside_water(i):
+            return any(s.cells[ni].cover == WATER for ni, _ in neighbors8(s, i))
+
+        # candidate trench cells: the ring just outside what we are defending
+        rim = set()
         for i in asset:
             for ni, _ in neighbors8(s, i):
                 if ni in aset:
@@ -923,18 +961,36 @@ class Game:
                 n = s.cells[ni]
                 if n.cover in (WATER, VILLAGE) or n.fireline:
                     continue
-                rim.append(ni)
-        rim = sorted(set(rim))
+                if beside_water(ni):
+                    continue          # the river is already the break here
+                rim.add(ni)
         if len(rim) < 3:
             return T("ember", "line.none_room")
 
-        # dig the stretch of that rim nearest the fuel: the side fire comes from
         def near_fuel(i):
             return min(abs(s.cells[i].r - s.cells[f].r) + abs(s.cells[i].c - s.cells[f].c)
-                       for f in fuel)
+                       for f in fuelset)
 
-        rim.sort(key=near_fuel)
-        chosen = rim[:cfg["line_cells"]]
+        # start where the fire will arrive, then walk the rim so the trench comes
+        # out as one run rather than a handful of unconnected holes
+        start = min(rim, key=near_fuel)
+        chosen = [start]
+        taken = {start}
+        while len(chosen) < cfg["line_cells"]:
+            grow = None
+            for end in (chosen[-1], chosen[0]):
+                opts = [ni for ni, _ in neighbors8(s, end)
+                        if ni in rim and ni not in taken]
+                if opts:
+                    pick = min(opts, key=near_fuel)
+                    if grow is None or near_fuel(pick) < near_fuel(grow[1]):
+                        grow = (end, pick)
+            if grow is None:
+                break
+            end, pick = grow
+            taken.add(pick)
+            chosen.append(pick) if end == chosen[-1] else chosen.insert(0, pick)
+
         for i in chosen:
             c = s.cells[i]
             if c.cover == INVASIVE:
@@ -1036,6 +1092,7 @@ class Game:
         rec["health"] = health_pct(self.state)
         rec["health_loss"] = max(0, rec["health_before"] - rec["health"])
         self.events.append(rec)
+        self.snapshots.append(self.view())
         self._log_rec = None
         self._write_log()
 
