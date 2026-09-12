@@ -352,27 +352,89 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
 
-def lan_ip() -> str:
+def addresses() -> list:
+    """Every address this machine can be reached on, best guess first.
+
+    A room needs a URL to hand out and the answer differs by situation: the wifi
+    address for phones in the room, a Tailscale address for someone testing from
+    another network. Printing one guess sent people to the wrong one.
+    """
+    out = []
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("10.255.255.255", 1))
-        ip = s.getsockname()[0]
+        out.append((s.getsockname()[0], "this machine's default route"))
         s.close()
-        return ip
     except OSError:
-        return "127.0.0.1"
+        pass
+    try:
+        import subprocess
+        raw = subprocess.run(["ip", "-4", "-o", "addr", "show"], capture_output=True,
+                             text=True, timeout=3).stdout
+        for line in raw.splitlines():
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+            dev, ip = parts[1], parts[3].split("/")[0]
+            if ip.startswith("127.") or dev.startswith(("docker", "br-", "veth")):
+                continue
+            note = ("tailscale, reachable from your other devices"
+                    if ip.startswith("100.") else
+                    "wifi or ethernet, for phones in the room")
+            if ip not in [a for a, _ in out]:
+                out.append((ip, note))
+            else:
+                out = [(a, note if a == ip else n) for a, n in out]
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return out or [("127.0.0.1", "this machine only")]
+
+
+def lan_ip() -> str:
+    return addresses()[0][0]
 
 
 def main():
-    port = int(os.environ.get("STAGE2_PORT", "8020"))
-    srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    """Flags beat environment variables when someone is trying to get a room
+    working. The environment still wins nothing: a flag overrides it."""
+    import argparse
+    ap = argparse.ArgumentParser(prog="python3 -m stage2.server",
+                                 description="Run the Stage 2 room server.")
+    ap.add_argument("--host", default=os.environ.get("STAGE2_HOST", "0.0.0.0"),
+                    help="address to bind (default 0.0.0.0, every interface)")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("STAGE2_PORT", "8020")),
+                    help="port to listen on (default 8020)")
+    ap.add_argument("--style", default=os.environ.get("STAGE2_STYLE", "ansi"),
+                    choices=list(mapstyle.STYLES),
+                    help="what the projector draws (default ansi, the terminal board)")
+    ap.add_argument("--seed", type=int, default=None, help="fix the map")
+    ap.add_argument("--fast", action="store_true", help="no animation delays")
+    args = ap.parse_args()
+
+    global STYLE, FAST, ROOM
+    STYLE = args.style
+    if args.fast:
+        FAST = True
+    if args.seed is not None:
+        ROOM = Room(seed=args.seed)
+
+    srv = ThreadingHTTPServer((args.host, args.port), Handler)
     srv.daemon_threads = True
-    ip = lan_ip()
-    print(f"pyrocene stage 2")
-    print(f"  players   http://{ip}:{port}/")
-    print(f"  game master  http://{ip}:{port}/gm")
-    print(f"  projector    http://{ip}:{port}/projector")
-    print(f"  map style   {STYLE}")
+    addrs = addresses()
+    ip = addrs[0][0]
+    print(f"pyrocene stage 2   map style: {STYLE}")
+    print()
+    print(f"  players      http://{ip}:{args.port}/")
+    print(f"  game master  http://{ip}:{args.port}/gm")
+    print(f"  projector    http://{ip}:{args.port}/projector")
+    if len(addrs) > 1:
+        print()
+        print("  also reachable on:")
+        for a, note in addrs[1:]:
+            print(f"    http://{a}:{args.port}/      {note}")
+    if args.host not in ("0.0.0.0", "::"):
+        print()
+        print(f"  bound only to {args.host}: nothing else on the network can reach it")
     if FAST:
         print("  (fast mode: no animation delays)")
     sys.stdout.flush()
