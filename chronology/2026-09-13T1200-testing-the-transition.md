@@ -6,7 +6,7 @@ problem rather than a code problem, so it is worth being precise about.
 
 ## What was checked
 
-A stage 1 server on a spare port, twelve seeded players, a full game played
+A stage 1 server on port 8040, twelve seeded players, a full game played
 through the HTTP endpoints the console uses, then the replay walked to the end.
 Checked on 2026-09-13 at commit `41b279c`.
 
@@ -48,13 +48,21 @@ with text naming the direction the lantana moved and how many squares it took.
 If the end-of-stage-1 replay is meant to be the reveal, the rounds have already
 given most of it away.
 
-## A harness note
+## Two harness notes
 
-The console's buttons are disabled while an animation is running, and any script
-driving the endpoints has to wait for the room to return to idle before posting
-the next thing. Pressing too fast returns 409 with "finish what is on screen
-first". That is the server behaving correctly. Three separate test scripts got
-this wrong before it was obvious.
+**Wait for idle.** The console's buttons are disabled while an animation is
+running, and any script driving the endpoints has to wait for the room to return
+to idle before posting the next thing. Pressing too fast returns 409 with
+"finish what is on screen first". That is the server behaving correctly. Three
+separate test scripts got this wrong before it was obvious.
+
+**Do not demo on port 8031.** That is the journey tests' default port. If a
+server is already sitting there, the test harness's own server fails to bind,
+the startup poll then reaches the *stranger's* server and succeeds, and every
+test runs against somebody else's game. Two runs came back with 20 and 17
+unrelated failures before the cause was obvious, and with the port free the same
+suite passes. The harness now refuses to start when the port is busy and says
+so. Demo on 8040 or anything else well away from it.
 
 ## Evidence
 

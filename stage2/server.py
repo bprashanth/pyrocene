@@ -575,7 +575,17 @@ def main():
     if args.seed is not None or args.stage != 2:
         ROOM = Room(seed=args.seed, stage=args.stage)
 
-    srv = ThreadingHTTPServer((args.host, args.port), Handler)
+    try:
+        srv = ThreadingHTTPServer((args.host, args.port), Handler)
+    except OSError as e:
+        # The common one is a server already on this port, which used to come
+        # out as a bare traceback and read like the game was broken.
+        print(f"cannot start on {args.host}:{args.port}: {e.strerror or e}")
+        if e.errno == 98:
+            print(f"  something is already using port {args.port}. Either:")
+            print(f"    ss -ltnp | grep :{args.port}      # see what holds it")
+            print(f"    python3 -m stage2.server --port {args.port + 1} ...   # use another")
+        sys.exit(1)
     srv.daemon_threads = True
     addrs = addresses()
     ip = addrs[0][0]

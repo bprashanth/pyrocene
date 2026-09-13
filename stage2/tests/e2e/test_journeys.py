@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -45,10 +46,25 @@ def setUpModule():
     # board so they do not move every time a map style is retuned; the styles
     # have their own tests in stage2/tests/test_styles.py, and J13 covers the
     # SVG path end to end.
+    # Refuse to run if something already holds the port. Otherwise our server
+    # fails to bind, the poll below reaches the *other* server, and every test
+    # runs against a stranger's game. That reads as a pile of unrelated
+    # failures, which cost an afternoon once.
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    probe.settimeout(1)
+    busy = probe.connect_ex(("127.0.0.1", PORT)) == 0
+    probe.close()
+    if busy:
+        raise RuntimeError(
+            f"port {PORT} is already in use, so these tests cannot start their own "
+            f"server. Stop it, or set STAGE2_TEST_PORT to a free port.")
+
     env = dict(os.environ, STAGE2_FAST="1", STAGE2_PORT=str(PORT), STAGE2_STYLE="ansi")
     _server = subprocess.Popen([sys.executable, "-m", "stage2.server"], cwd=ROOT, env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(60):
+        if _server.poll() is not None:
+            raise RuntimeError(f"the test server exited at once (code {_server.returncode})")
         try:
             api("/api/state")
             break
