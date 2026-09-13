@@ -147,6 +147,90 @@ class StageOne(unittest.TestCase):
         self.assertEqual(errors, [])
 
 
+class StageOneEndsEarly(unittest.TestCase):
+    def test_both_specialists_out_ends_it(self):
+        """With no fire there is no way back, so stage 1 stops rather than play
+        out a foregone conclusion. Stage 2 deliberately keeps going."""
+        fresh(seed=17)
+        for role in ("ecologist", "ranger"):
+            st = api("/api/state")
+            if st["phase"] != "playing":
+                break
+            who = next(p["id"] for p in st["players"]
+                       if p["alive"] and p["role"] == role)
+            api("/api/gm/eliminate", {"id": who})
+            api("/api/gm/night", {})
+            drain()
+            st = api("/api/state")
+            if st["phase"] != "playing":
+                break
+            api("/api/gm/vote", {})
+            drain()
+        st = api("/api/state")
+        self.assertEqual(st["phase"], "ended")
+        self.assertEqual(st["ending"]["reason"], "team")
+
+
+class StageOneContinue(unittest.TestCase):
+    def test_continue_applies_the_round_without_showing_it(self):
+        """The game master keeps a room moving with one press. The state must
+        advance exactly as it would have, with nothing put on the projector."""
+        fresh(seed=23)
+        before = api("/api/state")["health"]
+        who = next(p["id"] for p in api("/api/state")["players"]
+                   if p["alive"] and p["role"] == "native")
+        api("/api/gm/eliminate", {"id": who})
+        api("/api/gm/night", {})
+        self.assertGreater(api("/api/state")["steps_left"], 0)
+        st = api("/api/gm/skip", {})
+        self.assertEqual(st["mode"], "idle")
+        self.assertEqual(st["steps_left"], 0)
+        self.assertEqual(st["step"], "day", "the round still moved on")
+        self.assertLessEqual(st["health"], before)
+
+    def test_the_projector_keeps_the_map_back(self):
+        """Stage 1 holds the board for the replay, so a round in progress shows
+        the night and nothing else."""
+        fresh(seed=29)
+        frame = api("/api/frame")["frame"]
+        self.assertIn("Night 1", frame)
+        self.assertNotIn("legend", frame.lower())
+        who = next(p["id"] for p in api("/api/state")["players"] if p["alive"])
+        api("/api/gm/eliminate", {"id": who})
+        api("/api/gm/night", {})
+        api("/api/gm/skip", {})
+        self.assertIn("P Y R O C E N E", api("/api/frame")["frame"])
+
+    def test_the_console_offers_it_and_drops_the_animation(self):
+        fresh(seed=31)
+        gm = page(1100, 950)
+        errors = []
+        gm.on("pageerror", lambda e: errors.append(str(e)))
+        gm.goto(BASE + "/gm")
+        gm.wait_for_selector("#night:not([hidden])", timeout=8000)
+        gm.click("#finishnight")
+        gm.wait_for_selector("#skip:not([hidden])", timeout=8000)
+        self.assertEqual(gm.locator("#animbox").count(), 0,
+                         "the show-animation panel is gone")
+        gm.click("#skip")
+        gm.wait_for_selector("#day:not([hidden])", timeout=8000)
+        self.assertEqual(errors, [])
+
+
+class StageOneMap(unittest.TestCase):
+    def test_the_replay_outlines_the_ground_each_player_started_with(self):
+        fresh(seed=37)
+        for _ in range(2):
+            if api("/api/state")["phase"] != "playing":
+                break
+            play_round("native")
+        api("/api/gm/replay", {})
+        api("/api/gm/replay", {})
+        frame = api("/api/frame")["frame"]
+        self.assertIn("one player's ground", frame)
+        self.assertNotIn(">fire<", frame, "stage 1 cannot burn, so the legend must not say so")
+
+
 class Replay(unittest.TestCase):
     def test_it_walks_the_map_one_night_at_a_time(self):
         fresh(seed=5)

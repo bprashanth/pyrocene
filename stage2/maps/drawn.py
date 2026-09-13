@@ -144,6 +144,35 @@ def render(scene) -> str:
                     dash=f"{u*0.28:.0f} {u*0.2:.0f}"))
         B.append("</g>")
 
+    # --- the ground each player started with -------------------------------
+    # A boundary that never moves, so the room can watch one shape change hands
+    # over the evening and tie it back to the night somebody went out. Kept
+    # faint on purpose: it is a reference, not a thing to read. No names, so it
+    # gives away nothing the room has not worked out for itself. Drawn over
+    # the cover rather than under it, so a parcel stays readable after
+    # lantana has taken all of it, which is the whole point of showing it.
+    # Stage 1 only: stage 2 has fire and trenches on the same board and does
+    # not need another set of lines.
+    if scene.territory and scene.game_stage == 1:
+        t = []
+        for cells in scene.territory:
+            keep = [i for i in cells if scene.cover.get(i) != "water"]
+            if not keep:
+                continue
+            d = cut(keep, 0.3)
+            # A pale line under a fine dark dash, so a parcel edge reads as a
+            # boundary cut into the ground rather than as another track. The
+            # road is already a dashed line in the same ink, and without this
+            # the two are easy to mix up.
+            t.append(f'<path d="{d}" fill="none" stroke="{PAPER}" stroke-width="3.6" '
+                     f'opacity=".45" stroke-linejoin="round" fill-rule="evenodd"/>')
+            t.append(f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="1.2" '
+                     f'stroke-dasharray="2 4.5" stroke-linecap="round" '
+                     f'stroke-linejoin="round" fill-rule="evenodd"/>')
+        if t:
+            B.append(f'<g opacity="{0.2 if hazed else 0.42}" filter="url(#rough)">'
+                     + "".join(t) + "</g>")
+
     # --- homes --------------------------------------------------------------
     for i in scene.of("village"):
         r, c = scene.rc(i)
@@ -186,15 +215,28 @@ def render(scene) -> str:
             f'Night {scene.round} of {scene.max_rounds}</text>')
     bar = base.health_bar(base.W - base.PAD - 330, 44, 240, scene.health,
                           DIM, GOOD, "#b8862a", FIRE_INK, "#ddd3bd")
-    leg = base.legend(base.PAD, base.H - 86, [
+    # Stage 1 has no fire and no trenches, so naming them in the legend only
+    # invites questions the evening does not answer yet.
+    keys = [
         (f'<rect width="20" height="20" fill="{FOREST}" stroke="{INK}" stroke-width="1.2"/>', "forest"),
         (f'<rect width="20" height="20" fill="url(#lant)" stroke="{INK}" stroke-width="1.2"/>', "lantana"),
         (f'<rect width="20" height="20" fill="url(#lantT)" stroke="{INK}" stroke-width="1.2"/>', "thick lantana"),
-        (f'<rect width="20" height="20" fill="url(#fire)" stroke="{INK}" stroke-width="1.2"/>', "fire"),
-        (f'<rect width="20" height="20" fill="{DUG}" stroke="{TRENCH}" stroke-width="2.4" stroke-dasharray="5 4"/>', "fire line"),
+        (f'<rect width="20" height="20" fill="{BARE}" stroke="{INK}" stroke-width="1.2"/>', "bare ground"),
+    ]
+    if scene.game_stage != 1:
+        keys += [
+            (f'<rect width="20" height="20" fill="url(#fire)" stroke="{INK}" stroke-width="1.2"/>', "fire"),
+            (f'<rect width="20" height="20" fill="{DUG}" stroke="{TRENCH}" stroke-width="2.4" stroke-dasharray="5 4"/>', "fire line"),
+        ]
+    keys += [
         (f'<rect width="20" height="20" fill="{WATER}" stroke="{INK}" stroke-width="1.2"/>', "water"),
         (f'<path d="M1,13 L10,4 L19,13 Z M4,13 h12 v6 h-12 Z" fill="{ROOF}" stroke="{INK}" stroke-width="1.4"/>', "homes"),
-    ], INK, gap=152)
+    ]
+    if scene.territory and scene.game_stage == 1:
+        keys.append((f'<rect width="20" height="20" fill="none" stroke="{INK}" '
+                     f'stroke-width="1.3" stroke-dasharray="2 4" opacity=".6"/>', "one player's ground"))
+    leg = base.legend(base.PAD, base.H - 86, keys, INK,
+                      gap=min(152, int((base.W - base.PAD * 2) / max(1, len(keys)))))
     note = (f'<text x="{base.PAD}" y="{base.H-34}" class="note" fill="{INK}">'
             f'{base.esc(scene.note)}</text>' if scene.note else "")
     return base.shell("".join(B) + head + bar + leg + note, CSS, PAPER)

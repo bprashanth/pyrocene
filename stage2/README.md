@@ -6,6 +6,21 @@ already do. This mirrors the room onto a projected map, and adds fire.
 Nothing here touches the live game at pyrocene.netlify.app. Stage 2 keeps its
 own frozen copy of the engine under `stage2/engine/` and imports only that.
 
+## Index
+
+| Component | Where | What it is |
+|---|---|---|
+| Server | `server.py` | One HTTP server: phones, game master, projector, SSE, the replay routes |
+| Game | `game.py`, `config.py`, `text/` | Board, spread, fire, trenches, the event log, every tunable, every sentence |
+| Engine | `engine/` | Frozen copy of the live game's physics. Never re-pointed at the original |
+| Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
+| Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
+| Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
+| Tests | `tests/` | 44 tests; `test_isolation.py` guards the live game |
+| Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
+| Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
+| History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
+
 ## Run it in a room
 
 ```bash
@@ -36,15 +51,35 @@ No internet needed. xterm.js is vendored, the rest is the standard library.
 
 ## Stage 1 first
 
-`--stage 1` is the room's first evening. Plain Mafia, nothing else: no fire, no
-choice, the projector shows the map but nobody has been told to look at it. The
-game master records the night kill and the day vote as usual and the forest
-quietly changes behind the game.
+`--stage 1` is the room's first evening. Plain Mafia, nothing else: no fire and
+no nightly choice. The room plays as it would with a deck of cards and this app
+only keeps score.
 
-When the last lantana is out, or the room runs out of natives, press **Replay
-the map** and then **Next night** to walk the forest forward one night at a
-time. No cards, no narration, just the land changing. That is where the room
-finds out what their voting did, and it is the handover into stage 2.
+**The projector holds the night number and nothing else.** The board is kept
+back on purpose, so the replay at the end lands as a reveal rather than as a
+recap. After each night and each vote the console offers two buttons:
+
+| Button | |
+|---|---|
+| Continue | Applies the round and shows nothing. Press this to keep the room moving. |
+| Show what happened | Puts the card and the animation up, the same as stage 2. |
+
+**It ends as plain Mafia ends.** Every lantana out, or every native out, or both
+the ecologist and the ranger out. That last one is stage 1 only: with no fire
+there is no way back, so the game stops rather than play out a foregone
+conclusion. Stage 2 keeps going in the same spot, because a fire can burn
+lantana back and turn a hopeless board around.
+
+When it ends, press **Replay the map** and then **Next night** to walk the
+forest forward one night at a time. No cards, no narration, just the land.
+
+The replay draws a faint dashed boundary around the ground each player started
+with. Those boundaries never move, so the room can watch one shape change hands
+over the evening and tie it back to the night somebody went out. That is the
+frame for the explanation: a lantana patch cleared leaves bare ground, which can
+be taken again, and a lantana patch left alone spreads past its own boundary
+into the forest. No names and no roles are drawn, so nothing is given away that
+the room has not already worked out.
 
 ## The round
 
@@ -100,27 +135,6 @@ keeps guessing and lantana can lie about it.
 | No native forest left | Loss. |
 | Night 8 with lantana still in | Loss. A room that only shelters never wins. |
 
-## Show animation
-
-When a game finishes, the game master page offers **Show animation**. It opens a
-post-game replay in a new tab, built from that game's event log, and plays back
-the evening in under a minute: the forest as it started, lantana spreading night
-by night, each fire where it began and how far it ran, and the ending.
-
-This is for the moment after the room has stopped playing and is still in the
-room. A scoreboard says the forest ended at 45%. The replay shows them the night
-it happened.
-
-The replays live in `stage2/simulation/<name>/`. Any directory there with an
-`index.html` is picked up automatically and appears as a button, so there can be
-more than one. They are given the log to load through a `?log=` parameter and
-fetch it themselves; they run entirely in the browser and do not import anything
-from this package. `stage2/simulation/SPEC.md` is the contract, and
-`stage2/simulation/sample-game.json` is a real finished game to develop against.
-
-Those directories are owned by whoever is building a replay. Nothing in the game
-depends on them, and the buttons simply do not appear if none exist.
-
 ## Changing the words
 
 Every line the players see is in `stage2/text/`. Grep the sentence, edit it,
@@ -161,7 +175,7 @@ Everything tunable is in `stage2/config.py`.
 | `fire_round_ramp` | 0.22 | Extra reach per night as the season dries |
 | `line_cells` | 10 | Trench dug per resilience night |
 | `bare_on_removal` | True | False turns a cleared lantana patch straight to forest |
-| `team_loss` | False | True ends the game when ecologist and ranger are both out |
+| `team_loss` | False | True ends the game when ecologist and ranger are both out. Forced on in stage 1 |
 | `village_defend_range` | 8 | Only trench the homes if fuel is this close |
 | `stage` | 2 | 1 is plain Mafia with a replay at the end; 2 adds fire |
 | `hold_ms` | various | How long the projector holds each animation frame |
@@ -171,7 +185,7 @@ Everything tunable is in `stage2/config.py`.
 ```bash
 python3 -m unittest stage2.tests.test_isolation      # the live game must not move
 python3 -m unittest stage2.tests.e2e.test_journeys   # the game and the console
-python3 -m unittest stage2.tests.e2e.test_stages     # stage 1, the replay, the SVG map
+python3 -m unittest stage2.tests.e2e.test_stages     # stage 1, Continue, the replay, the SVG map
 python3 -m unittest stage2.tests.test_styles         # every map style renders
 SHOTS=1 SHOT_DIR=/tmp/shots python3 -m unittest stage2.tests.e2e.test_journeys
 python3 -m stage2.sim --games 250                    # balance, whole games in memory
@@ -204,7 +218,7 @@ post-game sequence without reading any of this code.
 | `sim.py` | Plays whole games in memory. Used for balance, never at runtime. |
 | `tests/` | 39 tests. `test_isolation.py` is the one that guards the live game. |
 | `logs/` | Written as games are played. `index.json` names the latest. |
-| `simulation/` | Post-game replays. Not owned by the game. |
+| `simulation/` | Post-game replays. Not owned by the game, and no console button right now. |
 
 ## Keeping the live game out of this
 

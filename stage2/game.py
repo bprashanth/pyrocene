@@ -47,6 +47,13 @@ class Game:
         self.cfg = deepcopy(CONFIG)
         if config:
             self.cfg.update(config)
+        if self.cfg["stage"] == 1 and "team_loss" not in (config or {}):
+            # Stage 1 is plain Mafia with no fire. Once both specialists are out
+            # the town has no way to find lantana and the rest of the evening is
+            # a formality, so call it there rather than play it out. Stage 2
+            # leaves this off on purpose: fire can burn lantana back and turn a
+            # hopeless board around, so the game is still worth finishing.
+            self.cfg["team_loss"] = True
         self.seed = seed if seed is not None else random.randrange(1_000_000_000)
         self.players: dict[str, Player] = {}
         self.phase = "lobby"          # lobby | playing | ended
@@ -1065,7 +1072,19 @@ class Game:
                   "hill": c.hill, "road": c.road, "risk": 0, "hotspot": False,
                   "monitored": False, "last_seen": 0} for c in s.cells]
         return {"cols": s.cols, "rows": s.rows, "cells": cells, "health": health_pct(s),
-                "round": self.round, "max_rounds": self.cfg["max_rounds"], "wind": s.wind}
+                "round": self.round, "max_rounds": self.cfg["max_rounds"], "wind": s.wind,
+                "stage": self.cfg["stage"], "territories": self.territories()}
+
+    def territories(self) -> list:
+        """The ground each player started with, as a list of cell lists.
+
+        Fixed for the whole game, unlike `self.owner`, which moves as lantana
+        spreads and as patches are cleared. A boundary that stays put is the
+        point: the room watches what happens inside a shape they can recognise,
+        and can tie it back to the night somebody went out. No names and no
+        roles are included, so this reveals nothing the room has not worked out.
+        """
+        return [list(p.patch) for p in self.players.values() if p.patch]
 
     def _dir_of(self, cells: list) -> str:
         s = self.state

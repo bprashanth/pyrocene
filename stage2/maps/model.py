@@ -24,6 +24,8 @@ class Scene:
     halo: set = field(default_factory=set)         # ground lantana is pressing on
     held: set = field(default_factory=set)         # trench cells the fire ran into
     haze: bool = False                             # push everything but focus back
+    territory: list = field(default_factory=list)  # cell lists, one per player's starting patch
+    game_stage: int = 2                            # 1 has no fire and no resilience
     title: str = ""
     note: str = ""
 
@@ -64,6 +66,8 @@ def from_view(view: dict, **overlay) -> Scene:
         halo=set(overlay.get("halo") or []),
         held=set(overlay.get("held") or []),
         haze=bool(overlay.get("haze")),
+        territory=[list(t) for t in (view.get("territories") or [])],
+        game_stage=int(view.get("stage", 2)),
         title=overlay.get("title", ""), note=overlay.get("note", ""),
     )
 

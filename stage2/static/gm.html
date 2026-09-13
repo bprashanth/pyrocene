@@ -80,9 +80,15 @@
     <h2>On the projector</h2>
     <p id="cardtitle" style="margin:0 0 4px;font-weight:700;color:var(--orange)"></p>
     <p id="cardtext" style="margin:0 0 14px;color:var(--muted)"></p>
-    <button id="advance" class="primary">Show what happened</button>
-    <span id="playing" class="muted" hidden>playing...</span>
+    <div class="row">
+      <button id="advance" class="primary">Show what happened</button>
+      <button id="skip" hidden>Continue</button>
+      <span id="playing" class="muted" hidden>playing...</span>
+    </div>
     <p class="hint" id="stepsleft"></p>
+    <p class="hint" id="skiphint" hidden>Continue applies the round without
+      showing it, so the room is not interrupted. The map is kept for the replay
+      at the end.</p>
   </div>
 
   <div id="night" class="card" hidden>
@@ -120,13 +126,6 @@
   <div id="last" class="card log" hidden>
     <h2>Last night, as Ember told it</h2>
     <div id="lastlines"></div>
-  </div>
-
-  <div id="animbox" class="card" hidden>
-    <h2>Show animation</h2>
-    <p class="hint">A replay of the game that just happened, built from the event
-      log. Open it on the projector screen.</p>
-    <div class="row" id="animbuttons"></div>
   </div>
 
   <div id="replaybox" class="card" hidden>
@@ -180,16 +179,10 @@
     // Stage 1 has only the vote: there is no fire to shelter from.
     $("#choicebox").hidden = s.stage === 1;
     $("#replaybox").hidden = lobby || !s.can_replay;
-    // The animation is for after a game, when there is something to replay.
-    const sims = s.simulations || [];
-    $("#animbox").hidden = lobby || !s.can_replay || !sims.length;
-    const ab = $("#animbuttons");
-    if (ab.dataset.built !== sims.join(",") + s.log) {
-      ab.dataset.built = sims.join(",") + s.log;
-      ab.innerHTML = sims.map(n =>
-        `<button class="primary" data-sim="${n}">Show animation${sims.length > 1 ? " - " + n : ""}</button>`
-      ).join("");
-    }
+    // Stage 1 is played in the room with this app only keeping score, so the
+    // game master can apply a round without putting anything on the projector.
+    $("#skip").hidden = s.stage !== 1;
+    $("#skiphint").hidden = s.stage !== 1;
     // One button that walks the replay. Hiding it once the replay started left
     // the game master with no way to move it forward.
     $("#replay").textContent = replaying ? "Next night" : "Replay the map";
@@ -244,10 +237,6 @@
   }
   document.addEventListener("click", async (e) => {
     const t = e.target;
-    if (t.dataset.sim) {
-      window.open(`/simulation/${t.dataset.sim}/?log=${encodeURIComponent(S.log)}`, "_blank");
-      return;
-    }
     if (t.dataset.elim) return void post("/api/gm/eliminate", { id: t.dataset.elim });
     if (t.dataset.un) return void post("/api/gm/uneliminate", { id: t.dataset.un });
   });
@@ -260,6 +249,7 @@
   });
   $("#seed").onclick = async () => { await post("/api/gm/seed", { n: +$("#seedn").value || 12 }); };
   $("#start").onclick = async () => { await post("/api/gm/start", { lantana: +$("#lantana").value || null }); };
+  $("#skip").onclick = async () => { await post("/api/gm/skip"); };
   $("#finishnight").onclick = async () => { await post("/api/gm/night"); };
   $("#finishvote").onclick = async () => { await post("/api/gm/vote"); };
   $("#advance").onclick = async () => { await post("/api/gm/advance"); };

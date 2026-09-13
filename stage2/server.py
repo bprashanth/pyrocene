@@ -135,11 +135,37 @@ class Room:
             self.paint(mapstyle.lobby_svg(len(g.players), STYLE), kind="lobby")
         self.broadcast_state()
 
+    def quiet(self):
+        """Hold the projector on the night number and nothing else.
+
+        Stage 1 is played in the room with this app only keeping score, and the
+        map is kept back for the replay at the end. Showing the board as it
+        changes would spend the reveal a night at a time.
+        """
+        self.mode = "idle"
+        g = self.game
+        if STYLE == "ansi":
+            self.paint(frames.render_card(f"Night {g.round}", "", g.view(), None), kind="quiet")
+        else:
+            self.paint(mapstyle.curtain_svg(g.round, g.cfg["max_rounds"], STYLE), kind="quiet")
+        self.broadcast_state()
+
+    def skip(self):
+        """Apply everything the round produced without showing any of it.
+
+        The game master presses this to keep a stage 1 evening moving: the state
+        has already changed, so all this drops is the cards and the animation.
+        """
+        if self.mode in ("playing", "replay"):
+            return
+        self.steps, self.cursor = [], 0
+        self.quiet() if self.game.cfg["stage"] == 1 else self.show_map()
+
     def begin(self, steps: list):
         self.steps = steps
         self.cursor = 0
         if not steps:
-            return self.show_map()
+            return self.quiet() if self.game.cfg["stage"] == 1 else self.show_map()
         self.show_card()
 
     # --- the replay -----------------------------------------------------------
@@ -188,7 +214,10 @@ class Room:
                 else:
                     self.steps = []
                     self.cursor = 0
-                    self.show_map()
+                    if self.game.cfg["stage"] == 1:
+                        self.quiet()
+                    else:
+                        self.show_map()
         threading.Thread(target=run, daemon=True).start()
 
     def map_facts(self) -> dict:
@@ -403,7 +432,8 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get("lantana"):
                         g.lantana_override = int(body["lantana"])
                     g.start()
-                    ROOM.show_map()
+                    # Stage 1 keeps the board back for the replay at the end.
+                    ROOM.quiet() if g.cfg["stage"] == 1 else ROOM.show_map()
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/eliminate":
                     g.eliminate(body["id"])
@@ -429,6 +459,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/advance":
                     ROOM.advance()
+                    return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/skip":
+                    if ROOM.mode == "playing":
+                        return self._json(409, {"error": "finish what is on screen first"})
+                    ROOM.skip()
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/replay":
                     if ROOM.mode in ("explain", "playing"):
