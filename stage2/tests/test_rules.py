@@ -241,6 +241,89 @@ class Connectivity(unittest.TestCase):
         self.assertNotIn("water", picks)
 
 
+class ReplayShowsTheFire(unittest.TestCase):
+    """A snapshot taken at the end of a round only holds the bare ground a fire
+    left. Rebuilding the replay from those alone handed the room the aftermath
+    and never the burning, which is the part they remember."""
+
+    def _played(self, seed=13, rounds=5):
+        rng = random.Random(2)
+        g = Game(seed=seed)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        for _ in range(rounds):
+            prey = [p for p in g.players.values()
+                    if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+            if prey:
+                g.eliminate(rng.choice(prey).id)
+            g.resolve_night()
+            if g.phase != "playing":
+                break
+            g.choose("resilience", None)
+            g.resolve_vote()
+        return g
+
+    def test_a_night_that_burned_burns_again_in_the_replay(self):
+        g = self._played()
+        burned_nights = [h["round"] for h in g.history
+                         if len((h.get("fire") or {}).get("burned_cells") or [])]
+        self.assertTrue(burned_nights, "this game needs a fire to be worth testing")
+        by_round = {st["round"]: st for st in g.replay_beats()}
+        for r in burned_nights:
+            kinds = [f["kind"] for f in by_round[r]["beats"]]
+            self.assertIn("ignite", kinds, f"night {r} burned but never lights up")
+            self.assertIn("burn", kinds)
+            lit = [f for f in by_round[r]["beats"] if f["fire"]]
+            self.assertTrue(lit, f"night {r} has no frame carrying fire")
+            self.assertEqual(len(lit[-1]["fire"]),
+                             len((g.history[r - 1].get("fire") or {})["burned_cells"]),
+                             "the replay must burn the same squares the game did")
+
+    def test_the_fire_burns_the_board_it_started_on(self):
+        """Drawn on the finished board the flames would sit on ground that is
+        already bare, so the run would read as nothing happening."""
+        g = self._played()
+        for st in g.replay_beats():
+            for f in st["beats"]:
+                if f["kind"] in ("ignite", "spread", "burn"):
+                    cover = {c["index"]: c["cover"] for c in f["view"]["cells"]}
+                    alight = [i for i in f["fire"] if cover.get(i) != "bare"]
+                    self.assertTrue(alight,
+                                    "every burning frame draws on the pre-fire board")
+                    break
+
+    def test_the_ground_moves_before_the_fire_does(self):
+        g = self._played()
+        for st in g.replay_beats():
+            kinds = [f["kind"] for f in st["beats"]]
+            if "creep" in kinds and "ignite" in kinds:
+                self.assertLess(kinds.index("creep"), kinds.index("ignite"),
+                                f"night {st['round']} burns before it grows")
+            if "ignite" in kinds:
+                self.assertEqual(kinds[-1], "settle")
+
+    def test_stage_one_replay_has_no_fire_in_it(self):
+        rng = random.Random(2)
+        g = Game(seed=13, config={"stage": 1})
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        while g.phase == "playing":
+            pool = [p for p in g.players.values() if p.alive]
+            g.eliminate(rng.choice(pool).id)
+            g.resolve_night()
+            if g.phase != "playing":
+                break
+            pool = [p for p in g.players.values() if p.alive]
+            g.eliminate(rng.choice(pool).id)
+            g.choose("hunt", None)
+            g.resolve_vote()
+        for st in g.replay_beats():
+            for f in st["beats"]:
+                self.assertEqual(f["fire"], [], "stage 1 never burns")
+
+
 class SeasonLength(unittest.TestCase):
     """The game master's one dial. Shortening the season says the year is ending
     dry; lengthening it says there is time, and the fire that follows works for

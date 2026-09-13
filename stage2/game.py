@@ -109,6 +109,8 @@ class Game:
         self.last_steps: list = []
         self.last_phases: list = []   # the round's parts, before they are folded
         self._night_phases: list = []
+        self.prefire: dict = {}       # round -> the board the fire started on
+        self.fire_runs: dict = {}     # round -> {"waves", "burned", "blocked"}
         self.lantana_override: int | None = None
         self.network_called = False   # the joined-up card is shown once
         self.reprieve_round = 0       # a round the game master bought more time for
@@ -512,6 +514,11 @@ class Game:
         # fire, unless this is stage 1, where the room is only playing Mafia and
         # the map is a record of it rather than a thing that fights back
         if not stage_one:
+            # The board as it stood when the fire started, and the waves it went
+            # in. The replay needs both: a snapshot taken after a round only
+            # holds the bare ground the fire left, so replaying from snapshots
+            # alone showed the aftermath and never the burning.
+            self.prefire[r] = self.view()
             fire_beats, fire_rec, fire_text = self._fire(rng)
             rec["fire"] = fire_rec
             # The record carries square names for the log; the step wants indices,
@@ -703,29 +710,56 @@ class Game:
                 "beats": [self._frame("ending", end["text"])], "cells": []}
 
     def replay_beats(self) -> list:
-        """The evening again, one night per press, shown the way it would have
-        been shown live.
+        """The evening again, one night per press, shown the way it was played.
 
-        This used to be one still frame per night, which put the whole night's
-        change on screen at once and left the room to spot the difference
-        themselves. It now runs the same haze-hold-turn-settle transition the
-        game uses during play, so the squares that moved are picked out before
-        they move, and whoever went out that night is named over their ground.
+        Each night runs in two parts, in the order they happened: what moved on
+        the ground, then the fire. Rebuilding from the end-of-round snapshots
+        alone gave the room the bare patch a fire left behind without ever
+        showing it burn, which is the part they remember.
         """
         out = []
         for k in range(1, len(self.snapshots)):
             before, after = self.snapshots[k - 1], self.snapshots[k]
-            moved = self._changed(before, after)
             badges = [{"name": p.name, "cells": list(p.patch), "by": p.out_by or "vote"}
                       for p in self.players.values()
                       if not p.alive and p.out_round == k
                       and p.patch and p.role in (LANTANA, NATIVE_P)]
-            beats = self._transition(before, after, moved, "creep") if moved else [
-                self._frame("settle", "", after)]
+            run = self.fire_runs.get(k)
+            pre = self.prefire.get(k, after)
+
+            beats = []
+            ground = self._changed(before, pre)
+            if ground:
+                beats += self._transition(before, pre, ground, "creep")
+            elif not run:
+                beats.append(self._frame("settle", "", after))
+            if run:
+                beats += self._fire_beats(run, pre, after)
+            if not beats:
+                beats = [self._frame("settle", "", after)]
             for f in beats:
                 f["badges"] = badges
             out.append({"round": k, "badges": badges, "beats": beats})
         return out
+
+    def _fire_beats(self, run: dict, pre: dict, after: dict) -> list:
+        """Replay one night's fire on the board it actually started on."""
+        waves = [w for w in run["waves"] if w]
+        if not waves:
+            return [self._frame("settle", "", after)]
+        shown, beats = list(waves[0]), []
+        beats.append(self._frame("ignite", "", pre, fire=list(shown)))
+        for w in waves[1:]:
+            shown = shown + list(w)
+            beats.append(self._frame("spread", "", pre, fire=list(shown)))
+        burned = run["burned"] or shown
+        beats.append(self._frame("burn", "", pre, fire=list(burned)))
+        if run.get("blocked"):
+            beats.append(self._frame("blocked", "", pre, fire=list(burned),
+                                     held=list(run["blocked"])))
+        beats.append(self._frame("scorch", "", after, focus=list(burned), haze=True))
+        beats.append(self._frame("settle", "", after))
+        return beats
 
     @staticmethod
     def _changed(before: dict, after: dict) -> list:
@@ -1097,6 +1131,10 @@ class Game:
             frames.append(self._frame("spread", "", fire=list(shown)))
         burned = list(shown)
         frames.append(self._frame("burn", "", fire=list(burned)))
+        # Kept so the replay can run the same fire again later.
+        self.fire_runs[self.round] = {"waves": [list(w) for w in order],
+                                      "burned": list(burned),
+                                      "blocked": sorted(blocked)}
 
         village_hit = False
         for i in burned:

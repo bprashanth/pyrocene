@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 73 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 77 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -73,10 +73,11 @@ conclusion. Stage 2 keeps going in the same spot, because a fire can burn
 lantana back and turn a hopeless board around.
 
 When it ends, press **Replay the map** and then **Next night** to walk the
-forest forward one night at a time. Each press runs the same hold-then-turn
-transition the game uses live: the board greys out, the squares that are about
-to move are picked out, they turn over, and the map comes back. No cards and no
-narration, just the land.
+forest forward one night at a time. Each press runs the night the way it was
+played: the board greys out, the squares that are about to move are picked out,
+they turn over, and in stage 2 the fire then starts where it started, spreads
+the way it spread, hits whatever trench it hit, and leaves the same ground bare.
+About nine to fifteen seconds a night. No cards and no narration, just the land.
 
 Then press **Start stage 2**. The same people, the same names, the same phones
 and the same forest, with roles dealt again so nobody carries over what they
