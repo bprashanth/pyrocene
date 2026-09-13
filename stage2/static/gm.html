@@ -128,6 +128,21 @@
     <div id="lastlines"></div>
   </div>
 
+  <div id="seasonbox" class="card" hidden>
+    <h2>Length of the season</h2>
+    <p class="hint">Bring the last night down to the one you are on and lantana
+      makes its run across whatever is between the patches, then one fire carries
+      the length of it. Push it out and the next fire is a smaller one that burns
+      into the lantana and leaves bare ground. Use it to end on the point you
+      want to make.</p>
+    <div class="row">
+      <button id="fewer">- night</button>
+      <span class="muted">last night: <b id="maxr2">8</b></span>
+      <button id="more">+ night</button>
+      <span id="seasonnote" class="muted"></span>
+    </div>
+  </div>
+
   <div id="nextstage" class="card" hidden>
     <h2>Go to stage 2</h2>
     <p class="hint">Same people, same names, same forest. Roles are dealt again
@@ -197,6 +212,12 @@
     // without everybody retyping their name.
     $("#nextstage").hidden = !(s.stage === 1 && s.phase === "ended");
     $("#backto1").hidden = s.stage !== 2;
+    $("#seasonbox").hidden = lobby || s.stage !== 2 || s.phase !== "playing";
+    $("#maxr2").textContent = s.max_rounds;
+    $("#fewer").disabled = s.max_rounds <= s.round;
+    $("#seasonnote").textContent = s.finale ? "tonight is the last night"
+      : s.reprieve ? "bought back a night: this fire burns fuel"
+      : `${s.max_rounds - s.round} more after tonight`;
     $("#skiphint").hidden = s.stage !== 1;
     // One button that walks the replay. Hiding it once the replay started left
     // the game master with no way to move it forward.
@@ -267,6 +288,8 @@
   $("#start").onclick = async () => { await post("/api/gm/start", { lantana: +$("#lantana").value || null }); };
   $("#skip").onclick = async () => { await post("/api/gm/skip"); };
   $("#tostage2").onclick = async () => { await post("/api/gm/next_stage"); };
+  $("#fewer").onclick = async () => { await post("/api/gm/rounds", { delta: -1 }); };
+  $("#more").onclick = async () => { await post("/api/gm/rounds", { delta: 1 }); };
   $("#backto1").onclick = async () => { await post("/api/gm/reset", { stage: 1 }); };
   $("#finishnight").onclick = async () => { await post("/api/gm/night"); };
   $("#finishvote").onclick = async () => { await post("/api/gm/vote"); };

@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 63 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 76 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -130,6 +130,10 @@ ground goes to whatever is next to it. A native player out lets lantana take
 hold in their stand and spread from there. The ecologist or ranger going out
 changes nothing on the map.
 
+**How a night goes.** Stage 2 opens on one card saying the order, because four
+things happen every night and a room has no reason to guess which comes first:
+lantana takes someone, the room decides, lantana spreads, then fire.
+
 **Resilience.** The room never picks which one. The game master either picks or
 presses Resolve and lets the system choose.
 
@@ -182,6 +186,28 @@ went out or what they were. A night that changes nothing on the map reads the
 same whether the ranger saved someone or a specialist was taken, so the room
 keeps guessing and lantana can lie about it.
 
+## The one dial the game master has
+
+A room is not a simulation. **Length of the season** on the console moves the
+last night in or out, and the game decides what the next fire is from that.
+
+| | |
+|---|---|
+| Bring the last night down to the one you are on | Lantana makes its run across whatever is between the patches, bare ground included, and one fire carries the whole length of it into forest or houses. Over 15 scripted games this ended the season on the fire or the homes 14 times, burning a mean of 87 squares. |
+| Push the last night further out | The next fire is a smaller one that starts in the thickest fuel and works through it, leaving bare ground where the lantana was. Mean burn 27 to 40 squares, mostly lantana, and the forest barely moves. |
+
+Both are real fire behaviour and both are the lesson. A room that only ever sees
+fire as the enemy has learnt half of it. Use the dial to end on the point you
+want to make: run it short when the room has let the patches join, and long when
+they are enjoying themselves and you want them to see a fire do some good.
+
+Two things had to give way for this to work. A trench dug on the same night
+normally drags the fire straight at itself so the room sees what they paid for,
+and on either of these nights that replaced the whole point with a six-square
+demonstration. And the season used to run out during the night rather than at
+the end of it, so calling time on the current round ended the game before that
+round was played.
+
 ## How it ends
 
 | Ending | |
@@ -233,6 +259,10 @@ Everything tunable is in `stage2/config.py`.
 | `road_mult` | 2.2 | How much faster lantana takes roadside ground |
 | `gap_mult` / `gap_reach` | 2.0 / 4 | Pull towards ground that would close a gap to another stand |
 | `role_seed` | None | Deal roles from their own stream, so a reused map is not a reused deal |
+| `finale_gap_mult` / `finale_gap_reach` | 7.0 / 7 | How hard lantana runs for the gaps on the last night |
+| `finale_cells` / `finale_native_p` | 100 / 0.88 | How far the last fire runs, and how readily it leaves the lantana |
+| `reprieve_cells` / `reprieve_fuel_p` | 44 / 0.97 | How far a bought-back fire burns, and how thoroughly it works the fuel |
+| `reprieve_native_p` | 0.10 | It stays in the fuel rather than the forest |
 | `fire_cells` | 3 / 12 / 38 | Squares a fire of each severity can take |
 | `fire_round_ramp` | 0.22 | Extra reach per night as the season dries |
 | `line_cells` | 10 | Trench dug per resilience night |

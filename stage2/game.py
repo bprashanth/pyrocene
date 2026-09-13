@@ -109,6 +109,7 @@ class Game:
         self.last_steps: list = []
         self.lantana_override: int | None = None
         self.network_called = False   # the joined-up card is shown once
+        self.reprieve_round = 0       # a round the game master bought more time for
 
     # ---- lobby -----------------------------------------------------------
     def add_player(self, name: str) -> Player:
@@ -316,6 +317,55 @@ class Game:
         if choice == "resilience":
             self.pending["vote"] = None      # no vote on a resilience night
 
+
+    def intro_steps(self) -> list:
+        """One card at the top of stage 2, naming the order of a night.
+
+        Stage 1 was a room game with a map behind it. Stage 2 has four things
+        happening every night and the room has no reason to know what order they
+        come in, which makes the first couple of rounds feel arbitrary.
+        """
+        if self.cfg["stage"] == 1:
+            return []
+        return [self._step("intro", T("cards", "intro.title"), T("cards", "intro.body"),
+                           [self._frame("settle", "")])]
+
+    # ---- the game master's one dial --------------------------------------
+    def set_max_rounds(self, n: int) -> int:
+        """Lengthen or shorten the season while the game is running.
+
+        This is the only thing the game master can steer, and it exists because
+        a room is not a simulation. Two things follow from it, and both are the
+        lesson rather than a cheat:
+
+        Bringing the last night close says the season is ending dry. Lantana
+        makes its run across whatever is between the patches, including bare
+        ground a removal left behind, and the fire that follows carries the
+        whole connected length of it into forest or houses. That is what an
+        unbroken fuel network does, shown on purpose.
+
+        Pushing the last night further out says the room has time. The next fire
+        is a smaller one that burns into the lantana and leaves bare ground
+        where the fuel was. That is the other half of the truth about fire, and
+        a room that only ever sees fire as the enemy has not learnt it.
+        """
+        n = max(self.round, min(20, int(n)))
+        old = self.cfg["max_rounds"]
+        if n > old:
+            self.reprieve_round = self.round
+        self.cfg["max_rounds"] = n
+        return n
+
+    @property
+    def finale(self) -> bool:
+        """Tonight is the last night of the season."""
+        return self.phase == "playing" and self.round >= self.cfg["max_rounds"]
+
+    @property
+    def reprieve(self) -> bool:
+        """The room was given more time this round, so fire works for them."""
+        return self.reprieve_round == self.round
+
     # ---- resolving, one moment at a time ---------------------------------
     # Each returned step is an explanation the room reads, then one animation
     # that shows it happening. The game master presses through them.
@@ -349,7 +399,7 @@ class Game:
                 [self._frame("quiet", "")]))
         self.step = "day"
         self.pending["night_kill"] = None
-        end = self._check_end(r)
+        end = self._check_end(r, night=True)
         if end:
             steps.append(self._ending_step(end))
         return steps
@@ -414,11 +464,12 @@ class Game:
                     "water", T("cards", "water.title"),
                     (reason + " " if reason else "") + T("ember", "water.ready"),
                     [self._frame("water", T("ember", "water.ready"))]))
-            else:
-                steps.append(self._step(
-                    "ews", T("cards", "ews.title"),
-                    (reason + " " if reason else "") + T("cards", "ews.body"),
-                    [self._frame("quiet", "")]))
+            # Early warning says nothing here on purpose. The forecast needs the
+            # board as it will stand after tonight, so the one card it is worth
+            # goes up at the end of the round with the forecast on it. Saying "a
+            # lookout goes up" first and the actual warning three screens later
+            # made the room read a paragraph and then wait for the point.
+
 
         # lantana takes ground
         before = self.view()
@@ -464,7 +515,7 @@ class Game:
         if not stage_one and (rec.get("resilience") or {}).get("type") == "early_warning":
             self.forecast = self._forecast(r + 1)
             steps.append(self._step(
-                "forecast", T("cards", "forecast.title"),
+                "forecast", T("cards", "ews.title"),
                 T("ember", "forecast", level=T("ember", f"forecast.{self.forecast['level']}"),
                   wind=self.forecast["wind"]),
                 [self._frame("forecast", "")]))
@@ -673,6 +724,13 @@ class Game:
             for i in band:
                 stand_of[i] = k
         reach = cfg["gap_reach"]
+        gap_pull = cfg["gap_mult"]
+        if self.finale:
+            # The season is ending. Lantana bridges what is left between the
+            # patches, bare ground included, which is exactly how a removal that
+            # was never followed up turns into a corridor.
+            reach = cfg["finale_gap_reach"]
+            gap_pull = cfg["finale_gap_mult"]
         for c in s.cells:
             if c.cover != INVASIVE or c.stage < ESTABLISHED:
                 continue
@@ -699,7 +757,7 @@ class Game:
                     p *= cfg["road_mult"]
                 mine = stand_of.get(c.index)
                 if mine is not None and self._closes_gap(s, ni, mine, stand_of, reach):
-                    p *= cfg["gap_mult"]
+                    p *= gap_pull
                 if rng.random() < p:
                     new[ni] = own
         for ni, own in new.items():
@@ -829,6 +887,35 @@ class Game:
                 home[i] = p.id
         return len({home[i] for i in band if i in home})
 
+
+    def _band_end(self, band: list):
+        """The square of a band furthest from the homes, so a fire lit there has
+        the whole length of the band to travel before it reaches anything."""
+        s = self.state
+        vill = [c.index for c in s.cells if c.cover == VILLAGE]
+        if not vill:
+            return max(band, key=lambda i: (s.cells[i].c, s.cells[i].r))
+        return max(band, key=lambda i: min(abs(s.cells[i].r - s.cells[v].r)
+                                           + abs(s.cells[i].c - s.cells[v].c) for v in vill))
+
+    def _toward_asset(self, band: list) -> str | None:
+        """Lean the last fire of the season at the homes if they are anywhere
+        near, and at the biggest block of forest otherwise."""
+        s = self.state
+        targets = [c.index for c in s.cells if c.cover == VILLAGE]
+        if not targets:
+            blocks = [c.index for c in s.cells if c.cover == NATIVE]
+            if not blocks:
+                return None
+            targets = blocks
+        br = sum(s.cells[i].r for i in band) / len(band)
+        bc = sum(s.cells[i].c for i in band) / len(band)
+        tr = sum(s.cells[i].r for i in targets) / len(targets)
+        tc = sum(s.cells[i].c for i in targets) / len(targets)
+        if abs(tr - br) > abs(tc - bc):
+            return "S" if tr > br else "N"
+        return "E" if tc > bc else "W"
+
     def _fire(self, rng: random.Random):
         """Returns (animation frames, log record, what Ember says)."""
         s, cfg = self.state, self.cfg
@@ -845,10 +932,26 @@ class Game:
         if self.water_round == self.round and sev > 1:
             sev, capped = 1, True
 
+        # The two nights the game master can call for. Both are real fire
+        # behaviour; which one the room gets is a decision about the evening.
+        bands = self.bands()
+        finale = self.finale and bands
+        reprieve = self.reprieve and not self.finale and bands
+        if finale:
+            sev = 3
+        elif reprieve:
+            sev = min(sev, 2)
+            capped = False
+
         push = None
         forced_path: list = []
         target = None
-        fresh = self.last_line and self.last_line["round"] == self.round
+        # A trench dug tonight normally drags the fire straight at itself, so the
+        # room sees what they paid for. On the last night that would replace the
+        # run they called time for with a six-square demonstration, so the band
+        # wins and the trench takes its chances like anything else on the map.
+        fresh = (not finale and not reprieve) and \
+            self.last_line and self.last_line["round"] == self.round
         if fresh and self.last_line.get("cells"):
             fenced = [i for i in self.last_line["cluster"]
                       if s.cells[i].cover == INVASIVE and s.cells[i].stage >= ESTABLISHED]
@@ -859,16 +962,49 @@ class Game:
                     igniter, forced_path = got
                     push = self.last_line["dir"]
         if push is None:
-            pool = cluster or [c.index for c in s.cells
-                               if c.cover == INVASIVE and c.stage >= ESTABLISHED]
+            if finale:
+                # Start it at the far end of the band, so the room watches the
+                # fire travel the length of what they let join up.
+                pool = [self._band_end(bands[0])]
+            elif reprieve:
+                # A fire that starts inside the thickest fuel and eats it.
+                pool = sorted(bands[0], key=lambda i: s.cells[i].stage,
+                              reverse=True)[:max(1, len(bands[0]) // 4)]
+            else:
+                pool = cluster or [c.index for c in s.cells
+                                   if c.cover == INVASIVE and c.stage >= ESTABLISHED]
             if not pool:
                 return quiet
             igniter = rng.choice(pool)
 
         ramp = 1 + cfg["fire_round_ramp"] * (self.round - 1)
         cap = round(cfg["fire_cells"][sev] * ramp)
+        if finale:
+            cap = max(cap, cfg["finale_cells"])
+            push = push or self._toward_asset(bands[0])
+        elif reprieve:
+            # A deliberate size, not a cap. Taking the smaller of this and the
+            # usual allowance left the fire smaller than the growth it was meant
+            # to undo, which taught the opposite of the point.
+            cap = cfg["reprieve_cells"]
         forced = forced_path[:max(0, cap - 1)] if push else []
-        order, blocked = self._spread_fire(rng, igniter, cap, push=push, forced=forced)
+        # On the last night the fire does not politely stop at the edge of the
+        # lantana. A band that has joined up is what carries it into standing
+        # forest, and the forest is where the loss comes from.
+        into = None
+        if finale:
+            into = cfg["finale_native_p"]
+        elif reprieve:
+            # A fire on a night the room was given back stays in the fuel. The
+            # forest is not dry enough to carry it, and what burns is the
+            # lantana, which is the half of fire the room never sees otherwise.
+            into = cfg["reprieve_native_p"]
+        # A fire on a bought-back night works through the fuel rather than
+        # petering out in it, or the lantana it takes is smaller than the
+        # lantana that grew the same night and the room sees nothing.
+        order, blocked = self._spread_fire(
+            rng, igniter, cap, push=push, forced=forced, into_forest=into,
+            fuel_p=cfg["reprieve_fuel_p"] if reprieve else None)
 
         frames = [self._frame("ignite", "", None, fire=[igniter])]
         shown = [igniter]
@@ -985,7 +1121,8 @@ class Game:
         return hit, path
 
     def _spread_fire(self, rng: random.Random, igniter: int, cap: int,
-                     push: str | None = None, forced: list | None = None):
+                     push: str | None = None, forced: list | None = None,
+                     into_forest: float | None = None, fuel_p: float | None = None):
         """Breadth-first fire from the igniter. Returns the waves in order and the
         set of fire-line cells the fire ran into. `push` leans the fire in one
         direction, the way wind does, used the night a line is dug."""
@@ -1021,8 +1158,10 @@ class Game:
                     if n.fireline:
                         blocked.add(ni)
                         continue
-                    pp = (cfg["fire_p_invasive"] if n.cover == INVASIVE
-                          else cfg["fire_p_native"] if n.cover == NATIVE else cfg["fire_p_bare"])
+                    native_p = cfg["fire_p_native"] if into_forest is None else into_forest
+                    lant_p = cfg["fire_p_invasive"] if fuel_p is None else fuel_p
+                    pp = (lant_p if n.cover == INVASIVE
+                          else native_p if n.cover == NATIVE else cfg["fire_p_bare"])
                     if d == lean:
                         pp *= cfg["fire_wind_mult"]
                     if rng.random() < pp:
@@ -1244,7 +1383,7 @@ class Game:
         return {"round": next_round, "severity": sev, "level": level, "wind": names[self.state.wind]}
 
     # endings ------------------------------------------------------------------
-    def _check_end(self, r: int) -> dict | None:
+    def _check_end(self, r: int, night: bool = False) -> dict | None:
         alive = [p for p in self.players.values() if p.alive]
         h = health_pct(self.state)
         if self.cfg["village_loss"] and self.village_lost:
@@ -1260,7 +1399,19 @@ class Game:
                     "text": T("ember", "end.lose.natives", health=h)}
         if self.cfg["team_loss"] and not any(p.role in (ECOLOGIST, RANGER) for p in alive):
             return {"result": "lose", "reason": "team", "health": h, "text": T("ember", "end.lose.team")}
-        if r >= self.cfg["max_rounds"]:
+        # The season runs out at the END of its last night, not at the start of
+        # it. Checking this during the night meant that calling time on the
+        # current round ended the game before the night it was calling time on
+        # had actually been played.
+        if not night and r >= self.cfg["max_rounds"]:
+            # If the season ended on the back of a fire that ran, say so. The
+            # room has just watched the map burn, and telling them they ran out
+            # of nights describes the calendar rather than what happened.
+            last = (self.history[-1].get("fire") or {}) if self.history else {}
+            if last.get("severity", 0) >= 3 and len(last.get("burned_cells") or []) >= 30:
+                return {"result": "lose", "reason": "fire", "health": h,
+                        "text": T("ember", "end.lose.finale",
+                                  n=len(last["burned_cells"]), health=h)}
             return {"result": "lose", "reason": "time", "health": h, "text": T("ember", "end.lose.time", r=r)}
         return None
 

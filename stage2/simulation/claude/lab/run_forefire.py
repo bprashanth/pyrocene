@@ -14,6 +14,13 @@ def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, l
     times longer), which lets ForeFire's front parameters stay at the sizes
     its own tests use; positions and times come back in board units."""
     wind = wind or WIND
+    # A front that reaches the domain edge is dropped whole by ForeFire, which
+    # looked like the fire going out at minute six. So the board gets a margin
+    # of nothing to burn, taken off again on the way out.
+    PAD = 20
+    fuel = np.pad(fuel, PAD, mode="constant", constant_values=0)
+    alt = np.pad(alt, PAD, mode="edge")
+    ign_xy = (ign_xy[0] + PAD * RES, ign_xy[1] + PAD * RES)
     ny, nx = fuel.shape
     R = RES * scale
     Lx, Ly = nx * R, ny * R
@@ -79,7 +86,7 @@ def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, l
             verts = np.array([[vx, vy] for vx, vy in p.vertices if np.isfinite(vx) and np.isfinite(vy)])
             if len(verts) < 4: continue
             inside |= mpath.Path(verts).contains_points(pts)
-            polys.append([[float(vx / scale), float((Ly - vy) / scale)] for vx, vy in verts])
+            polys.append([[float(vx / scale) - PAD * RES, float((Ly - vy) / scale) - PAD * RES] for vx, vy in verts])
         newly = inside & np.isnan(arrival)
         arrival[newly] = t
         fronts.append({"t": t, "polys": polys})
@@ -91,9 +98,9 @@ def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, l
             log(f"  forefire front collapsed at t={t}s"); fronts[-1]["collapsed"] = True
             break
         log(f"  forefire t={t}s burned pixels {int(np.isfinite(arrival).sum())} nodes {sum(len(p) for p in polys)}")
-    return arrival.reshape(ny, nx), fronts
+    return arrival.reshape(ny, nx)[PAD:-PAD, PAD:-PAD], fronts
 
-def run_subprocess(board_path, cleared, minutes, step, params=None, tries=4, python=None):
+def run_subprocess(board_path, cleared, minutes, step, params=None, tries=4, python=None, line=(), ign=None):
     """ForeFire's front tracker can fault on a board full of islands, so it runs
     in its own process and is retried with a slightly coarser front each time.
     Returns (arrival, fronts, params_used) or (None, None, None)."""
@@ -104,7 +111,7 @@ def run_subprocess(board_path, cleared, minutes, step, params=None, tries=4, pyt
         p = dict(params or {})
         if k: p["perimeterResolution"] = p.get("perimeterResolution", 1.0) + 0.5 * k; p["spatialIncrement"] = p.get("spatialIncrement", 0.3) + 0.1 * k
         with tempfile.NamedTemporaryFile(suffix=".npz", delete=False) as tf: outp = tf.name
-        r = subprocess.run([python, os.path.join(here, "run_forefire.py"), board_path, json.dumps(list(cleared)), str(minutes), str(step), json.dumps(p), outp], capture_output=True, text=True, timeout=400)
+        r = subprocess.run([python, os.path.join(here, "run_forefire.py"), board_path, json.dumps(list(cleared)), str(minutes), str(step), json.dumps(p), outp, json.dumps(list(line)), json.dumps(list(ign) if ign else None)], capture_output=True, text=True, timeout=400)
         if r.returncode == 0 and os.path.exists(outp) and os.path.getsize(outp) > 0:
             d = np.load(outp, allow_pickle=True); os.remove(outp)
             return d["arrival"], json.loads(str(d["fronts"])), p
@@ -117,8 +124,10 @@ if __name__ == "__main__":
     if len(sys.argv) >= 7:
         # worker mode: board cleared_json minutes step params_json out.npz
         b = load_board(sys.argv[1]); cleared = json.loads(sys.argv[2]); minutes = int(sys.argv[3]); step = int(sys.argv[4]); params = json.loads(sys.argv[5])
-        fuel, alt = rasters(b, cleared)
-        arr, fronts = run(fuel, alt, ignition_xy(b), minutes=minutes, step=step, log=lambda *a: None, params=params)
+        line = json.loads(sys.argv[7]) if len(sys.argv) > 7 else []
+        ign = json.loads(sys.argv[8]) if len(sys.argv) > 8 and sys.argv[8] != "null" else None
+        fuel, alt = rasters(b, cleared, line)
+        arr, fronts = run(fuel, alt, tuple(ign) if ign else ignition_xy(b), minutes=minutes, step=step, log=lambda *a: None, params=params)
         np.savez(sys.argv[6], arrival=arr, fronts=json.dumps(fronts))
         sys.exit(0)
     b = load_board(sys.argv[1] if len(sys.argv) > 1 else "/mnt/seagate/models/pyrocene/lab/board-sample-night5.json")

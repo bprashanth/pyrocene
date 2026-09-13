@@ -52,6 +52,14 @@ CONFIG = {
     "road_mult": 2.2,          # roadside ground is taken far faster
     "gap_mult": 2.0,           # ground that would close a gap to another stand
     "gap_reach": 4,            # how far away another stand still counts as near
+    # The last night of the season, when the game master has said time is up.
+    "finale_gap_mult": 7.0,    # lantana makes its run for the gaps
+    "finale_gap_reach": 7,
+    "finale_cells": 100,        # how far that night's fire is allowed to run
+    "finale_native_p": 0.88,   # and how readily it leaves the lantana for forest
+    "reprieve_cells": 44,     # and how far a fire burns on a night bought back
+    "reprieve_native_p": 0.10,  # which stays in the fuel rather than the forest
+    "reprieve_fuel_p": 0.97,   # and works right through the fuel it starts in
 
     # --- fire ---------------------------------------------------------------
     # Severity comes from the largest connected BAND of burnable lantana, not

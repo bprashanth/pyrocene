@@ -5,6 +5,12 @@
 # on the map reads the same whether the ranger saved someone or a specialist was
 # taken, so the room keeps guessing and lantana can lie about it.
 
+[intro.title]
+How a night goes
+
+[intro.body]
+1. Lantana takes someone. 2. The room decides: hunt lantana, or work against fire. 3. Lantana spreads into the ground around it. 4. Fire, if there is fuel for it. The map shows each step before it happens.
+
 [night.title]
 The night
 
@@ -34,9 +40,6 @@ A response team stands by
 
 [ews.title]
 Early warning
-
-[ews.body]
-A lookout goes up. Tomorrow night's fire will be forecast before the room decides anything.
 
 [growth.title]
 Lantana spreads

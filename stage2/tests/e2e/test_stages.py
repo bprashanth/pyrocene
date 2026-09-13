@@ -312,7 +312,12 @@ class Handover(unittest.TestCase):
         # not up yet. The header is what tells the game master where they are.
         gm.wait_for_function("document.querySelector('#phase').textContent.includes('stage 2')",
                              timeout=8000)
+        # Stage 2 opens on a card saying how a night goes.
+        gm.wait_for_selector("#onscreen:not([hidden])", timeout=8000)
+        self.assertIn("night", gm.locator("#cardtitle").inner_text().lower())
+        gm.click("#advance")
         gm.wait_for_selector("#night:not([hidden])", timeout=8000)
+        gm.wait_for_selector("#seasonbox:not([hidden])", timeout=8000)
         self.assertEqual(api("/api/state")["stage"], 2)
         self.assertEqual(errors, [])
 

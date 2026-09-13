@@ -237,6 +237,135 @@ class Connectivity(unittest.TestCase):
         self.assertNotIn("water", picks)
 
 
+class SeasonLength(unittest.TestCase):
+    """The game master's one dial. Shortening the season says the year is ending
+    dry; lengthening it says there is time, and the fire that follows works for
+    the room instead of against it. Both are real fire behaviour."""
+
+    def _play(self, seed, mode, call_at=4, shelter=True):
+        rng = random.Random(seed * 7919)
+        g = Game(seed=seed)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        at_call = None
+        while g.phase == "playing":
+            r = g.round
+            if r == call_at:
+                g.set_max_rounds(r if mode == "finale" else g.cfg["max_rounds"] + 2)
+            prey = [p for p in g.players.values()
+                    if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+            if prey and rng.random() > 0.25:
+                g.eliminate(rng.choice(prey).id)
+            g.resolve_night()
+            if g.phase != "playing":
+                break
+            fuel_before = sum(1 for c in g.state.cells if c.cover == INVASIVE)
+            if shelter:
+                g.choose("resilience", None)
+            else:
+                pool = [p for p in g.players.values() if p.alive]
+                g.eliminate(rng.choice(pool).id)
+                g.choose("hunt", None)
+            g.resolve_vote()
+            if r == call_at:
+                fire = (g.history[-1].get("fire") or {})
+                at_call = {"fire": fire, "health": g.history[-1]["health"],
+                           "fuel_before": fuel_before,
+                           "fuel_after": sum(1 for c in g.state.cells if c.cover == INVASIVE)}
+                if mode == "reprieve":
+                    break
+        return g, at_call
+
+    def test_the_dial_cannot_end_a_night_before_it_is_played(self):
+        """Calling time on the round you are on has to let that round happen.
+        Checking the calendar during the night ended the game before the night
+        the game master was calling time on had been played at all."""
+        g, at = self._play(3, "finale", call_at=4)
+        self.assertIsNotNone(at, "the last night never ran")
+        self.assertEqual(len(g.history), 4)
+
+    def test_calling_time_ends_it_on_a_fire(self):
+        reasons, burns = [], []
+        for seed in range(1, 16):
+            g, at = self._play(seed, "finale", call_at=4)
+            if not at:
+                continue
+            reasons.append((g.ending or {}).get("reason"))
+            burns.append(len(at["fire"].get("burned_cells") or []))
+        self.assertGreaterEqual(len(reasons), 10)
+        on_fire = sum(1 for r in reasons if r in ("fire", "village"))
+        self.assertGreaterEqual(on_fire, int(0.8 * len(reasons)),
+                                f"the season should end on the fire, got {reasons}")
+        self.assertGreater(sum(burns) / len(burns), 50,
+                           "the last fire has to be the big one")
+
+    def test_buying_a_night_burns_the_lantana_back(self):
+        cleared, burns = [], []
+        for seed in range(1, 21):
+            g, at = self._play(seed, "reprieve", call_at=4)
+            if not at:
+                continue
+            cleared.append(at["fuel_before"] - at["fuel_after"])
+            burns.append(len(at["fire"].get("burned_cells") or []))
+        self.assertGreaterEqual(len(cleared), 12)
+        self.assertGreater(sum(1 for c in cleared if c > 0), len(cleared) * 0.6,
+                           f"most bought nights should leave less lantana: {cleared}")
+        self.assertGreater(sum(burns) / len(burns), 20)
+
+    def test_the_dial_will_not_go_below_the_night_in_play(self):
+        g = Game(seed=3)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        g.round = 5
+        self.assertEqual(g.set_max_rounds(2), 5)
+        self.assertTrue(g.finale)
+
+
+class Openings(unittest.TestCase):
+    def test_stage_two_opens_by_saying_how_a_night_goes(self):
+        g = Game(seed=3)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        steps = g.intro_steps()
+        self.assertEqual(len(steps), 1)
+        for word in ("Lantana takes someone", "spreads", "Fire"):
+            self.assertIn(word, steps[0]["text"])
+
+    def test_stage_one_has_no_such_card(self):
+        g = Game(seed=3, config={"stage": 1})
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        self.assertEqual(g.intro_steps(), [])
+
+    def test_early_warning_is_one_card_with_the_forecast_on_it(self):
+        """It used to put up a paragraph about a lookout going up and then give
+        the actual warning three screens later."""
+        rng = random.Random(2)
+        g = Game(seed=13)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        for _ in range(2):
+            prey = [p for p in g.players.values()
+                    if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+            if prey:
+                g.eliminate(rng.choice(prey).id)
+            g.resolve_night()
+            if g.phase != "playing":
+                return
+            g.choose("resilience", "ews")
+            steps = g.resolve_vote()
+            said = [st for st in steps if st["title"] == "Early warning"]
+            self.assertEqual(len(said), 1, "one card, not two")
+            self.assertTrue(said[0]["text"].startswith("Forecast for next night:"),
+                            said[0]["text"])
+            self.assertLess(len(said[0]["text"]), 90, "no paragraph")
+
+
 class ReplayNames(unittest.TestCase):
     """The replay names whoever went out, because that is what lets a room put a
     night in the game against a change on the ground. Nothing else may."""

@@ -101,6 +101,8 @@ class Room:
         d["replay_at"] = self.replay_at
         d["replay_total"] = len(self.replay)
         d["replaying"] = self.replaying
+        d["finale"] = self.game.finale
+        d["reprieve"] = self.game.reprieve
         return d
 
     def me_payload(self, p):
@@ -177,7 +179,7 @@ class Room:
         self.replay, self.replay_at = [], 0
         self.replaying = False
         self.epoch += 1
-        self.show_map()
+        self.begin(g.intro_steps())
 
     def begin(self, steps: list):
         self.steps = steps
@@ -471,7 +473,7 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get("lantana"):
                         g.lantana_override = int(body["lantana"])
                     g.start()
-                    ROOM.show_map()
+                    ROOM.begin(g.intro_steps())
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/eliminate":
                     g.eliminate(body["id"])
@@ -502,6 +504,12 @@ class Handler(BaseHTTPRequestHandler):
                     if ROOM.mode in ("explain", "playing"):
                         return self._json(409, {"error": "finish what is on screen first"})
                     ROOM.next_stage()
+                    return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/rounds":
+                    delta = int(body.get("delta") or 0)
+                    n = int(body.get("n") or (g.cfg["max_rounds"] + delta))
+                    g.set_max_rounds(n)
+                    ROOM.broadcast_state()
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/skip":
                     if ROOM.mode == "playing":

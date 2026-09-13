@@ -33,7 +33,7 @@ There is no dense lantana to fence yet. The crew digs a line on the {dir} side o
 A response team is on standby tonight. Whatever starts, they will get to it fast.
 
 [forecast]
-Forecast for the next night: {level}. Wind from the {wind}.
+Forecast for next night: {level}. Wind from the {wind}.
 
 [forecast.none]
 no fire
@@ -123,6 +123,9 @@ The ecologist and the ranger are both gone. The village cannot find the lantana 
 
 [end.lose.time]
 Night {r} and the lantana is still here. The season is over.
+
+[end.lose.finale]
+The fire ran through {n} squares before it stopped. The forest is at {health}% and the season is over.
 
 [fire.held]
 The line holds. The ground behind it is untouched.

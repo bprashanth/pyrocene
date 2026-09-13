@@ -2,7 +2,7 @@
 
 Cell2Fire has its own fuel classes, so the board's classes are mapped onto
 the nearest standard models rather than given Rothermel numbers directly:
-forest floor -> TL1 (low-load compact timber litter), young lantana -> SH1,
+forest floor -> GR2 (its timber-litter classes hardly move at this scale), young lantana -> SH1,
 spreading -> SH5, thick -> SH9, grass on bare -> GR1, nothing -> NB9 (bare).
 Weather is one row per minute at the same wind as the other models.
 
@@ -12,7 +12,7 @@ ROS), one line per cell that catches, the period being the minute it caught.
 import os, subprocess, numpy as np
 from landscape import RES, WIND
 
-SB = {0: 99, 1: 181, 2: 141, 3: 145, 4: 149, 5: 101}    # NB9, TL1, SH1, SH5, SH9, GR1 as grid values in the S&B lookup
+SB = {0: 99, 1: 102, 2: 141, 3: 145, 4: 149, 5: 101}    # NB9, GR2, SH1, SH5, SH9, GR1 as grid values in the S&B lookup (timber litter classes barely moved)
 
 def run(binary, board, fuel, alt, ign_xy, minutes=30, workdir="/tmp/c2f-run", wind=None, seed=1):
     wind = wind or WIND
@@ -24,9 +24,11 @@ def run(binary, board, fuel, alt, ign_xy, minutes=30, workdir="/tmp/c2f-run", wi
             np.savetxt(fh, arr, fmt=fmt, delimiter=" ")
     asc(os.path.join(workdir, "fuels.asc"), np.vectorize(SB.get)(fuel))
     asc(os.path.join(workdir, "elevation.asc"), alt, fmt="%.2f")
-    lookup = os.path.join(os.path.dirname(binary), "..", "data", "ScottAndBurgan", "Hom_Fuel_101_40x40-asc", "spain_lookup_table.csv")
-    if os.path.exists(lookup):
-        import shutil; shutil.copy(lookup, os.path.join(workdir, "spain_lookup_table.csv"))
+    # the Scott and Burgan lookup table lives next to the binary, or in the source tree's data folder
+    for lookup in (os.path.join(os.path.dirname(binary), "spain_lookup_table.csv"),
+                   os.path.join(os.path.dirname(binary), "..", "data", "ScottAndBurgan", "Hom_Fuel_101_40x40-asc", "spain_lookup_table.csv")):
+        if os.path.exists(lookup):
+            import shutil; shutil.copy(lookup, os.path.join(workdir, "spain_lookup_table.csv")); break
     with open(os.path.join(workdir, "Weather.csv"), "w") as fh:
         fh.write("Instance,datetime,WS,WD,FireScenario\n")
         for m in range(minutes + 2):
@@ -36,7 +38,7 @@ def run(binary, board, fuel, alt, ign_xy, minutes=30, workdir="/tmp/c2f-run", wi
     with open(os.path.join(workdir, "Ignitions.csv"), "w") as fh: fh.write(f"Year,Ncell\n1,{ncell}\n")
     out = os.path.join(workdir, "out"); os.makedirs(out, exist_ok=True)
     cmd = [binary, "--input-instance-folder", workdir, "--output-folder", out, "--sim", "S", "--nsims", "1", "--seed", str(seed), "--nthreads", "1",
-           "--fmc", "6", "--scenario", "2", "--weather", "rows", "--Weather-Period-Length", "1", "--ignitions", "--final-grid", "--output-messages"]
+           "--fmc", "6", "--scenario", "1", "--weather", "rows", "--Weather-Period-Length", "1", "--ignitions", "--final-grid", "--output-messages"]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     msg = os.path.join(out, "Messages", "MessagesFile1.csv")
     if r.returncode != 0 or not os.path.exists(msg):

@@ -13,7 +13,7 @@ present. Writes results/<name>.json next to this file and a copy under
 import argparse, json, os, sys, time
 import numpy as np
 from landscape import (load_board, rasters, ignition_xy, arrival_to_squares, FUELS, WIND, CELL, RES, rothermel_ros)
-import ca, run_forefire
+import ca, run_forefire, proposal, gamemap
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--board", default="/mnt/seagate/models/pyrocene/lab/board-sample-night5.json")
@@ -27,8 +27,9 @@ args = ap.parse_args()
 board = load_board(args.board)
 FF_PARAMS = {}   # run_forefire's defaults, see the note there
 ign = ignition_xy(board)
-scenarios = {"as_played": [], "cleared": board["crit"]["cut"]}
-out = {"board": {k: board[k] for k in ("cols", "rows", "cells", "ignition", "cause", "severity", "burned", "waves", "crit", "night")},
+plan = proposal.make(board)
+scenarios = {"as_played": {"cleared": [], "line": []}, "proposal": plan}
+out = {"board": {k: board[k] for k in ("cols", "rows", "cells", "ignition", "cause", "severity", "burned", "waves", "crit", "night")}, "proposal": plan,
        "meta": {"cell_m": CELL, "res_m": RES, "wind": WIND, "minutes": args.minutes, "step": args.step,
                 "fuels": {k: dict(name=f["name"], still_m_per_min=round(rothermel_ros(f) * 60, 2), wind_m_per_min=round(rothermel_ros(f, WIND["speed"]) * 60, 2), load_kg_m2=f["Sigmad"], depth_m=f["e"], moisture=f["Md"]) for k, f in FUELS.items()}},
        "scenarios": {}}
@@ -40,16 +41,29 @@ def pack(arr):
 def counts(arr):
     return {str(m): len(arrival_to_squares(arr, board, m * 60)) for m in range(0, args.minutes + 1, 1)}
 
-for sname, cleared in scenarios.items():
-    fuel, alt = rasters(board, cleared)
-    sc = {"cleared": cleared, "fuel": fuel.ravel().tolist(), "ny": fuel.shape[0], "nx": fuel.shape[1], "models": {}}
+def nearest_fuel(board, cleared):
+    """If the plan cleared the square the fire started on, the same fire is
+    started on the nearest lantana square left standing."""
+    cols = board["cols"]; ign = board["ignition"]
+    if ign not in set(cleared): return ign
+    ir, ic = divmod(ign, cols)
+    cands = [c["i"] for c in board["cells"] if c["cover"] == 1 and c["stage"] >= 2 and c["i"] not in set(cleared)]
+    return min(cands, key=lambda i: (abs(i // cols - ir) + abs(i % cols - ic), i)) if cands else ign
+
+for sname, plan_ in scenarios.items():
+    cleared, line = plan_["cleared"], plan_["line"]
+    fuel, alt = rasters(board, cleared, line)
+    ign_cell = nearest_fuel(board, cleared)
+    ign = ((ign_cell % board["cols"]) + 0.5) * CELL, ((ign_cell // board["cols"]) + 0.5) * CELL
+    sc = {"cleared": cleared, "line": line, "ignition": ign_cell, "fuel": fuel.ravel().tolist(), "ny": fuel.shape[0], "nx": fuel.shape[1], "models": {},
+          "svg": gamemap.render(board, cleared, line)}
     t0 = time.time()
     arr = ca.run(fuel, alt, ign, minutes=args.minutes)
     sc["models"]["ca"] = {"label": "Cell-to-cell automaton (Cell2Fire style, own code)", "arrival": pack(arr), "squares": counts(arr), "seconds": round(time.time() - t0, 2)}
     print(sname, "ca", sc["models"]["ca"]["squares"][str(args.minutes)], "squares", flush=True)
     if not args.no_forefire:
         t0 = time.time()
-        arr, fronts, used = run_forefire.run_subprocess(args.board, cleared, args.minutes, args.step, FF_PARAMS)
+        arr, fronts, used = run_forefire.run_subprocess(args.board, cleared, args.minutes, args.step, FF_PARAMS, line=line, ign=ign)
         if arr is not None:
             collapsed = next((f["t"] for f in fronts if f.get("collapsed")), None)
             sc["models"]["forefire"] = {"label": "ForeFire 2.5 (continuous front, Rothermel)", "arrival": pack(arr), "squares": counts(arr), "fronts": fronts, "seconds": round(time.time() - t0, 2), "params": used, "collapsed": collapsed}

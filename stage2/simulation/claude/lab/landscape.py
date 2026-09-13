@@ -21,7 +21,7 @@ NATIVE, INVASIVE, BARE, WATER, VILLAGE = 0, 1, 2, 3, 4
 #   e fuel bed depth m, Sigmad dead load kg/m2, DeltaH heat content J/kg, me moisture of extinction
 FUELS = {
     0: dict(name="nothing",            Rhod=500, Md=0.30, sd=2000, e=0.0,  Sigmad=0.0, me=0.30),
-    1: dict(name="forest floor",       Rhod=500, Md=0.27, sd=4500, e=0.20, Sigmad=0.40, me=0.30),
+    1: dict(name="forest floor",       Rhod=500, Md=0.18, sd=4500, e=0.30, Sigmad=0.50, me=0.30),
     2: dict(name="lantana, young",     Rhod=500, Md=0.11, sd=4800, e=0.5,  Sigmad=0.6,  me=0.30),
     3: dict(name="lantana, spreading", Rhod=500, Md=0.09, sd=4800, e=1.0,  Sigmad=1.3,  me=0.30),
     4: dict(name="lantana, thick",     Rhod=500, Md=0.07, sd=4600, e=1.8,  Sigmad=2.4,  me=0.30),
@@ -75,17 +75,17 @@ def fuel_class(cell):
     if cv == BARE: return 0 if cell["burnt"] >= 0 else 5
     return 0
 
-def rasters(board, cleared=()):
+def rasters(board, cleared=(), line=()):
     """Fuel index and altitude rasters at RES metres, row 0 at the north edge
     of the board (board row 0). Squares in `cleared` are treated as bare."""
     cols, rows = board["cols"], board["rows"]
     nx, ny = cols * SUB, rows * SUB
     fuel = np.zeros((ny, nx), dtype=np.int32)
     alt = np.zeros((ny, nx), dtype=np.float64)
-    cleared = set(cleared)
+    cleared = set(cleared); line = set(line)
     hill = np.zeros((rows, cols))
     for c in board["cells"]:
-        k = 5 if c["i"] in cleared else fuel_class(c)
+        k = 0 if c["i"] in line else 5 if c["i"] in cleared else fuel_class(c)
         r, cc = c["r"], c["c"]
         fuel[r * SUB:(r + 1) * SUB, cc * SUB:(cc + 1) * SUB] = k
         hill[r, cc] = 1.0 if c["hill"] else 0.0

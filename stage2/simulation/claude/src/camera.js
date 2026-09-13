@@ -44,7 +44,7 @@ export function makeShots(world, groundY) {
   }
 
   // the bearing drifts with the clock: a slow orbit, a full turn in about six minutes
-  const AZ0 = 0.35, AZ_RATE = 0.017;
+  const AZ0 = 0.35, AZ_RATE = 0.0;   // the orbit was confusing; the bearing is fixed for now
   function bearing(t) { return AZ0 + AZ_RATE * t; }
 
   // what the camera wants for a beat: target, distance, elevation, as functions of progress

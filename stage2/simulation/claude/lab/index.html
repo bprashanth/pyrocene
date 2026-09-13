@@ -5,28 +5,29 @@
 <style>
   :root { --bg:#0b0e14; --ink:#e6eaf0; --dim:#8a93a3; --line:#222a36; }
   html, body { margin:0; background:var(--bg); color:var(--ink); font: 14px/1.45 Inter, "Helvetica Neue", Arial, sans-serif; }
-  #wrap { padding: 18px 28px 40px; }
+  #wrap { padding: 18px 28px 40px; max-width:1700px; margin:0 auto; }
   h1 { font-size:18px; letter-spacing:.08em; margin:0 0 4px; font-weight:800; }
-  .sub { color:var(--dim); margin-bottom:14px; max-width:1200px; }
-  #bar { display:flex; gap:14px; align-items:center; margin:10px 0 16px; flex-wrap:wrap; }
+  .sub { color:var(--dim); margin-bottom:12px; }
+  #bar { display:flex; gap:14px; align-items:center; margin:8px 0 16px; flex-wrap:wrap; }
   button { font:inherit; font-size:12px; font-weight:600; letter-spacing:.06em; color:var(--ink); background:#161c27; border:1px solid #2d3745; border-radius:6px; padding:6px 12px; cursor:pointer; }
-  button.on { background:#2b3a52; border-color:#4b6288; }
   input[type=range] { width:420px; }
   .mono { font-family:"DejaVu Sans Mono", Menlo, monospace; }
-  #grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; }
+  #grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
   .panel { background:#0f141d; border:1px solid var(--line); border-radius:8px; padding:10px 12px 12px; }
   .panel h3 { margin:0 0 2px; font-size:13px; font-weight:700; letter-spacing:.04em; }
-  .panel .k { color:var(--dim); font-size:11px; letter-spacing:.06em; min-height:2.6em; }
-  .panel canvas { width:100%; aspect-ratio: 22/12; display:block; border-radius:4px; background:#0a0d12; margin-top:6px; }
-  .panel .n { margin-top:8px; display:flex; justify-content:space-between; font-size:12px; }
+  .panel .k { color:var(--dim); font-size:11.5px; min-height:1.4em; }
+  .panel canvas, .panel .svg { width:100%; aspect-ratio: 22/12; display:block; border-radius:4px; background:#0a0d12; margin-top:6px; overflow:hidden; }
+  .panel .svg svg { width:100%; height:100%; display:block; }
+  .panel .n { margin-top:8px; display:flex; justify-content:space-between; font-size:12px; min-height:1.6em; }
   .panel .n b { font-size:18px; font-weight:800; }
-  .row-title { grid-column: 1 / -1; color:var(--dim); font-size:11px; letter-spacing:.16em; margin-top:6px; }
-  #legend { display:flex; gap:18px; flex-wrap:wrap; margin-top:18px; color:var(--dim); font-size:12px; }
-  #legend span i { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-2px; margin-right:6px; }
-  table { border-collapse:collapse; margin-top:16px; font-size:12px; }
-  td, th { border:1px solid var(--line); padding:4px 10px; text-align:left; }
-  th { color:var(--dim); font-weight:600; }
-  #note { margin-top:18px; color:var(--dim); max-width:1100px; font-size:12.5px; }
+  .row-title { grid-column: 1 / -1; color:var(--ink); font-size:12px; letter-spacing:.14em; margin-top:8px; }
+  .row-title span { color:var(--dim); letter-spacing:0; margin-left:10px; }
+  #legend { display:flex; gap:26px; align-items:center; flex-wrap:wrap; margin-top:18px; color:var(--dim); font-size:12px; }
+  #spectrum { display:flex; align-items:center; gap:8px; }
+  #spectrum i { display:block; width:200px; height:12px; border-radius:3px; background:linear-gradient(90deg, #a08a5a 0 16%, #2f5a35 16% 34%, #8aa04a 34% 56%, #b4b84c 56% 78%, #d6c23a 78%); }
+  #legend .sw i { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-2px; margin-right:6px; }
+  #legend .trench i { display:inline-block; width:26px; height:10px; vertical-align:-1px; margin-right:6px; background:#efe6d2; border-radius:5px; background-image: repeating-linear-gradient(90deg, #1f5f88 0 5px, transparent 5px 9px); background-size:100% 3px; background-repeat:no-repeat; background-position:0 3.5px; }
+  #note { margin-top:14px; color:var(--dim); font-size:12.5px; }
 </style>
 <div id="wrap">
   <h1>PYROCENE FIRE LAB</h1>
@@ -36,14 +37,15 @@
     <input id="t" type="range" min="0" max="1800" step="5" value="0">
     <span class="mono" id="tlabel">0:00</span>
     <span style="color:var(--dim)">after ignition</span>
-    <span style="margin-left:auto"></span>
-    <button id="bfronts" class="on">Front lines</button>
-    <button id="bgrid" class="on">Board grid</button>
-    <button id="bcut" class="on">Joining squares</button>
   </div>
   <div id="grid"></div>
-  <div id="legend"></div>
-  <table id="fuels"></table>
+  <div id="legend">
+    <div id="spectrum"><span>bare</span><i></i><span>thick lantana</span></div>
+    <span class="sw"><i style="background:#ff9a3c"></i>burning</span>
+    <span class="sw"><i style="background:#141010"></i>burned</span>
+    <span class="trench"><i></i>fire line</span>
+    <span class="sw"><i style="border:1.5px solid #fff; border-radius:50%"></i>ignition</span>
+  </div>
   <div id="note"></div>
 </div>
 <script>
@@ -55,43 +57,46 @@
   const T = M.minutes * 60;
   document.getElementById("t").max = T;
   const FUEL_COL = ["#1b2a33", "#2f5a35", "#8aa04a", "#b4b84c", "#d6c23a", "#a08a5a"];
-  const FUEL_NAME = Object.fromEntries(Object.entries(M.fuels).map(([k, f]) => [k, f.name]));
-  document.getElementById("sub").textContent =
-    `Night ${B.night} of the sample game, the board as it was when the biggest fire started. One square is ${M.cell_m} m, models run at ${M.res_m} m. ` +
-    `Wind ${M.wind.speed} m/s from ${M.wind.from_deg === 270 ? "the west" : M.wind.from_deg + "°"}. Same fuel table for every model. The game's own fire took ${B.burned.length} squares.`;
+  const windWord = { 0: "north", 90: "east", 180: "south", 270: "west" }[M.wind.from_deg] || (M.wind.from_deg + "°");
+  document.getElementById("sub").textContent = `Night ${B.night}, the board when the big fire started. One square is ${M.cell_m} m. Wind ${M.wind.speed} m/s from the ${windWord}. ${M.minutes} minutes of fire.`;
 
-  // panels: row 1 as played (game, automaton, forefire, cell2fire), row 2 with the joining squares cleared
   const grid = document.getElementById("grid");
   const panels = [];
-  function addRow(title) { const d = document.createElement("div"); d.className = "row-title"; d.textContent = title; grid.appendChild(d); }
+  function addRow(title, sub) { const d = document.createElement("div"); d.className = "row-title"; d.innerHTML = title + (sub ? `<span>${sub}</span>` : ""); grid.appendChild(d); }
+  function addMap(sc, label, sub) {
+    const p = document.createElement("div"); p.className = "panel";
+    p.innerHTML = `<h3>${label}</h3><div class="k">${sub}</div><div class="svg">${sc.svg}</div><div class="n"></div>`;
+    grid.appendChild(p);
+  }
   function addPanel(sname, model, label, sub) {
     const p = document.createElement("div"); p.className = "panel";
-    p.innerHTML = `<h3>${label}</h3><div class="k">${sub}</div><canvas width="880" height="480"></canvas><div class="n"><span>squares burned <b class="b">0</b></span><span class="mono pct">0%</span></div>`;
+    p.innerHTML = `<h3>${label}</h3><div class="k">${sub}</div><canvas width="880" height="480"></canvas><div class="n"><span>squares burned <b class="b">0</b></span><span class="mono pct"></span></div>`;
     grid.appendChild(p);
     panels.push({ sname, model, canvas: p.querySelector("canvas"), b: p.querySelector(".b"), pct: p.querySelector(".pct") });
   }
-  const sc0 = R.scenarios.as_played, sc1 = R.scenarios.cleared;
-  addRow("AS PLAYED");
-  addPanel("as_played", "game", "The game", "The fire the room saw: its own rule, wave by wave, spread evenly over the clip");
-  const subFor = (sc, m) => `computed in ${sc.models[m].seconds}s` + (sc.models[m].collapsed ? `; its front collapsed at ${Math.round(sc.models[m].collapsed / 60)} min, nothing burns after that` : "");
-  for (const m of ["ca", "forefire", "cell2fire"]) if (sc0.models[m]) addPanel("as_played", m, sc0.models[m].label, subFor(sc0, m));
-  addRow(`WITH THE ${sc1.cleared.length} JOINING SQUARES CLEARED BEFORE THE FIRE (the replay's critical night)`);
-  addPanel("cleared", "none", "The game", "The room did not play this night, so the game has no answer here");
-  for (const m of ["ca", "forefire", "cell2fire"]) if (sc1.models[m]) addPanel("cleared", m, sc1.models[m].label, subFor(sc1, m));
+  const sc0 = R.scenarios.as_played, sc1 = R.scenarios.proposal;
+  const FF = "ForeFire 2.5", C2 = "Cell2Fire";
+  const ffSub = "moves a continuous fire line", c2Sub = "fire jumps square to square, standard fuel classes";
+  addRow("AS PLAYED", `the game's own fire took ${B.burned.length} squares`);
+  addMap(sc0, "The game", "the board as the room left it");
+  if (sc0.models.forefire) addPanel("as_played", "forefire", FF, ffSub);
+  if (sc0.models.cell2fire) addPanel("as_played", "cell2fire", C2, c2Sub);
+  addRow("WITH A PLAN", `${R.proposal.cleared.length} squares of thick lantana cleared, a fire line of ${R.proposal.line.length} squares dug downwind` + (sc1.ignition !== B.ignition ? "; the same fire, started on the nearest lantana left" : ""));
+  addMap(sc1, "The plan", "cleared ground and the fire line, drawn as the game draws them");
+  if (sc1.models.forefire) addPanel("proposal", "forefire", FF, ffSub);
+  if (sc1.models.cell2fire) addPanel("proposal", "cell2fire", C2, c2Sub);
 
-  // decode rasters once
   for (const sc of [sc0, sc1]) {
     sc.fuelArr = Int8Array.from(sc.fuel);
     for (const m of Object.values(sc.models)) m.arr = Int32Array.from(m.arrival);
-    // the fuel picture
     const c = document.createElement("canvas"); c.width = sc.nx; c.height = sc.ny; const x = c.getContext("2d");
     const img = x.createImageData(sc.nx, sc.ny);
+    const sub = sc.nx / cols;
     for (let i = 0; i < sc.nx * sc.ny; i++) { const col = FUEL_COL[sc.fuelArr[i]]; img.data[i * 4] = parseInt(col.slice(1, 3), 16); img.data[i * 4 + 1] = parseInt(col.slice(3, 5), 16); img.data[i * 4 + 2] = parseInt(col.slice(5, 7), 16); img.data[i * 4 + 3] = 255; }
-    // water and homes darker blue / marked
-    for (const cell of B.cells) if (cell.cover === 3 || cell.cover === 4) { const sub = sc.nx / cols; for (let yy = 0; yy < sub; yy++) for (let xx = 0; xx < sub; xx++) { const i = (cell.r * sub + yy) * sc.nx + cell.c * sub + xx; img.data[i * 4] = cell.cover === 3 ? 20 : 120; img.data[i * 4 + 1] = cell.cover === 3 ? 50 : 90; img.data[i * 4 + 2] = cell.cover === 3 ? 90 : 60; } }
+    for (const cell of B.cells) if (cell.cover === 3 || cell.cover === 4) for (let yy = 0; yy < sub; yy++) for (let xx = 0; xx < sub; xx++) { const i = (cell.r * sub + yy) * sc.nx + cell.c * sub + xx; img.data[i * 4] = cell.cover === 3 ? 60 : 200; img.data[i * 4 + 1] = cell.cover === 3 ? 110 : 190; img.data[i * 4 + 2] = cell.cover === 3 ? 150 : 170; }
     x.putImageData(img, 0, 0); sc.fuelCanvas = c;
+    sc.lineCells = B.cells.filter(c => c.fireline).map(c => c.i).concat(sc.line || []);
   }
-  const gameWaveT = B.waves.map((w, k) => (k / Math.max(1, B.waves.length - 1)) * T * 0.45);   // the game has no clock: spread its waves over the first half of the clip
 
   function squaresBurned(sc, arr, t) {
     const sub = sc.nx / cols; let n = 0;
@@ -101,37 +106,42 @@
     }
     return n;
   }
-  const opts = { fronts: true, grid: true, cut: true };
+  // the trench the way the game draws it: a pale band of turned earth with blue dashes
+  function drawLine(ctx, cells, cw, ch) {
+    if (!cells.length) return;
+    const cs = new Set(cells), pts = i => [(i % cols + 0.5) * cw, (Math.floor(i / cols) + 0.5) * ch];
+    const segs = [];
+    for (const i of cs) { const r = Math.floor(i / cols), c = i % cols;
+      for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) { const rr = r + dr, cc = c + dc; if (rr >= rows || cc < 0 || cc >= cols || !cs.has(rr * cols + cc)) continue;
+        if (dr === 1 && dc !== 0 && (cs.has(r * cols + cc) || cs.has(rr * cols + c))) continue; segs.push([pts(i), pts(rr * cols + cc)]); } }
+    ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const [col, w, dash] of [["#efe6d2", cw * 0.62, []], ["#1f5f88", cw * 0.09, [cw * 0.28, cw * 0.2]]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.setLineDash(dash);
+      for (const [a, b] of segs) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      for (const i of cs) { const [x, y] = pts(i); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 0.01, y); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
   function draw(t) {
     for (const p of panels) {
       const sc = R.scenarios[p.sname], ctx = p.canvas.getContext("2d"), W = p.canvas.width, H = p.canvas.height;
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sc.fuelCanvas, 0, 0, W, H);
       const sx = W / sc.nx, sy = H / sc.ny, cw = W / cols, ch = H / rows;
-      let burned = 0;
-      if (p.model === "game") {
-        B.waves.forEach((w, k) => { if (gameWaveT[k] > t) return; const age = t - gameWaveT[k]; for (const i of w) { const r = Math.floor(i / cols), c = i % cols; ctx.fillStyle = age < 120 ? `rgba(255,${150 - 60 * age / 120 | 0},40,0.95)` : "rgba(18,14,12,0.92)"; ctx.fillRect(c * cw, r * ch, cw, ch); burned++; } });
-      } else if (p.model !== "none") {
-        const arr = sc.models[p.model].arr;
-        const img = ctx.getImageData(0, 0, W, H); const d = img.data;
-        for (let y = 0; y < H; y++) { const iy = Math.floor(y / sy); for (let x = 0; x < W; x++) { const a = arr[iy * sc.nx + Math.floor(x / sx)]; if (a < 0 || a > t) continue; const age = t - a; const o = (y * W + x) * 4;
-          if (age < 90) { const k = age / 90; d[o] = 255; d[o + 1] = 170 - 110 * k; d[o + 2] = 40 - 30 * k; } else { d[o] = 20; d[o + 1] = 16; d[o + 2] = 14; } } }
-        ctx.putImageData(img, 0, 0);
-        burned = squaresBurned(sc, arr, t);
-        if (opts.fronts && p.model === "forefire" && sc.models.forefire.fronts) {
-          const fr = sc.models.forefire.fronts.filter(f => f.t <= t).slice(-1)[0];
-          if (fr) { ctx.strokeStyle = "rgba(255,230,160,0.95)"; ctx.lineWidth = 2; for (const poly of fr.polys) { ctx.beginPath(); poly.forEach(([x, y], k) => k ? ctx.lineTo(x / M.res_m * sx, y / M.res_m * sy) : ctx.moveTo(x / M.res_m * sx, y / M.res_m * sy)); ctx.closePath(); ctx.stroke(); } }
-        }
+      const arr = sc.models[p.model].arr;
+      const img = ctx.getImageData(0, 0, W, H); const d = img.data;
+      for (let y = 0; y < H; y++) { const iy = Math.floor(y / sy); for (let x = 0; x < W; x++) { const a = arr[iy * sc.nx + Math.floor(x / sx)]; if (a < 0 || a > t) continue; const age = t - a; const o = (y * W + x) * 4;
+        if (age < 90) { const k = age / 90; d[o] = 255; d[o + 1] = 170 - 110 * k; d[o + 2] = 40 - 30 * k; } else { d[o] = 20; d[o + 1] = 16; d[o + 2] = 14; } } }
+      ctx.putImageData(img, 0, 0);
+      const burned = squaresBurned(sc, arr, t);
+      if (p.model === "forefire" && sc.models.forefire.fronts) {
+        const fr = sc.models.forefire.fronts.filter(f => f.t <= t).slice(-1)[0];
+        if (fr) { ctx.strokeStyle = "rgba(255,230,160,0.95)"; ctx.lineWidth = 2; for (const poly of fr.polys) { ctx.beginPath(); poly.forEach(([x, y], k) => k ? ctx.lineTo(x / M.res_m * sx, y / M.res_m * sy) : ctx.moveTo(x / M.res_m * sx, y / M.res_m * sy)); ctx.closePath(); ctx.stroke(); } }
       }
-      if (opts.grid) { ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1; for (let c = 1; c < cols; c++) { ctx.beginPath(); ctx.moveTo(c * cw, 0); ctx.lineTo(c * cw, H); ctx.stroke(); } for (let r = 1; r < rows; r++) { ctx.beginPath(); ctx.moveTo(0, r * ch); ctx.lineTo(W, r * ch); ctx.stroke(); } }
-      // trench
-      ctx.strokeStyle = "rgba(140,200,255,0.9)"; ctx.lineWidth = 3;
-      for (const cell of B.cells) if (cell.fireline) { ctx.strokeRect(cell.c * cw + 2, cell.r * ch + 2, cw - 4, ch - 4); }
-      if (opts.cut) { ctx.strokeStyle = p.sname === "cleared" ? "rgba(120,255,160,0.9)" : "rgba(255,120,60,0.9)"; ctx.lineWidth = 2; for (const i of B.crit.cut) { const r = Math.floor(i / cols), c = i % cols; ctx.strokeRect(c * cw + 1, r * ch + 1, cw - 2, ch - 2); } }
-      // ignition
-      const ir = Math.floor(B.ignition / cols), ic = B.ignition % cols;
+      drawLine(ctx, sc.lineCells, cw, ch);
+      const ign = sc.ignition == null ? B.ignition : sc.ignition, ir = Math.floor(ign / cols), ic = ign % cols;
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc((ic + 0.5) * cw, (ir + 0.5) * ch, 7, 0, 6.3); ctx.stroke();
-      p.b.textContent = p.model === "none" ? "–" : burned; p.pct.textContent = p.model === "none" ? "" : Math.round(100 * burned / (cols * rows)) + "% of the board";
+      p.b.textContent = burned; p.pct.textContent = Math.round(100 * burned / (cols * rows)) + "% of the board";
     }
     document.getElementById("tlabel").textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
   }
@@ -141,13 +151,7 @@
   requestAnimationFrame(now => { last = now; loop(now); });
   document.getElementById("play").onclick = e => { if (+slider.value >= T) slider.value = 0; playing = !playing; last = performance.now(); e.target.textContent = playing ? "Pause" : "Play"; };
   slider.oninput = () => { playing = false; document.getElementById("play").textContent = "Play"; draw(+slider.value); };
-  for (const [id, key] of [["bfronts", "fronts"], ["bgrid", "grid"], ["bcut", "cut"]]) document.getElementById(id).onclick = e => { opts[key] = !opts[key]; e.target.classList.toggle("on", opts[key]); draw(+slider.value); };
-  document.getElementById("legend").innerHTML = FUEL_COL.map((c, k) => `<span><i style="background:${c}"></i>${FUEL_NAME[k]}</span>`).join("") +
-    `<span><i style="background:#ff9a3c"></i>burning now</span><span><i style="background:#141010"></i>burned</span><span><i style="border:2px solid rgba(140,200,255,.9)"></i>fire line</span><span><i style="border:2px solid rgba(255,120,60,.9)"></i>the joining squares</span>`;
-  document.getElementById("fuels").innerHTML = `<tr><th>fuel</th><th>load kg/m²</th><th>depth m</th><th>moisture</th><th>spread, still air</th><th>spread in this wind</th></tr>` +
-    Object.values(M.fuels).map(f => `<tr><td>${f.name}</td><td>${f.load_kg_m2}</td><td>${f.depth_m}</td><td>${f.moisture}</td><td>${f.still_m_per_min} m/min</td><td>${f.wind_m_per_min} m/min</td></tr>`).join("");
-  document.getElementById("note").innerHTML = `Every number in the table is an assumption, chosen so that native forest floor barely carries fire and thick lantana carries it fast, which is the ecological claim the game makes. Rate of spread is Rothermel (1972), the same function in every model. ` +
-    `The automaton and ForeFire are given identical fuel and wind; Cell2Fire uses its own Scott and Burgan fuel classes mapped from the same board. None of this is a prediction for a real place. It is the game's board, burned by three ways of moving a fire front, so the room can see what connected fuel does and what clearing the joining squares would have done.`;
+  document.getElementById("note").textContent = "Rate of spread: Rothermel. Not a prediction for a real place.";
   draw(0);
 })();
 </script>
