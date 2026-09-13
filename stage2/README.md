@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 76 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 70 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
