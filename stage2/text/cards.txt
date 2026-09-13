@@ -41,6 +41,9 @@ A lookout goes up. Tomorrow night's fire will be forecast before the room decide
 [growth.title]
 Lantana spreads
 
+[network.title]
+The patches have joined up
+
 [fire.title]
 Fire
 

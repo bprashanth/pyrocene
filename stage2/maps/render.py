@@ -24,7 +24,7 @@ def frame_svg(beat: dict, name: str) -> str:
     sc = from_view(beat["view"], fire=beat.get("fire"), focus=beat.get("focus"),
                    halo=beat.get("halo"), held=beat.get("held"),
                    haze=beat.get("haze"), note=beat.get("text", ""),
-                   badges=beat.get("badges"))
+                   badges=beat.get("badges"), spotlight=beat.get("spotlight"))
     return style(name).render(sc)
 
 

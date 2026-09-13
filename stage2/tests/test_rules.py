@@ -132,6 +132,111 @@ class Water(unittest.TestCase):
                                 f"seed {seed}: a stand joined across water")
 
 
+class Connectivity(unittest.TestCase):
+    """The lesson stage 2 exists to deliver: scattered patches are a nuisance,
+    one joined-up band is a different problem."""
+
+    def test_severity_follows_the_band_not_the_thickest_patch(self):
+        g = play(4, rounds=3)
+        bands = g.bands()
+        self.assertTrue(bands)
+        sev, cluster = g.severity()
+        self.assertEqual(sorted(cluster), sorted(bands[0]),
+                         "severity must be read off the biggest connected band")
+        load = g.band_load(bands[0])
+        want = 1 if load < g.cfg["sev_t1"] else 2 if load < g.cfg["sev_t2"] else 3
+        self.assertEqual(sev, want)
+
+    def test_a_band_never_spans_open_water(self):
+        for seed in (2, 6, 10, 14):
+            g = play(seed)
+            s = g.state
+            for band in g.bands():
+                inside = set(band)
+                for i in band:
+                    joins = [j for j, _ in neighbors8(s, i)
+                             if j in inside and not across_water(s, i, j)]
+                    if not joins and len(band) > 1:
+                        self.fail(f"seed {seed}: a band held together only across water")
+
+    def test_the_evening_builds(self):
+        """Small scattered fires first, one big connected run later. If this
+        inverts, the game teaches that early action does not matter."""
+        early, late = [], []
+        for seed in range(1, 31):
+            g = play(seed)
+            for k, h in enumerate(g.history, start=1):
+                f = h.get("fire") or {}
+                n = len(f.get("burned_cells") or [])
+                (early if k <= 2 else late).append(n)
+        self.assertGreater(len(early), 40)
+        self.assertGreater(len(late), 30)
+        mean_early = sum(early) / len(early)
+        mean_late = sum(late) / len(late)
+        self.assertLess(mean_early, 10, f"early fires should be small, got {mean_early:.1f}")
+        self.assertGreater(mean_late, 2.5 * mean_early,
+                           f"late fires should dwarf early ones: {mean_early:.1f} then {mean_late:.1f}")
+
+    def test_the_room_is_told_once_when_it_joins_up(self):
+        seen = 0
+        for seed in range(1, 21):
+            rng = random.Random(seed * 7919)
+            g = Game(seed=seed)
+            for i in range(12):
+                g.add_player(f"P{i + 1}")
+            g.start()
+            calls = 0
+            while g.phase == "playing":
+                prey = [p for p in g.players.values()
+                        if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+                if prey and rng.random() > 0.25:
+                    g.eliminate(rng.choice(prey).id)
+                g.resolve_night()
+                if g.phase != "playing":
+                    break
+                pool = [p for p in g.players.values() if p.alive]
+                g.eliminate(rng.choice(pool).id)
+                g.choose("hunt", None)
+                calls += sum(1 for st in g.resolve_vote() if st["key"] == "network")
+            self.assertLessEqual(calls, 1, f"seed {seed}: said it more than once")
+            seen += calls
+        self.assertGreaterEqual(seen, 15, "most games should reach the turn")
+
+    def test_stage_one_never_says_it(self):
+        g = Game(seed=3, config={"stage": 1})
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        rng = random.Random(3)
+        while g.phase == "playing":
+            pool = [p for p in g.players.values() if p.alive]
+            g.eliminate(rng.choice(pool).id)
+            g.resolve_night()
+            if g.phase != "playing":
+                break
+            pool = [p for p in g.players.values() if p.alive]
+            g.eliminate(rng.choice(pool).id)
+            g.choose("hunt", None)
+            for st in g.resolve_vote():
+                self.assertNotEqual(st["key"], "network",
+                                    "stage 1 has no fire, so the band means nothing there")
+
+    def test_the_automatic_choice_does_not_hide_the_big_fire(self):
+        """Water holds a fire to a few squares. Picking it the moment a band has
+        formed is exactly when it must not be picked, or the room never sees the
+        run they have been building towards all evening."""
+        picks = []
+        for seed in range(1, 26):
+            g = play(seed, rounds=4)
+            if g.phase != "playing":
+                continue
+            if g.bands() and g.connected():
+                g.locked_sev, g.locked_cluster = g.severity()
+                picks.append(g._auto_action()[0])
+        self.assertGreater(len(picks), 8, "need a real sample")
+        self.assertNotIn("water", picks)
+
+
 class ReplayNames(unittest.TestCase):
     """The replay names whoever went out, because that is what lets a room put a
     night in the game against a change on the ground. Nothing else may."""

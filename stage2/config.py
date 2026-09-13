@@ -7,6 +7,7 @@ CONFIG = {
     # actually did to the forest. No fire, no resilience.
     # 2 adds fire and the one choice a night.
     "stage": 2,
+    "role_seed": None,         # None means deal from the map seed
 
     # --- the room ---------------------------------------------------------
     "min_players": 6,          # 2 lantana + ecologist + ranger + 2 natives
@@ -18,7 +19,7 @@ CONFIG = {
 
     # --- the homes, the one thing worth spending a night on ---------------
     "village_loss": True,      # fire reaching the homes ends the game
-    "village_clearance": 5,    # keep homes this far from the starting infestation
+    "village_clearance": 9,    # keep homes this far from the starting infestation
     "village_defend_range": 8, # only trench around the homes if fuel is this close
 
     # --- the map ----------------------------------------------------------
@@ -43,11 +44,24 @@ CONFIG = {
     "reinvade_p": 0.55,        # bare cell next to lantana: chance it is retaken
     "regen_p": 0.22,           # bare cell with nothing near it: chance forest returns
 
+    # --- corridors ----------------------------------------------------------
+    # What makes a fire dangerous is not how much lantana there is but whether
+    # it has joined up. These push it to join up the way it does in the field:
+    # along roads and other disturbed edges first, and into the gaps between
+    # stands that are already close to each other.
+    "road_mult": 2.2,          # roadside ground is taken far faster
+    "gap_mult": 2.0,           # ground that would close a gap to another stand
+    "gap_reach": 4,            # how far away another stand still counts as near
+
     # --- fire ---------------------------------------------------------------
-    # Severity comes from the largest connected stand of dense lantana, so what
-    # Ember says and what the map does always agree.
-    "sev_t1": 7,               # smaller than this: severity 1
-    "sev_t2": 13,              # smaller than this: severity 2, else 3
+    # Severity comes from the largest connected BAND of burnable lantana, not
+    # from the biggest thick patch. Three separate stands are three small fires;
+    # joined into one band they are a single run that carries end to end.
+    "dense_weight": 2,         # a dense square is worth this many thin ones
+    "sev_t1": 18,              # load below this: severity 1
+    "sev_t2": 30,              # load below this: severity 2, else 3
+    "connect_cells": 16,       # a band this big that also spans...
+    "connect_patches": 2,      # ...this many starting patches has joined up
     "spark_p": 0.6,            # with no dense lantana, chance of a small fire anyway
     "fire_cells": {1: 3, 2: 12, 3: 38},   # squares each severity can take
     "fire_round_ramp": 0.22,   # extra reach per night as the season dries out

@@ -231,6 +231,82 @@ class StageOneMap(unittest.TestCase):
         self.assertNotIn(">fire<", frame, "stage 1 cannot burn, so the legend must not say so")
 
 
+class Handover(unittest.TestCase):
+    """Stage 1 ends and the room walks into stage 2 without a restart. This used
+    to need stopping the server, which meant everyone rejoining and retyping
+    their name while the room waited."""
+
+    def tearDown(self):
+        api("/api/gm/reset", {"stage": 1, "seed": 5})
+
+    def _finish_stage_one(self, seed=41):
+        fresh(seed=seed)
+        guard = 0
+        while api("/api/state")["phase"] == "playing" and guard < 12:
+            guard += 1
+            play_round()
+        return api("/api/state")
+
+    def test_it_keeps_the_people_and_deals_again(self):
+        st = self._finish_stage_one()
+        self.assertEqual(st["phase"], "ended")
+        before = {p["name"]: p["role"] for p in st["players"]}
+        tokens = [p["id"] for p in st["players"]]
+        st = api("/api/gm/next_stage", {})
+        self.assertEqual(st["stage"], 2)
+        self.assertEqual(st["phase"], "playing")
+        self.assertEqual(st["round"], 1)
+        after = {p["name"]: p["role"] for p in st["players"]}
+        self.assertEqual(sorted(before), sorted(after), "the same people carry over")
+        self.assertEqual(tokens, [p["id"] for p in st["players"]])
+        self.assertNotEqual(before, after,
+                            "a fresh deal, or stage 1 tells you who lantana is")
+        self.assertTrue(all(p["alive"] for p in st["players"]))
+
+    def test_a_phone_stays_joined(self):
+        api("/api/gm/reset", {"stage": 1, "seed": 43})
+        tok = api("/api/join", {"name": "Meera"})["token"]
+        api("/api/gm/seed", {"n": 11})
+        api("/api/gm/start", {})
+        guard = 0
+        while api("/api/state")["phase"] == "playing" and guard < 12:
+            guard += 1
+            play_round()
+        api("/api/gm/next_stage", {})
+        me = api("/api/me?token=" + tok)
+        self.assertEqual(me["name"], "Meera")
+        self.assertTrue(me["alive"])
+        self.assertIn(me["role"], ("lantana", "native", "ecologist", "ranger"))
+
+    def test_it_refuses_before_stage_one_is_over(self):
+        fresh(seed=45)
+        with self.assertRaises(urllib.error.HTTPError):
+            api("/api/gm/next_stage", {})
+
+    def test_the_console_offers_it_only_at_the_end(self):
+        fresh(seed=47)
+        gm = page(1100, 1000)
+        errors = []
+        gm.on("pageerror", lambda e: errors.append(str(e)))
+        gm.goto(BASE + "/gm")
+        gm.wait_for_selector("#night:not([hidden])", timeout=8000)
+        self.assertTrue(gm.locator("#nextstage").is_hidden(),
+                        "not while the game is still on")
+        guard = 0
+        while api("/api/state")["phase"] == "playing" and guard < 12:
+            guard += 1
+            play_round()
+        gm.wait_for_selector("#nextstage:not([hidden])", timeout=8000)
+        gm.click("#tostage2")
+        # Stage 2 opens on night 1, so the day panel that holds the choice is
+        # not up yet. The header is what tells the game master where they are.
+        gm.wait_for_function("document.querySelector('#phase').textContent.includes('stage 2')",
+                             timeout=8000)
+        gm.wait_for_selector("#night:not([hidden])", timeout=8000)
+        self.assertEqual(api("/api/state")["stage"], 2)
+        self.assertEqual(errors, [])
+
+
 class Replay(unittest.TestCase):
     def test_it_walks_the_map_one_night_at_a_time(self):
         fresh(seed=5)

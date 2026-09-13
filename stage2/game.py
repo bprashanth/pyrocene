@@ -78,6 +78,9 @@ class Game:
             # hopeless board around, so the game is still worth finishing.
             self.cfg["team_loss"] = True
         self.seed = seed if seed is not None else random.randrange(1_000_000_000)
+        # Roles are dealt from their own stream so a second game can reuse a
+        # map without dealing the same people the same parts again.
+        self.role_seed = self.cfg.get("role_seed") or self.seed
         self.players: dict[str, Player] = {}
         self.phase = "lobby"          # lobby | playing | ended
         self.round = 0
@@ -104,6 +107,7 @@ class Game:
         self.ending = None
         self.last_steps: list = []
         self.lantana_override: int | None = None
+        self.network_called = False   # the joined-up card is shown once
 
     # ---- lobby -----------------------------------------------------------
     def add_player(self, name: str) -> Player:
@@ -128,7 +132,7 @@ class Game:
         n = len(self.players)
         if n < self.cfg["min_players"]:
             raise ValueError(f"need at least {self.cfg['min_players']} players, have {n}")
-        rng = random.Random(self.seed)
+        rng = random.Random(self.role_seed)
         k = self.lantana_count()
         ids = list(self.players)
         rng.shuffle(ids)
@@ -426,6 +430,21 @@ class Game:
             T("ember", "growth", n=len(moved)) if moved else T("ember", "growth.none"),
             self._transition(before, after, moved, "creep", halo=halo), cells=moved))
 
+        # The turn the evening is built around, called once, the night it
+        # happens. Until now the patches have been separate and taking a player
+        # out has removed a whole one. From here the fuel runs between them, so
+        # removing a player no longer breaks the chain and fire stops being
+        # somebody else's problem. Showing the band is the point: the room has
+        # to see the shape that has formed, not be told a number.
+        if not stage_one and not self.network_called and self.connected():
+            self.network_called = True
+            band = self.bands()[0]
+            steps.append(self._step(
+                "network", T("cards", "network.title"),
+                T("ember", "network", n=self.band_patches(band)),
+                self._spotlight(after, band),
+                cells=band))
+
         # fire, unless this is stage 1, where the room is only playing Mafia and
         # the map is a record of it rather than a thing that fights back
         if not stage_one:
@@ -492,6 +511,27 @@ class Game:
         out = dict(after)
         out["cells"] = [post[c["index"]] if c["index"] in rev else c
                         for c in before["cells"]]
+        return out
+
+
+    def _spotlight(self, view: dict, cells: list) -> list:
+        """Trace one shape on the board and hold on it.
+
+        Not the same as a transition: nothing is changing here. The board is
+        pushed back, the band lights up a section at a time so the room can
+        follow it end to end, and then the map comes back.
+        """
+        st = self.state
+        order = sorted(cells, key=lambda i: (st.cells[i].c, st.cells[i].r))
+        size = max(1, -(-len(order) // 5))
+        out, shown = [], []
+        for k in range(0, len(order), size):
+            shown = shown + order[k:k + size]
+            out.append(self._frame("creep", "", view, focus=list(shown),
+                                   haze=True, spotlight=True))
+        out.append(self._frame("focus", "", view, focus=list(order),
+                               haze=True, spotlight=True))
+        out.append(self._frame("settle", "", view))
         return out
 
     def _transition(self, before: dict, after: dict, cells: list, kind: str,
@@ -592,10 +632,37 @@ class Game:
             return taken, T("ember", "elim.native", dir=self._dir_of(cells or taken))
         return [], T("ember", f"elim.{p.role}")
 
+
+    @staticmethod
+    def _closes_gap(s, i: int, mine: int, stand_of: dict, reach: int) -> bool:
+        """True if a different stand is within reach of this square, so taking it
+        shortens the gap between two stands rather than only widening one."""
+        c = s.cells[i]
+        r0, c0 = c.r, c.c
+        for dr in range(-reach, reach + 1):
+            for dc in range(-reach, reach + 1):
+                r, cc = r0 + dr, c0 + dc
+                if not (0 <= r < s.rows and 0 <= cc < s.cols):
+                    continue
+                other = stand_of.get(r * s.cols + cc)
+                if other is not None and other != mine:
+                    return True
+        return False
+
     def _grow(self, rng: random.Random):
         s, cfg = self.state, self.cfg
         new: dict[int, str | None] = {}
         candidates: set = set()          # ground lantana is pressing on, for the halo
+        # Which stand each burnable lantana cell belongs to right now. Ground
+        # that sits between two different stands is ground that would join them,
+        # and lantana takes that ground faster than open forest: it is usually
+        # the disturbed edge, and both stands are seeding into it. This is what
+        # turns a scatter of patches into one band, and the band is the lesson.
+        stand_of = {}
+        for k, band in enumerate(self.bands()):
+            for i in band:
+                stand_of[i] = k
+        reach = cfg["gap_reach"]
         for c in s.cells:
             if c.cover != INVASIVE or c.stage < ESTABLISHED:
                 continue
@@ -616,6 +683,13 @@ class Game:
                     p *= cfg["growth_wind_mult"]
                 if n.cover == BARE:
                     p *= cfg["growth_bare_mult"]
+                if n.road:
+                    # Roadsides are how lantana actually travels: bare, lit,
+                    # disturbed, and seeded by everything that passes.
+                    p *= cfg["road_mult"]
+                mine = stand_of.get(c.index)
+                if mine is not None and self._closes_gap(s, ni, mine, stand_of, reach):
+                    p *= cfg["gap_mult"]
                 if rng.random() < p:
                     new[ni] = own
         for ni, own in new.items():
@@ -682,19 +756,68 @@ class Game:
         out.sort(key=len, reverse=True)
         return out
 
+    def bands(self) -> list:
+        """Connected runs of burnable lantana, biggest first.
+
+        This is the thing the game is about. Three separate patches of the same
+        total size are three small fires. Joined into one band they are a single
+        fire that carries from end to end, and the ground it crosses on the way
+        is what turns a nuisance into a loss. Water splits a band, because a
+        creeping fire cannot cross a river any more than the plant can.
+        """
+        s = self.state
+        seen, out = set(), []
+        for c in s.cells:
+            if c.index in seen or c.cover != INVASIVE or c.stage < ESTABLISHED:
+                continue
+            comp, q = [c.index], deque([c.index])
+            seen.add(c.index)
+            while q:
+                i = q.popleft()
+                for ni, _ in neighbors8(s, i):
+                    n = s.cells[ni]
+                    if (ni not in seen and n.cover == INVASIVE
+                            and n.stage >= ESTABLISHED and not across_water(s, i, ni)):
+                        seen.add(ni)
+                        comp.append(ni)
+                        q.append(ni)
+            out.append(comp)
+        return sorted(out, key=len, reverse=True)
+
+    def band_load(self, band: list) -> int:
+        """What a band is worth as fuel. Dense ground is older, drier and taller,
+        so it counts for more than the same area of thin lantana."""
+        w = self.cfg["dense_weight"]
+        return sum(w if self.state.cells[i].stage == DENSE else 1 for i in band)
+
     def severity(self) -> tuple[int, list]:
-        """0 nothing to burn, else 1..3 from the largest connected dense cluster."""
-        clusters = self.dense_clusters()
-        fuel = any(c.cover == INVASIVE and c.stage >= ESTABLISHED for c in self.state.cells)
-        if not fuel and not clusters:
+        """0 nothing to burn, else 1..3 from the largest connected band.
+
+        Severity used to come from the largest patch of dense lantana alone,
+        which meant a long chain of thinner lantana joining two stands counted
+        for nothing. That is the opposite of what we are trying to teach: it is
+        the joining up that makes the fire dangerous, not the thickness of any
+        one patch.
+        """
+        bands = self.bands()
+        if not bands:
             return 0, []
-        biggest = clusters[0] if clusters else []
-        n = len(biggest)
-        if n < self.cfg["sev_t1"]:
+        biggest = bands[0]
+        load = self.band_load(biggest)
+        if load < self.cfg["sev_t1"]:
             return 1, biggest
-        if n < self.cfg["sev_t2"]:
+        if load < self.cfg["sev_t2"]:
             return 2, biggest
         return 3, biggest
+
+    def band_patches(self, band: list) -> int:
+        """How many players' starting patches a band reaches across. One is a
+        patch growing. Three is a network."""
+        home = {}
+        for p in self.players.values():
+            for i in p.patch:
+                home[i] = p.id
+        return len({home[i] for i in band if i in home})
 
     def _fire(self, rng: random.Random):
         """Returns (animation frames, log record, what Ember says)."""
@@ -912,24 +1035,51 @@ class Game:
         return any(s.cells[i].cover == VILLAGE for i in near)
 
     def _auto_action(self) -> tuple[str, str]:
-        """Pick the most useful action for the map as it stands. A forecast is
-        the last resort: spending the room's one choice on information while a
-        dense stand sits next to the village teaches the wrong lesson."""
+        """Pick the most useful action for the map as it stands.
+
+        This used to reach for water the moment severity hit 3, on the reasoning
+        that a fire that big runs past any single break. That is defensible and
+        it was wrong for this game: water holds tonight's fire to a few squares,
+        so the one night the room would have watched a connected band carry a
+        fire from one end of the map to the other, they saw a puddle instead.
+        The whole point of the evening is that a joined-up band is a different
+        problem from a big patch, and you cannot teach that by hiding it.
+
+        So once there is a band worth fearing, the answer is a break, dug where
+        it protects something. If it holds, the room sees a break work. If the
+        fire goes round it, they see why one trench is not a strategy. Either
+        way they see the run. Water stays as the answer to a middling fire with
+        nothing in particular to defend, and a forecast is the last resort.
+        """
         s = self.state
-        clusters = self.dense_clusters()
+        bands = self.bands()
         sev = self.locked_sev
-        # A fire this big will run past any single break, so the answer is
-        # people and water, not a trench.
-        if sev >= 3:
-            return WATER_ACT, T("ember", "auto.big")
-        if clusters:
-            near = self._near(clusters[0], self.cfg["line_reach"])
+        biggest = bands[0] if bands else []
+        if biggest:
+            near = self._near(biggest, self.cfg["line_reach"])
             if any(s.cells[i].cover == VILLAGE for i in near):
                 return FIRELINE, T("ember", "auto.village")
-            return FIRELINE, T("ember", "auto.native")
+            if sev >= 2 or self.connected():
+                return FIRELINE, T("ember", "auto.native")
         if sev >= 2:
             return WATER_ACT, T("ember", "auto.big")
         return EWS, T("ember", "auto.watch")
+
+    def connected(self) -> bool:
+        """Has the lantana joined into one network yet?
+
+        Before this, removing a player takes a whole patch of fuel off the board
+        and the fires stay small and scattered. After it, the fuel runs between
+        what used to be separate patches, so taking one player out no longer
+        breaks the chain, and the room has to deal with fire whether it wants to
+        or not. This is the turn the evening is built around.
+        """
+        bands = self.bands()
+        if not bands:
+            return False
+        big = bands[0]
+        return (len(big) >= self.cfg["connect_cells"]
+                and self.band_patches(big) >= self.cfg["connect_patches"])
 
     def _near(self, cells: list, reach: int) -> set:
         s = self.state

@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 51 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 61 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -73,6 +73,11 @@ lantana back and turn a hopeless board around.
 When it ends, press **Replay the map** and then **Next night** to walk the
 forest forward one night at a time. No cards, no narration, just the land.
 
+Then press **Start stage 2**. The same people, the same names, the same phones
+and the same forest, with roles dealt again so nobody carries over what they
+learned about who was lantana. Fire comes into the game from night one. **Back
+to stage 1** resets the other way, for rehearsal.
+
 Through the whole of stage 1 the map draws a faint dashed boundary around the
 ground each player started with. Those boundaries never move, so the room can
 watch one shape change hands over the evening. That is the frame for the
@@ -114,16 +119,42 @@ changes nothing on the map.
 **Resilience.** The room never picks which one. The game master either picks or
 presses Resolve and lets the system choose.
 
+The automatic choice used to reach for water as soon as severity hit 3, on the
+reasoning that a fire that big runs past any single break. That is defensible
+and it was wrong here: water holds tonight's fire to a few squares, so the one
+night the room would have watched a connected band carry a fire across the map,
+they saw a puddle instead. Once there is a band worth fearing the automatic
+choice is a trench. If it holds, the room sees a break work. If the fire goes
+round it, they see why one trench is not a strategy. Either way they see the
+run.
+
 | Action | What it does |
 |---|---|
 | Fire line | A permanent trench hugging the homes, or the biggest block of forest. Repeated nights extend the same ring. |
 | Water | Tonight's fire is held to a few squares whatever the fuel. |
 | Early warning | A forecast of tomorrow night. Changes nothing tonight. |
 
-**Fire.** Severity comes from the largest connected stand of thick lantana,
-fixed against the map the room debated over, so what Ember says and what the map
-does always agree. Early nights are small sparks. By the middle of the game
-separate patches have met, and one fire runs through all of them.
+**Fire, and the thing stage 2 is actually about.** Severity comes from the
+largest connected **band** of burnable lantana, not from the biggest thick
+patch. Three separate stands of ten squares are three small fires. The same
+thirty squares joined into one band is a single run that carries end to end, and
+the ground it crosses on the way is what turns a nuisance into a loss.
+
+That is the whole lesson, and the round order is built to deliver it:
+
+| Nights | What the room sees | What it should learn |
+|---|---|---|
+| 1 to 2 | Small fires, a few squares, in whichever patch they start | Hunting lantana now is cheap and it works |
+| 3 to 4 | The patches meet. One card says so, once | The moment the network closes, removing one player stops breaking the chain |
+| 5 on | One fire running the length of the band into forest or homes | From here it is fire work, and fire work is expensive |
+
+Lantana is pushed to join up the way it does in the field: fastest along roads,
+and fastest into the gaps between stands that are already close. Water splits a
+band, because a creeping fire cannot cross a river any more than the plant can.
+
+Measured over 120 scripted games: the joined-up card appears in 116 of them,
+median night 3, and the biggest fire of a game is a median of 55 squares of the
+264 on the board.
 
 **What the animations say.** Every change greys out the rest of the board and
 holds on the squares that are about to move, so a room knows where to look on a
@@ -175,14 +206,19 @@ Everything tunable is in `stage2/config.py`.
 | `max_rounds` | 8 | Nights before the season ends as a loss |
 | `loss_health` | 35 | Forest percentage that loses the game |
 | `village_loss` | True | Fire reaching the homes ends it |
-| `village_clearance` | 5 | How far homes start from the first infestation |
+| `village_clearance` | 9 | How far homes start from the first infestation |
 | `lantana_ratio` | 4 | One lantana per this many players, minimum two |
 | `lantana_core` | 4 | Cells of a lantana player's ground that start infested |
 | `native_loss_core` | 4 | Cells lantana takes at once when a native is out |
 | `owned_fraction` | 0.66 | Share of land split into patches; the rest is commons |
 | `growth_established` / `growth_dense` | 0.30 / 0.42 | How fast lantana spreads per neighbour |
 | `reinvade_p` / `regen_p` | 0.55 / 0.22 | What bare ground becomes |
-| `sev_t1` / `sev_t2` | 7 / 13 | Thick-stand sizes that push fire to severity 2 and 3 |
+| `sev_t1` / `sev_t2` | 18 / 30 | Band load that pushes fire to severity 2 and 3 |
+| `dense_weight` | 2 | How many thin squares one dense square is worth |
+| `connect_cells` / `connect_patches` | 16 / 2 | Band size and spread that counts as joined up |
+| `road_mult` | 2.2 | How much faster lantana takes roadside ground |
+| `gap_mult` / `gap_reach` | 2.0 / 4 | Pull towards ground that would close a gap to another stand |
+| `role_seed` | None | Deal roles from their own stream, so a reused map is not a reused deal |
 | `fire_cells` | 3 / 12 / 38 | Squares a fire of each severity can take |
 | `fire_round_ramp` | 0.22 | Extra reach per night as the season dries |
 | `line_cells` | 10 | Trench dug per resilience night |

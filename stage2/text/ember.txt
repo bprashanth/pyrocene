@@ -70,6 +70,13 @@ Lantana spread into one more square.
 [growth.none]
 Lantana did not spread tonight.
 
+# --- the turn ------------------------------------------------------------------
+# Said once, the night separate patches become one run of fuel. Everything the
+# room does from here is different, so it gets its own card and its own animation.
+
+[network]
+The lantana now runs in one connected band across {n} patches. Fire can carry the whole length of it. Taking one patch out no longer breaks the chain.
+
 # --- fire ---------------------------------------------------------------------
 [fire.quiet]
 No fire tonight.

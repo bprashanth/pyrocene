@@ -161,6 +161,30 @@ class Room:
         self.steps, self.cursor = [], 0
         self.quiet() if self.game.cfg["stage"] == 1 else self.show_map()
 
+    def next_stage(self):
+        """Carry the room from stage 1 into stage 2.
+
+        The same people, the same names, the same phones, the same forest. Roles
+        are dealt again, because stage 2 is a new game and nobody should walk in
+        knowing who lantana was last time. Keeping the tokens is the point: a
+        room of twenty does not want to retype their names, and a restart used to
+        be the only way to change stage.
+        """
+        old = self.game
+        if old.cfg["stage"] != 1 or old.phase != "ended":
+            raise ValueError("stage 1 has to finish first")
+        roster = [(p.name, p.token) for p in old.players.values()]
+        self.stage = 2
+        # Same forest, so the room already knows the map, but a different deal.
+        g = Game(seed=old.seed, config={"stage": 2, "role_seed": old.seed + 1})
+        for name, token in roster:
+            g.add_player(name).token = token
+        g.start()
+        self.game = g
+        self.steps, self.cursor = [], 0
+        self.replay, self.replay_at = [], 0
+        self.show_map()
+
     def begin(self, steps: list):
         self.steps = steps
         self.cursor = 0
@@ -460,6 +484,11 @@ class Handler(BaseHTTPRequestHandler):
                 if p == "/api/gm/advance":
                     ROOM.advance()
                     return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/next_stage":
+                    if ROOM.mode in ("explain", "playing"):
+                        return self._json(409, {"error": "finish what is on screen first"})
+                    ROOM.next_stage()
+                    return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/skip":
                     if ROOM.mode == "playing":
                         return self._json(409, {"error": "finish what is on screen first"})
@@ -479,6 +508,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/reset":
                     seed = body.get("seed")
+                    # A reset keeps whichever stage the room is on unless it is
+                    # told otherwise, so a game master can rehearse stage 1 again
+                    # after going through to stage 2 without restarting.
+                    if body.get("stage") in (1, 2):
+                        ROOM.stage = int(body["stage"])
                     ROOM.game = Game(seed=int(seed) if seed else None,
                                      config={"stage": ROOM.stage})
                     ROOM.steps, ROOM.cursor = [], 0

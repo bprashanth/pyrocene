@@ -228,9 +228,30 @@ def render(scene) -> str:
         B.append(bd(scene.held, TRENCH, max(4, u * 0.22)))
     if scene.focus:
         d = cut(scene.focus, 0.2)
-        B.append(f'<path d="{d}" fill="{PAPER}" opacity=".35" filter="url(#rough)" fill-rule="evenodd"/>')
-        B.append(f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="3.4" '
-                 f'filter="url(#rough)" fill-rule="evenodd"/>')
+        if scene.spotlight:
+            # Used when the point of the frame is the shape itself rather than a
+            # change about to happen inside it. The paper wash below is right for
+            # "watch these squares turn over" and wrong here: it drains the
+            # colour out of the very thing the room is being asked to look at,
+            # so a connected band of lantana came out as a grey blob.
+            lit = [i for i in scene.focus if scene.cover.get(i) == "lantana"]
+            # Outline whatever is actually lit, on the same organic path as the
+            # fill. Outlining the square-cornered focus box instead left a
+            # blocky edge floating a few pixels off the shape it described.
+            edge = nat(lit, 0.2, 67) if lit else d
+            if lit:
+                B.append(f'<path d="{edge}" fill="{PAPER}" filter="url(#rougher)" fill-rule="evenodd"/>')
+                B.append(f'<path d="{edge}" fill="url(#lant)" filter="url(#rougher)" fill-rule="evenodd"/>')
+                thick_lit = [i for i in lit if scene.stage.get(i, 1) >= 3]
+                if thick_lit:
+                    B.append(f'<path d="{nat(thick_lit, 0.22, 71)}" fill="url(#lantT)" '
+                             f'filter="url(#rougher)" fill-rule="evenodd"/>')
+            B.append(f'<path d="{edge}" fill="none" stroke="{LANT_INK}" stroke-width="3.8" '
+                     f'filter="url(#rougher)" fill-rule="evenodd"/>')
+        else:
+            B.append(f'<path d="{d}" fill="{PAPER}" opacity=".35" filter="url(#rough)" fill-rule="evenodd"/>')
+            B.append(f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="3.4" '
+                     f'filter="url(#rough)" fill-rule="evenodd"/>')
     B.append("</g>")
     # Names, so nobody has to talk over the map. Drawn after the clip so a label
     # near the edge is never cut in half.
