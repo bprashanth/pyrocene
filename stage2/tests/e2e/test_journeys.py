@@ -164,6 +164,9 @@ def fresh(seed=None, players=12):
     api("/api/gm/reset", {"seed": seed})
     api("/api/gm/seed", {"n": players})
     api("/api/gm/start", {})
+    # Stage 2 opens on a card saying how a night goes. Press through it, the way
+    # a game master does, so the tests start where a round starts.
+    drain()
     return api("/api/state")
 
 
@@ -197,6 +200,9 @@ class J01_JoinAndRoles(unittest.TestCase):
         self.assertEqual(gm.locator("#players tr").count(), 12)
         shot(gm, "j01-gm-lobby.png")
         gm.click("#start")
+        # Stage 2 opens on the card that says how a night goes.
+        gm.wait_for_selector("#onscreen:not([hidden])", timeout=5000)
+        gm.click("#advance")
         gm.wait_for_selector("#night:not([hidden])", timeout=5000)
 
         state = api("/api/state")
@@ -462,9 +468,12 @@ class J07_EarlyWarning(unittest.TestCase):
         fresh(seed=61)
         play_round("hunt")
         st = play_round("resilience", "ews")
-        self.assertIn("ews", keys(st))
         fc = step(st, "forecast")
         self.assertIsNotNone(fc, "early warning must put a forecast on screen")
+        self.assertNotIn("ews", keys(st),
+                         "one card with the forecast on it, not a preamble as well")
+        self.assertEqual(fc["title"], "Early warning")
+        self.assertTrue(fc["text"].startswith("Forecast for next night:"), fc["text"])
         after = api("/api/state")
         self.assertIsNotNone(after["forecast"])
         self.assertIn(after["forecast"]["wind"], fc["text"])
@@ -476,11 +485,11 @@ class J08_SystemPicks(unittest.TestCase):
         for _ in range(2):
             play_round("hunt")
         st = play_round("resilience", None)
-        picked = [k for k in keys(st) if k in ("line", "water", "ews")]
+        picked = [k for k in keys(st) if k in ("line", "water", "forecast")]
         self.assertEqual(len(picked), 1, "exactly one resilience action should happen")
         said = step(st, picked[0])["text"]
         self.assertTrue(any(w in said for w in ("so the crew digs", "so a response team",
-                                                "posts a forecast")),
+                                                "Forecast for next night")),
                         f"Ember must give the reason: {said}")
         self.assertTrue(api("/api/state")["history"][-1]["auto"])
 
@@ -549,7 +558,8 @@ class J10_SeedTestPlayers(unittest.TestCase):
         gm.click("#seed")
         gm.wait_for_function("document.querySelectorAll('#players tr').length === 12", timeout=5000)
         gm.click("#start")
-        gm.wait_for_selector("#night:not([hidden])", timeout=5000)
+        gm.wait_for_selector("#onscreen:not([hidden])", timeout=5000)
+        gm.click("#advance")
         gm.wait_for_selector("#night:not([hidden])", timeout=5000)
         shot(gm, "j10-gm-night.png")
         gm.click("#finishnight")
