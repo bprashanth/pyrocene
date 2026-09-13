@@ -10,17 +10,17 @@ Arrival time per pixel is read from the Messages file: (from, to, period,
 ROS), one line per cell that catches, the period being the minute it caught.
 """
 import os, subprocess, numpy as np
-from landscape import RES, WIND
+import landscape as L
 
 SB = {0: 99, 1: 102, 2: 141, 3: 145, 4: 149, 5: 101}    # NB9, GR2, SH1, SH5, SH9, GR1 as grid values in the S&B lookup (timber litter classes barely moved)
 
 def run(binary, board, fuel, alt, ign_xy, minutes=30, workdir="/tmp/c2f-run", wind=None, seed=1):
-    wind = wind or WIND
+    wind = wind or L.WIND
     ny, nx = fuel.shape
     os.makedirs(workdir, exist_ok=True)
     def asc(path, arr, fmt="%d"):
         with open(path, "w") as fh:
-            fh.write(f"ncols {nx}\nnrows {ny}\nxllcorner 0\nyllcorner 0\ncellsize {RES}\nNODATA_value -9999\n")
+            fh.write(f"ncols {nx}\nnrows {ny}\nxllcorner 0\nyllcorner 0\ncellsize {L.RES}\nNODATA_value -9999\n")
             np.savetxt(fh, arr, fmt=fmt, delimiter=" ")
     asc(os.path.join(workdir, "fuels.asc"), np.vectorize(SB.get)(fuel))
     asc(os.path.join(workdir, "elevation.asc"), alt, fmt="%.2f")
@@ -33,7 +33,7 @@ def run(binary, board, fuel, alt, ign_xy, minutes=30, workdir="/tmp/c2f-run", wi
         fh.write("Instance,datetime,WS,WD,FireScenario\n")
         for m in range(minutes + 2):
             fh.write(f"lab,2001-10-16 {13 + m // 60:02d}:{m % 60:02d},{wind['speed'] * 3.6:.1f},{wind['from_deg']:.1f},2\n")
-    ix, iy = int(ign_xy[0] / RES), int(ign_xy[1] / RES)
+    ix, iy = int(ign_xy[0] / L.RES), int(ign_xy[1] / L.RES)
     ncell = iy * nx + ix          # Cell2Fire numbers cells row-major from the top-left, and this is what it ignites
     with open(os.path.join(workdir, "Ignitions.csv"), "w") as fh: fh.write(f"Year,Ncell\n1,{ncell}\n")
     out = os.path.join(workdir, "out"); os.makedirs(out, exist_ok=True)

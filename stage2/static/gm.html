@@ -77,7 +77,7 @@
   </div>
 
   <div id="onscreen" class="card" hidden>
-    <h2>On the projector</h2>
+    <h2>Ready to show</h2>
     <p id="cardtitle" style="margin:0 0 4px;font-weight:700;color:var(--orange)"></p>
     <p id="cardtext" style="margin:0 0 14px;color:var(--muted)"></p>
     <div class="row">
@@ -239,7 +239,11 @@
 
     if (s.current) {
       $("#cardtitle").textContent = s.current.title;
-      $("#cardtext").textContent = s.current.text;
+      // Stage 2 hands back one step with nothing written on it: the whole night
+      // runs as a single animation and the projector keeps the map. Say what
+      // the press does rather than leaving the panel blank.
+      $("#cardtext").textContent = s.current.text ||
+        "The removal, the spread, the crew's work and the fire, in order, in one run.";
     }
     $("#advance").hidden = s.mode !== "explain";
     $("#playing").hidden = s.mode !== "playing";

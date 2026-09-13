@@ -107,9 +107,12 @@ class Game:
                          "cols": 0, "rows": 0, "players": []}
         self.ending = None
         self.last_steps: list = []
+        self.last_phases: list = []   # the round's parts, before they are folded
+        self._night_phases: list = []
         self.lantana_override: int | None = None
         self.network_called = False   # the joined-up card is shown once
         self.reprieve_round = 0       # a round the game master bought more time for
+        self.held_beats: list = []    # stage 2: the night's frames, held for the one run
 
     # ---- lobby -----------------------------------------------------------
     def add_player(self, name: str) -> Player:
@@ -400,6 +403,13 @@ class Game:
         self.step = "day"
         self.pending["night_kill"] = None
         end = self._check_end(r, night=True)
+        if self.cfg["stage"] != 1:
+            # Hold the night's frames for the single run at the end of the round.
+            # The room wakes, hears nothing, and goes straight to the vote.
+            self.held_beats = [f for st in steps for f in st["beats"]]
+            self.last_phases = list(steps)
+            self._night_phases = list(steps)
+            steps = []
         if end:
             steps.append(self._ending_step(end))
         return steps
@@ -540,10 +550,84 @@ class Game:
             if rng.random() < 0.3:
                 self.state.wind = rng.choice(("N", "S", "E", "W"))
         self.pending = {"night_kill": None, "vote": None, "choice": None, "action": None}
+        if not stage_one:
+            steps = self._one_run(steps, r)
         self.last_steps = steps
         return steps
 
     # ---- step and frame helpers -------------------------------------------
+
+
+    def _tighten(self, beats: list) -> list:
+        """Trim the joins when four transitions are played as one.
+
+        Each phase on its own opens by holding on the squares about to change
+        and closes by handing the whole map back, which is right when the room
+        has just read a card about it. Run end to end those holds are most of
+        the running time and they read as four separate things rather than one
+        night. So the settles between phases go, and the opening holds are cut
+        to about half a second. The last settle stays: the room needs a moment
+        on the board they are about to argue over.
+        """
+        if not beats:
+            return beats
+        out = []
+        for k, f in enumerate(beats):
+            last = k == len(beats) - 1
+            if f["kind"] == "quiet" and len(beats) > 1:
+                continue                       # nothing happened in that phase
+            if f["kind"] == "settle" and not last:
+                continue
+            g = dict(f)
+            if f["kind"] in ("focus", "halo") and not last:
+                g["hold_ms"] = min(f["hold_ms"], self.cfg["run_hold_ms"])
+            out.append(g)
+        # Some phases end on a written frame rather than on the board: a
+        # forecast, or the night a water crew stands by. Dropping the settles
+        # between phases left those as the last thing on the projector, so the
+        # room was looking at a sentence when they went back to arguing.
+        if out and out[-1]["kind"] in ("forecast", "water", "quiet"):
+            out.append(self._frame("settle", ""))
+        return out
+
+    def _one_run(self, steps: list, r: int) -> list:
+        """Stage 2: the whole night as a single animation, with no cards.
+
+        Stage 1 stops at every change, because the map is the lesson there and
+        the room has nothing else to attend to. Stage 2 is a game being played:
+        the room has just argued, voted and been told nothing, and stopping them
+        four times to read a card about ground they cannot act on breaks the
+        thing they are actually doing. So the removal, the spread, whatever the
+        crew did and the fire all run in order, once, and the game master sees
+        the numbers on the console. The explaining happens in the replay, where
+        there is time for it.
+        """
+        beats, ending = list(self.held_beats), None
+        self.held_beats = []
+        for st in steps:
+            if st["key"] == "ending":
+                ending = st
+                continue
+            beats.extend(st["beats"])
+        # Keep the phases as they were built. Nothing in the room uses them any
+        # more, but they are what a test or a screenshot run wants to look at,
+        # and folding them away would have meant asserting on the shape of one
+        # long animation instead of on what each part of the night did.
+        self.last_phases = self._night_phases + [st for st in steps if st["key"] != "ending"]
+        self._night_phases = []
+        beats = self._tighten(beats)
+        out = []
+        if beats:
+            # No text, so the projector holds the map rather than a card and the
+            # console offers one press.
+            # Named for the night it belongs to. The round counter has already
+            # moved on by the time this is built, so a bare title had the
+            # console offering night two while night one was still waiting.
+            out.append(self._step("round", T("cards", "round.title", r=r), "", beats))
+        if ending:
+            out.append(ending)
+        return out
+
     def _step(self, key: str, title: str, text: str, beats: list, cells=None) -> dict:
         return {"key": key, "title": title, "text": text, "beats": beats,
                 "cells": [self.cell_name(i) for i in (cells or [])]}

@@ -28,10 +28,15 @@
   #legend .sw i { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-2px; margin-right:6px; }
   #legend .trench i { display:inline-block; width:26px; height:10px; vertical-align:-1px; margin-right:6px; background:#efe6d2; border-radius:5px; background-image: repeating-linear-gradient(90deg, #1f5f88 0 5px, transparent 5px 9px); background-size:100% 3px; background-repeat:no-repeat; background-position:0 3.5px; }
   #note { margin-top:14px; color:var(--dim); font-size:12.5px; }
+  #pick { font:inherit; font-size:12px; color:var(--ink); background:#161c27; border:1px solid #2d3745; border-radius:6px; padding:4px 8px; margin-left:14px; vertical-align:middle; }
+  #facts { display:flex; flex-wrap:wrap; gap:6px 28px; margin:-2px 0 12px; font-size:13px; }
+  #facts b { color:var(--dim); font-weight:600; margin-right:6px; }
+  #facts a { color:#6f8cc0; margin-right:10px; font-size:12px; }
 </style>
 <div id="wrap">
-  <h1>PYROCENE FIRE LAB</h1>
+  <h1>PYROCENE FIRE LAB <select id="pick"></select></h1>
   <div class="sub" id="sub">Loading…</div>
+  <div id="facts"></div>
   <div id="bar">
     <button id="play">Play</button>
     <input id="t" type="range" min="0" max="1800" step="5" value="0">
@@ -57,34 +62,45 @@
   const T = M.minutes * 60;
   document.getElementById("t").max = T;
   const FUEL_COL = ["#1b2a33", "#2f5a35", "#8aa04a", "#b4b84c", "#d6c23a", "#a08a5a"];
-  const windWord = { 0: "north", 90: "east", 180: "south", 270: "west" }[M.wind.from_deg] || (M.wind.from_deg + "°");
-  document.getElementById("sub").textContent = `Night ${B.night}, the board when the big fire started. One square is ${M.cell_m} m. Wind ${M.wind.speed} m/s from the ${windWord}. ${M.minutes} minutes of fire.`;
+  const windWord = { 0: "north", 45: "north-east", 90: "east", 135: "south-east", 180: "south", 225: "south-west", 270: "west", 315: "north-west" }[M.wind.from_deg] || (M.wind.from_deg + "°");
+  const mins = M.minutes >= 90 ? `${Math.round(M.minutes / 60 * 10) / 10} h` : `${M.minutes} min`;
+  const windTxt = (R.wind_reported ? `${R.wind_reported} reported, ${M.wind.speed} m/s modelled` : `${M.wind.speed} m/s`) + `, from the ${windWord}`;
+  document.getElementById("sub").hidden = true;
+  const facts = R.case ? [["Place", R.case.place], ["Date", R.case.date], ["Fuel", R.case.fuel]] : [["Game", `sample, night ${B.night}`]];
+  facts.push(["Square", `${M.cell_m} m`], ["Wind", windTxt], ["Duration", mins]);
+  document.getElementById("facts").innerHTML = facts.map(([k, v]) => `<span><b>${k}</b>${v}</span>`).join("") +
+    (R.case ? `<span>${R.case.sources.map(u => `<a href="${u}" target="_blank" rel="noopener">${new URL(u).hostname.replace("www.", "")}</a>`).join("")}</span>` : "");
+  try {
+    const idx = await (await fetch("results/index.json", { cache: "no-store" })).json();
+    const pick = document.getElementById("pick");
+    for (const run of idx.runs) { const o = document.createElement("option"); o.value = run.name; o.textContent = run.title; if (run.name === name) o.selected = true; pick.appendChild(o); }
+    pick.onchange = () => { location.search = "?run=" + pick.value; };
+  } catch (e) {}
 
   const grid = document.getElementById("grid");
   const panels = [];
   function addRow(title, sub) { const d = document.createElement("div"); d.className = "row-title"; d.innerHTML = title + (sub ? `<span>${sub}</span>` : ""); grid.appendChild(d); }
-  function addMap(sc, label, sub) {
+  function addMap(sc, label) {
     const p = document.createElement("div"); p.className = "panel";
-    p.innerHTML = `<h3>${label}</h3><div class="k">${sub}</div><div class="svg">${sc.svg}</div><div class="n"></div>`;
+    p.innerHTML = `<h3>${label}</h3><div class="svg">${sc.svg}</div><div class="n"></div>`;
     grid.appendChild(p);
   }
-  function addPanel(sname, model, label, sub) {
+  function addPanel(sname, model, label) {
     const p = document.createElement("div"); p.className = "panel";
-    p.innerHTML = `<h3>${label}</h3><div class="k">${sub}</div><canvas width="880" height="480"></canvas><div class="n"><span>squares burned <b class="b">0</b></span><span class="mono pct"></span></div>`;
+    p.innerHTML = `<h3>${label}</h3><canvas width="880" height="480"></canvas><div class="n"><span>squares burned <b class="b">0</b></span><span class="mono pct"></span></div>`;
     grid.appendChild(p);
     panels.push({ sname, model, canvas: p.querySelector("canvas"), b: p.querySelector(".b"), pct: p.querySelector(".pct") });
   }
   const sc0 = R.scenarios.as_played, sc1 = R.scenarios.proposal;
   const FF = "ForeFire 2.5", C2 = "Cell2Fire";
-  const ffSub = "moves a continuous fire line", c2Sub = "fire jumps square to square, standard fuel classes";
-  addRow("AS PLAYED", `the game's own fire took ${B.burned.length} squares`);
-  addMap(sc0, "The game", "the board as the room left it");
-  if (sc0.models.forefire) addPanel("as_played", "forefire", FF, ffSub);
-  if (sc0.models.cell2fire) addPanel("as_played", "cell2fire", C2, c2Sub);
-  addRow("WITH A PLAN", `${R.proposal.cleared.length} squares of thick lantana cleared, a fire line of ${R.proposal.line.length} squares dug downwind` + (sc1.ignition !== B.ignition ? "; the same fire, started on the nearest lantana left" : ""));
-  addMap(sc1, "The plan", "cleared ground and the fire line, drawn as the game draws them");
-  if (sc1.models.forefire) addPanel("proposal", "forefire", FF, ffSub);
-  if (sc1.models.cell2fire) addPanel("proposal", "cell2fire", C2, c2Sub);
+  addRow("WHAT HAPPENED", R.case ? "" : `the game's fire took ${B.burned.length} squares`);
+  addMap(sc0, R.case ? "The land" : "The game");
+  if (sc0.models.forefire) addPanel("as_played", "forefire", FF);
+  if (sc0.models.cell2fire) addPanel("as_played", "cell2fire", C2);
+  addRow("MANAGEMENT PLAN", R.proposal.text || `${R.proposal.cleared.length} squares of thick lantana cleared, fire line of ${R.proposal.line.length} squares`);
+  addMap(sc1, "The plan");
+  if (sc1.models.forefire) addPanel("proposal", "forefire", FF);
+  if (sc1.models.cell2fire) addPanel("proposal", "cell2fire", C2);
 
   for (const sc of [sc0, sc1]) {
     sc.fuelArr = Int8Array.from(sc.fuel);
@@ -130,7 +146,7 @@
       const sx = W / sc.nx, sy = H / sc.ny, cw = W / cols, ch = H / rows;
       const arr = sc.models[p.model].arr;
       const img = ctx.getImageData(0, 0, W, H); const d = img.data;
-      for (let y = 0; y < H; y++) { const iy = Math.floor(y / sy); for (let x = 0; x < W; x++) { const a = arr[iy * sc.nx + Math.floor(x / sx)]; if (a < 0 || a > t) continue; const age = t - a; const o = (y * W + x) * 4;
+      for (let y = 0; y < H; y++) { const iy = Math.floor(y / sy); for (let x = 0; x < W; x++) { const pi = iy * sc.nx + Math.floor(x / sx); const a = arr[pi]; if (a < 0 || a > t || sc.fuelArr[pi] === 0) continue; const age = t - a; const o = (y * W + x) * 4;
         if (age < 90) { const k = age / 90; d[o] = 255; d[o + 1] = 170 - 110 * k; d[o + 2] = 40 - 30 * k; } else { d[o] = 20; d[o + 1] = 16; d[o + 2] = 14; } } }
       ctx.putImageData(img, 0, 0);
       const burned = squaresBurned(sc, arr, t);
@@ -141,7 +157,7 @@
       drawLine(ctx, sc.lineCells, cw, ch);
       const ign = sc.ignition == null ? B.ignition : sc.ignition, ir = Math.floor(ign / cols), ic = ign % cols;
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc((ic + 0.5) * cw, (ir + 0.5) * ch, 7, 0, 6.3); ctx.stroke();
-      p.b.textContent = burned; p.pct.textContent = Math.round(100 * burned / (cols * rows)) + "% of the board";
+      p.b.textContent = burned;
     }
     document.getElementById("tlabel").textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
   }

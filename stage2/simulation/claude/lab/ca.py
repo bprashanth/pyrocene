@@ -10,7 +10,8 @@ Cell2Fire is run separately in run_cell2fire.py when it is available.
 """
 import heapq, math
 import numpy as np
-from landscape import RES, FUELS, WIND, rothermel_ros
+import landscape as L
+from landscape import rothermel_ros
 
 NB = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1),
       (-2, -1), (-2, 1), (2, -1), (2, 1), (-1, -2), (1, -2), (-1, 2), (1, 2)]   # 16 directions, so the front is not a diamond
@@ -20,11 +21,11 @@ def length_to_breadth(wind_ms):
     return 1.0 + 8.729 * (1.0 - math.exp(-0.030 * ws)) ** 2.155
 
 def run(fuel, alt, ign_xy, minutes=40, wind=None, wind_reduction=0.4):
-    wind = wind or WIND
+    wind = wind or L.WIND
     ny, nx = fuel.shape
     # rate of spread at the head, per fuel class, and the elliptical shape
-    head = {k: rothermel_ros(f, wind["speed"], 0.0, wind_reduction) for k, f in FUELS.items()}
-    still = {k: rothermel_ros(f, 0.0, 0.0, wind_reduction) for k, f in FUELS.items()}
+    head = {k: rothermel_ros(f, wind["speed"], 0.0, wind_reduction) for k, f in L.FUELS.items()}
+    still = {k: rothermel_ros(f, 0.0, 0.0, wind_reduction) for k, f in L.FUELS.items()}
     lb = length_to_breadth(wind["speed"])
     ecc = math.sqrt(1 - 1 / (lb * lb))
     # wind blows towards this unit vector in raster coordinates (x east, y south)
@@ -37,10 +38,10 @@ def run(fuel, alt, ign_xy, minutes=40, wind=None, wind_reduction=0.4):
         cos = (dx * wx + dy * wy) / d
         r = head[k] * (1 - ecc) / (1 - ecc * cos)          # ellipse: head at cos=1, back at cos=-1
         r = max(r, still[k] * 0.35)
-        slope = dz / (d * RES)
+        slope = dz / (d * L.RES)
         if slope > 0: r *= 1 + 5.275 * 0.5 ** -0.3 * min(slope, 1.0) ** 2 * 0.3
         return r
-    ix, iy = int(ign_xy[0] / RES), int(ign_xy[1] / RES)
+    ix, iy = int(ign_xy[0] / L.RES), int(ign_xy[1] / L.RES)
     arrival = np.full((ny, nx), np.inf)
     arrival[iy, ix] = 0.0
     pq = [(0.0, iy, ix)]
@@ -60,7 +61,7 @@ def run(fuel, alt, ign_xy, minutes=40, wind=None, wind_reduction=0.4):
             r1 = ros_towards(k1, dx, dy, dz)
             r = 0.5 * (r0 + r1)
             if r <= 0: continue
-            dt = math.hypot(dx, dy) * RES / r
+            dt = math.hypot(dx, dy) * L.RES / r
             nt = t + dt
             if nt < arrival[yy, xx]:
                 arrival[yy, xx] = nt

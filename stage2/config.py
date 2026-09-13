@@ -88,6 +88,8 @@ CONFIG = {
     # --- projector pacing, milliseconds per animation frame ---------------
     # The game master controls the gaps between one explanation and the next, so
     # these only pace what moves. STAGE2_FAST=1 zeroes all of them.
+    "run_hold_ms": 520,        # holds inside stage 2's single run of a night
+
     "hold_ms": {
         # A transition runs about four seconds: hold on the squares, turn them
         # over a few at a time, then hand the whole map back.

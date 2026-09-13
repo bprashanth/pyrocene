@@ -562,11 +562,11 @@ class J10_SeedTestPlayers(unittest.TestCase):
         gm.click("#advance")
         gm.wait_for_selector("#night:not([hidden])", timeout=5000)
         shot(gm, "j10-gm-night.png")
+        # Stage 2 shows nothing at the end of the night. The room wakes, hears
+        # no verdict, and goes straight to the vote; the map moves once, later.
         gm.click("#finishnight")
-        gm.wait_for_selector("#advance:not([hidden])", timeout=8000)
-        shot(gm, "j10-gm-card.png")
-        gm.click("#advance")
         gm.wait_for_selector("#day:not([hidden])", timeout=15000)
+        shot(gm, "j10-gm-day.png")
         gm.check('input[name=choice][value=hunt]')
         gm.click("#finishvote")
         gm.wait_for_function(
@@ -599,8 +599,6 @@ class J12_NoScriptErrors(unittest.TestCase):
 
         # a whole round through the buttons a game master actually presses
         gm.click("#finishnight")
-        gm.wait_for_selector("#advance:not([hidden])", timeout=8000)
-        gm.click("#advance")
         gm.wait_for_selector("#day:not([hidden])", timeout=15000)
         gm.check('input[name=choice][value=resilience]')
         gm.wait_for_function("!document.querySelector('#finishvote').disabled", timeout=8000)

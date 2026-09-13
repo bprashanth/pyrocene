@@ -9,7 +9,10 @@
 How a night goes
 
 [intro.body]
-1. Lantana takes someone. 2. The room decides: hunt lantana, or work against fire. 3. Lantana spreads into the ground around it. 4. Fire, if there is fuel for it. The map shows each step before it happens.
+1. Team lantana eliminates a player. 2. The room votes: hunt for lantana, or work against fire. 3. Lantana spreads. 4. Fire sparks and spreads based on the environment.
+
+[round.title]
+Night {r}
 
 [night.title]
 The night

@@ -7,22 +7,23 @@ board metres with y measured south from the north-west corner.
 import numpy as np
 import pyforefire as pf, pyforefire.helpers as H
 import matplotlib.path as mpath
-from landscape import RES, fuel_table_csv, WIND
+import landscape as L
+from landscape import fuel_table_csv
 
 def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, log=print, params=None, scale=1.0):
     """`scale` runs the same board on a domain scale times larger (and scale
     times longer), which lets ForeFire's front parameters stay at the sizes
     its own tests use; positions and times come back in board units."""
-    wind = wind or WIND
+    wind = wind or L.WIND
     # A front that reaches the domain edge is dropped whole by ForeFire, which
     # looked like the fire going out at minute six. So the board gets a margin
     # of nothing to burn, taken off again on the way out.
     PAD = 20
     fuel = np.pad(fuel, PAD, mode="constant", constant_values=0)
     alt = np.pad(alt, PAD, mode="edge")
-    ign_xy = (ign_xy[0] + PAD * RES, ign_xy[1] + PAD * RES)
+    ign_xy = (ign_xy[0] + PAD * L.RES, ign_xy[1] + PAD * L.RES)
     ny, nx = fuel.shape
-    R = RES * scale
+    R = L.RES * scale
     Lx, Ly = nx * R, ny * R
     ff = pf.ForeFire()
     ff["fuelsTable"] = fuel_table_csv()
@@ -32,8 +33,9 @@ def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, l
     # front must be resolved finer than a pixel: with a coarser front, nodes
     # meeting a no-fuel square were dragged along its edge at the speed of
     # their neighbours and the fire ran the length of the river in minutes.
-    P = dict(perimeterResolution=1.0, spatialIncrement=0.3, initialFrontDepth=3, minimalPropagativeFrontDepth=1.2,
-             relax=0.2, smoothing=1000000, minSpeed=0.0005, burningDuration=100, maxFrontDepth=3,
+    k = L.RES / 3.0   # the settings below are for 3 m pixels; a coarser board scales them up
+    P = dict(perimeterResolution=1.0 * k, spatialIncrement=0.3 * k, initialFrontDepth=3 * k, minimalPropagativeFrontDepth=1.2 * k,
+             relax=0.2, smoothing=1000000, minSpeed=0.0005, burningDuration=100, maxFrontDepth=3 * k,
              bmapLayer=1, defaultHeatType=0, nominalHeatFlux=100000)
     P.update(params or {})
     for k, v in P.items():
@@ -86,7 +88,7 @@ def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, l
             verts = np.array([[vx, vy] for vx, vy in p.vertices if np.isfinite(vx) and np.isfinite(vy)])
             if len(verts) < 4: continue
             inside |= mpath.Path(verts).contains_points(pts)
-            polys.append([[float(vx / scale) - PAD * RES, float((Ly - vy) / scale) - PAD * RES] for vx, vy in verts])
+            polys.append([[float(vx / scale) - PAD * L.RES, float((Ly - vy) / scale) - PAD * L.RES] for vx, vy in verts])
         newly = inside & np.isnan(arrival)
         arrival[newly] = t
         fronts.append({"t": t, "polys": polys})
@@ -109,9 +111,12 @@ def run_subprocess(board_path, cleared, minutes, step, params=None, tries=4, pyt
     here = os.path.dirname(os.path.abspath(__file__))
     for k in range(tries):
         p = dict(params or {})
-        if k: p["perimeterResolution"] = p.get("perimeterResolution", 1.0) + 0.5 * k; p["spatialIncrement"] = p.get("spatialIncrement", 0.3) + 0.1 * k
+        if k: p["perimeterResolution"] = p.get("perimeterResolution", 1.0 * L.RES / 3.0) * (1 + 0.5 * k); p["spatialIncrement"] = p.get("spatialIncrement", 0.3 * L.RES / 3.0) * (1 + 0.5 * k)
         with tempfile.NamedTemporaryFile(suffix=".npz", delete=False) as tf: outp = tf.name
-        r = subprocess.run([python, os.path.join(here, "run_forefire.py"), board_path, json.dumps(list(cleared)), str(minutes), str(step), json.dumps(p), outp, json.dumps(list(line)), json.dumps(list(ign) if ign else None)], capture_output=True, text=True, timeout=400)
+        try:
+            r = subprocess.run([python, os.path.join(here, "run_forefire.py"), board_path, json.dumps(list(cleared)), str(minutes), str(step), json.dumps(p), outp, json.dumps(list(line)), json.dumps(list(ign) if ign else None)], capture_output=True, text=True, timeout=900)
+        except subprocess.TimeoutExpired:
+            print(f"  forefire try {k + 1} timed out"); continue
         if r.returncode == 0 and os.path.exists(outp) and os.path.getsize(outp) > 0:
             d = np.load(outp, allow_pickle=True); os.remove(outp)
             return d["arrival"], json.loads(str(d["fronts"])), p

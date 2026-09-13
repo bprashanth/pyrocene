@@ -9,9 +9,9 @@ named here in one place, because the room may one day set these numbers.
 import json, math
 import numpy as np
 
-CELL = 30.0          # metres per board square
-RES = 3.0            # metres per raster pixel
-SUB = int(CELL / RES)
+CELL = 30.0          # metres per board square (a board may set its own: configure())
+RES = 3.0            # metres per raster pixel, always a tenth of a square
+SUB = 10
 
 NATIVE, INVASIVE, BARE, WATER, VILLAGE = 0, 1, 2, 3, 4
 
@@ -29,6 +29,15 @@ FUELS = {
 }
 WIND = dict(speed=3.0, from_deg=270.0)   # m/s, blowing from the west
 HILL_HEIGHT = 30.0                        # metres, what a "hill" square rises to
+
+def configure(board):
+    """A board may carry its own square size, wind and fuel table (the real
+    cases do). Sets the module's values so every model reads the same."""
+    global CELL, RES, WIND, FUELS
+    CELL = float(board.get("cell_m", 30.0)); RES = CELL / SUB
+    if board.get("wind"): WIND = dict(board["wind"])
+    if board.get("fuels"):
+        for k, f in board["fuels"].items(): FUELS[int(k)] = dict(f)
 
 def rothermel_ros(f, wind_ms=0.0, slope_tan=0.0, wind_reduction=0.4):
     """Rate of spread in m/s, the Rothermel (1972) surface model as ForeFire
@@ -65,7 +74,9 @@ def fuel_table_csv():
     return "\n".join(rows)
 
 def load_board(path):
-    with open(path) as fh: return json.load(fh)
+    with open(path) as fh: b = json.load(fh)
+    configure(b)
+    return b
 
 def fuel_class(cell):
     if cell["fireline"]: return 0

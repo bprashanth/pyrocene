@@ -197,7 +197,10 @@ class Connectivity(unittest.TestCase):
                 pool = [p for p in g.players.values() if p.alive]
                 g.eliminate(rng.choice(pool).id)
                 g.choose("hunt", None)
-                calls += sum(1 for st in g.resolve_vote() if st["key"] == "network")
+                g.resolve_vote()
+                # Stage 2 folds the night into one animation, so the parts are
+                # read off last_phases rather than off what resolve hands back.
+                calls += sum(1 for st in g.last_phases if st["key"] == "network")
             self.assertLessEqual(calls, 1, f"seed {seed}: said it more than once")
             seen += calls
         self.assertGreaterEqual(seen, 15, "most games should reach the turn")
@@ -217,7 +220,8 @@ class Connectivity(unittest.TestCase):
             pool = [p for p in g.players.values() if p.alive]
             g.eliminate(rng.choice(pool).id)
             g.choose("hunt", None)
-            for st in g.resolve_vote():
+            g.resolve_vote()
+            for st in g.last_phases:
                 self.assertNotEqual(st["key"], "network",
                                     "stage 1 has no fire, so the band means nothing there")
 
@@ -323,6 +327,72 @@ class SeasonLength(unittest.TestCase):
         self.assertTrue(g.finale)
 
 
+class OneRunPerNight(unittest.TestCase):
+    """Stage 2 is a game being played. The room argues, votes, and is told
+    nothing; then the whole night runs once, on one press."""
+
+    def _round(self, g, rng, choice="resilience"):
+        prey = [p for p in g.players.values()
+                if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+        if prey:
+            g.eliminate(rng.choice(prey).id)
+        night = g.resolve_night()
+        if g.phase != "playing":
+            return night, []
+        if choice == "hunt":
+            pool = [p for p in g.players.values() if p.alive]
+            g.eliminate(rng.choice(pool).id)
+        g.choose(choice, None)
+        return night, g.resolve_vote()
+
+    def test_the_night_shows_nothing_and_the_round_shows_everything(self):
+        rng = random.Random(2)
+        g = Game(seed=13)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        for _ in range(3):
+            night, day = self._round(g, rng)
+            if g.phase != "playing":
+                break
+            self.assertEqual(night, [], "the night must not stop the room")
+            keys = [st["key"] for st in day]
+            self.assertEqual(keys, ["round"], f"one press, not {keys}")
+            self.assertEqual(day[0]["text"], "", "nothing to read")
+            self.assertIn("Night", day[0]["title"])
+
+    def test_the_one_run_holds_the_whole_night_in_order(self):
+        rng = random.Random(2)
+        g = Game(seed=13)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        for _ in range(4):
+            night, day = self._round(g, rng)
+            if g.phase != "playing" or not day:
+                break
+            kinds = [f["kind"] for f in day[0]["beats"]]
+            parts = [st["key"] for st in g.last_phases]
+            self.assertIn("fire", "".join(parts) + "".join(kinds) if parts else "")
+            # the board is the last thing the room is left looking at
+            self.assertEqual(kinds[-1], "settle")
+            # and the fire comes after the spread, not before it
+            if "creep" in kinds and "ignite" in kinds:
+                self.assertLess(kinds.index("creep"), kinds.index("ignite"))
+
+    def test_stage_one_still_stops_at_every_change(self):
+        rng = random.Random(2)
+        g = Game(seed=13, config={"stage": 1})
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        night, day = self._round(g, rng, choice="hunt")
+        self.assertEqual([st["key"] for st in night], ["night"])
+        self.assertIn("vote", [st["key"] for st in day])
+        self.assertTrue(all(st["text"] for st in night + day),
+                        "stage 1 reads a card at every change")
+
+
 class Openings(unittest.TestCase):
     def test_stage_two_opens_by_saying_how_a_night_goes(self):
         g = Game(seed=3)
@@ -331,7 +401,8 @@ class Openings(unittest.TestCase):
         g.start()
         steps = g.intro_steps()
         self.assertEqual(len(steps), 1)
-        for word in ("Lantana takes someone", "spreads", "Fire"):
+        for word in ("Team lantana eliminates", "The room votes", "Lantana spreads",
+                     "Fire sparks"):
             self.assertIn(word, steps[0]["text"])
 
     def test_stage_one_has_no_such_card(self):
@@ -358,8 +429,8 @@ class Openings(unittest.TestCase):
             if g.phase != "playing":
                 return
             g.choose("resilience", "ews")
-            steps = g.resolve_vote()
-            said = [st for st in steps if st["title"] == "Early warning"]
+            g.resolve_vote()
+            said = [st for st in g.last_phases if st["title"] == "Early warning"]
             self.assertEqual(len(said), 1, "one card, not two")
             self.assertTrue(said[0]["text"].startswith("Forecast for next night:"),
                             said[0]["text"])

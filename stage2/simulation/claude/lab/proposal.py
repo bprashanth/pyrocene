@@ -10,7 +10,8 @@ The rule is deliberately simple and stated on the page:
 """
 import math
 import numpy as np
-from landscape import WIND, NATIVE, INVASIVE, BARE
+import landscape as L
+from landscape import NATIVE, INVASIVE, BARE
 
 LINE_CELLS = 12
 
@@ -36,7 +37,7 @@ def clusters(cells, cols, rows):
     return sorted(out, key=len, reverse=True)
 
 def make(board, wind=None):
-    wind = wind or WIND
+    wind = wind or L.WIND
     cols, rows = board["cols"], board["rows"]
     cell = {c["i"]: c for c in board["cells"]}
     thick = [i for i, c in cell.items() if c["cover"] == INVASIVE and c["stage"] == 3]

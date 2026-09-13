@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 70 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 73 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -61,7 +61,7 @@ vote the console offers two buttons:
 | Button | |
 |---|---|
 | Continue | Applies the round without playing it. The map updates quietly and the room is not interrupted. |
-| Show what happened | Puts the card and the animation up, the same as stage 2. |
+| Show what happened | Puts the card and the animation up. |
 
 Press Continue all evening and the room plays Mafia at its own pace with the
 board sitting there for anyone who wants to look.
@@ -130,9 +130,23 @@ ground goes to whatever is next to it. A native player out lets lantana take
 hold in their stand and spread from there. The ecologist or ranger going out
 changes nothing on the map.
 
-**How a night goes.** Stage 2 opens on one card saying the order, because four
-things happen every night and a room has no reason to guess which comes first:
-lantana takes someone, the room decides, lantana spreads, then fire.
+**How a night goes.** Stage 2 opens on one card naming the order: team lantana
+eliminates a player, the room votes to hunt lantana or work against fire,
+lantana spreads, fire sparks and spreads based on the environment.
+
+**A stage 2 round is one press.** Finish night puts nothing on the projector.
+The room wakes, hears no verdict and goes straight to the vote. Mark the vote,
+press Finish vote, then press **Show what happened** once and the whole night
+runs in order: the removal, the spread, whatever the crew did and the fire.
+About twelve to seventeen seconds, then the board settles and the room argues
+over it.
+
+This is the opposite of stage 1 on purpose. Stage 1 stops at every change,
+because the map is the lesson there and the room has nothing else to attend to.
+Stage 2 is a game being played, and stopping it four times a night to read a
+card about ground nobody can act on gets in the way of the thing the room is
+doing. The explaining happens in the replay, where there is time for it. The
+game master reads the forest percentage off the console and carries on.
 
 **Resilience.** The room never picks which one. The game master either picks or
 presses Resolve and lets the system choose.
@@ -271,6 +285,7 @@ Everything tunable is in `stage2/config.py`.
 | `village_defend_range` | 8 | Only trench the homes if fuel is this close |
 | `stage` | 2 | 1 is plain Mafia with a replay at the end; 2 adds fire |
 | `hold_ms` | various | How long the projector holds each animation frame |
+| `run_hold_ms` | 520 | Shorter holds inside stage 2's single run of a night |
 
 ## Testing
 

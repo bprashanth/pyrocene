@@ -21,6 +21,25 @@ iconography, then the two models burning that. If the plan cleared the
 square the fire started on, the same fire starts on the nearest lantana
 left.
 
+## Real fires
+
+`cases.py` lays documented invasive-fuel fires out on the board in the
+game's words: Lahaina 2023 (guinea grass, one square 100 m, 60 minutes) and
+Bandipur 2019 (lantana under dry forest, one square 200 m, three hours).
+Each carries its own square size, wind (reported and as given to the
+models), fuel table, plan and sources. The page's menu switches between the
+sample game and the cases.
+
+```bash
+/tmp/forefire_venv.rskvjS/bin/python cases.py       # writes board-<case>.json under /mnt/seagate/models/pyrocene/lab/
+CELL2FIRE=/mnt/seagate/models/pyrocene/lab/cell2fire/Cell2Fire \
+  /tmp/forefire_venv.rskvjS/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board-lahaina.json
+```
+
+To add a case, add a function to `cases.py` that returns a board with
+`cell_m`, `minutes`, `wind`, `wind_reported`, `fuels`, `plan` and `case`
+(title, place, date, fuel, sources).
+
 ## Run it
 
 Needs the ForeFire venv (`/tmp/forefire_venv.rskvjS/bin/python`, or
@@ -42,12 +61,13 @@ CELL2FIRE=/mnt/seagate/models/pyrocene/lab/cell2fire/Cell2Fire \
   /tmp/forefire_venv.rskvjS/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board.json --name mygame
 ```
 
-Then `?run=mygame` on the page.
+Then `?run=mygame` on the page. `results/index.json` feeds the page's menu.
 
 ## Files
 
 ```
-landscape.py     board -> fuel and altitude rasters; the fuel table; Rothermel rate of spread
+landscape.py     board -> fuel and altitude rasters; the fuel table; Rothermel rate of spread; per-board scale, wind, fuels
+cases.py         real fires drawn onto the board, with their plans and sources
 proposal.py      the plan: which squares to clear, where the fire line goes
 gamemap.py       the board drawn by stage2/maps/drawn.py, for the reference panels
 ca.py            the Cell2Fire-style automaton (own code; in the results, not on the page)

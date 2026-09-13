@@ -14,24 +14,29 @@ import argparse, json, os, sys, time
 import numpy as np
 from landscape import (load_board, rasters, ignition_xy, arrival_to_squares, FUELS, WIND, CELL, RES, rothermel_ros)
 import ca, run_forefire, proposal, gamemap
+import landscape
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--board", default="/mnt/seagate/models/pyrocene/lab/board-sample-night5.json")
-ap.add_argument("--minutes", type=int, default=30)
-ap.add_argument("--step", type=int, default=30)
-ap.add_argument("--name", default="sample")
+ap.add_argument("--minutes", type=int, default=None, help="default: the board's own, else 30")
+ap.add_argument("--step", type=int, default=None, help="seconds between ForeFire snapshots; default one hundredth of the run")
+ap.add_argument("--name", default="")
 ap.add_argument("--cell2fire", default=os.environ.get("CELL2FIRE", ""), help="path to the Cell2Fire binary")
 ap.add_argument("--no-forefire", action="store_true")
 args = ap.parse_args()
 
 board = load_board(args.board)
+if args.minutes is None: args.minutes = int(board.get("minutes", 30))
+if args.step is None: args.step = max(30, int(args.minutes * 60 / 100))
+if board.get("case") and not args.name: args.name = board["case"]["id"]
 FF_PARAMS = {}   # run_forefire's defaults, see the note there
 ign = ignition_xy(board)
-plan = proposal.make(board)
+args.name = args.name or "sample"
+plan = board["plan"] if board.get("plan") else proposal.make(board)
 scenarios = {"as_played": {"cleared": [], "line": []}, "proposal": plan}
-out = {"board": {k: board[k] for k in ("cols", "rows", "cells", "ignition", "cause", "severity", "burned", "waves", "crit", "night")}, "proposal": plan,
-       "meta": {"cell_m": CELL, "res_m": RES, "wind": WIND, "minutes": args.minutes, "step": args.step,
-                "fuels": {k: dict(name=f["name"], still_m_per_min=round(rothermel_ros(f) * 60, 2), wind_m_per_min=round(rothermel_ros(f, WIND["speed"]) * 60, 2), load_kg_m2=f["Sigmad"], depth_m=f["e"], moisture=f["Md"]) for k, f in FUELS.items()}},
+out = {"board": {k: board[k] for k in ("cols", "rows", "cells", "ignition", "cause", "severity", "burned", "waves", "crit", "night")}, "proposal": plan, "case": board.get("case"), "wind_reported": board.get("wind_reported"),
+       "meta": {"cell_m": landscape.CELL, "res_m": landscape.RES, "wind": landscape.WIND, "minutes": args.minutes, "step": args.step,
+                "fuels": {k: dict(name=f["name"], still_m_per_min=round(rothermel_ros(f) * 60, 2), wind_m_per_min=round(rothermel_ros(f, landscape.WIND["speed"]) * 60, 2), load_kg_m2=f["Sigmad"], depth_m=f["e"], moisture=f["Md"]) for k, f in landscape.FUELS.items()}},
        "scenarios": {}}
 
 def pack(arr):
@@ -54,7 +59,7 @@ for sname, plan_ in scenarios.items():
     cleared, line = plan_["cleared"], plan_["line"]
     fuel, alt = rasters(board, cleared, line)
     ign_cell = nearest_fuel(board, cleared)
-    ign = ((ign_cell % board["cols"]) + 0.5) * CELL, ((ign_cell // board["cols"]) + 0.5) * CELL
+    ign = ((ign_cell % board["cols"]) + 0.5) * landscape.CELL, ((ign_cell // board["cols"]) + 0.5) * landscape.CELL
     sc = {"cleared": cleared, "line": line, "ignition": ign_cell, "fuel": fuel.ravel().tolist(), "ny": fuel.shape[0], "nx": fuel.shape[1], "models": {},
           "svg": gamemap.render(board, cleared, line)}
     t0 = time.time()
@@ -83,6 +88,10 @@ with open(path, "w") as fh: json.dump(out, fh, separators=(",", ":"))
 os.makedirs("/mnt/seagate/models/pyrocene/lab", exist_ok=True)
 with open(f"/mnt/seagate/models/pyrocene/lab/results-{args.name}.json", "w") as fh: json.dump(out, fh)
 print("wrote", path, round(os.path.getsize(path) / 1e6, 2), "MB")
+ipath = "results/index.json"
+index = json.load(open(ipath)) if os.path.exists(ipath) else {"runs": []}
+index["runs"] = [x for x in index["runs"] if x["name"] != args.name] + [{"name": args.name, "title": (board.get("case") or {}).get("title", "Sample game, night " + str(board.get("night", "")))}]
+json.dump(index, open(ipath, "w"), indent=1)
 
 # a contact sheet for a quick look
 try:

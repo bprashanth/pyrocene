@@ -128,10 +128,21 @@ class Room:
         return mapstyle.card_svg(step["title"], step["text"], self.game.view(), STYLE)
 
     def show_card(self):
+        """Put the explanation up, or leave the map alone if there is none.
+
+        Stage 2 hands back one step per round with no text on it. There is
+        nothing to read, so the projector keeps the board and the console offers
+        the one press that plays the whole night.
+        """
         step = self.steps[self.cursor]
         self.mode = "explain"
-        self.paint(self.draw_card(step), kind="card")
-        self.broadcast_state()
+        if step.get("text"):
+            self.paint(self.draw_card(step), kind="card")
+            self.broadcast_state()
+        else:
+            g = self.game
+            self.paint(self.draw_frame(g._frame("settle", "")), kind="map")
+            self.broadcast_state()
 
     def show_map(self):
         self.mode = "idle"
@@ -416,8 +427,16 @@ class Handler(BaseHTTPRequestHandler):
             pl = ROOM.game.by_token(qs.get("token", [""])[0])
             return self._json(200, ROOM.me_payload(pl)) if pl else self._json(404, {"error": "no such player"})
         if p == "/api/steps":           # tests and screenshots
+            # Stage 2 folds a whole night into one animation with no card on it.
+            # The parts are still built the same way, so this reports them, and
+            # a test can ask what the fire did without unpicking one long run.
+            steps = ROOM.steps
+            folded = [st["key"] for st in steps]
+            if (ROOM.game.cfg["stage"] != 1 and ROOM.game.last_phases
+                    and all(k in ("round", "ending") for k in folded)):
+                steps = ROOM.game.last_phases + [st for st in steps if st["key"] == "ending"]
             out = []
-            for st in ROOM.steps:
+            for st in steps:
                 out.append({"key": st["key"], "title": st["title"], "text": st["text"],
                             "cells": st["cells"],
                             "kinds": [b["kind"] for b in st["beats"]],
