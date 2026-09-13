@@ -1,6 +1,11 @@
-/* camera.js: shots. Each beat gets a camera move, a function of its own
- * progress, and the player blends from wherever the camera was into it so
- * nothing jumps unless a cut is wanted. */
+/* camera.js: one camera, moving slowly, never cutting.
+ *
+ * The first version gave every beat its own shot from its own angle, and the
+ * room could not follow. Now there is one camera on a slow orbit around the
+ * board: its bearing drifts continuously with the clock, its target and
+ * distance ease from one beat's subject to the next over a few seconds, and
+ * the elevation only dips for the ignition and the held line. The only cuts
+ * left are the two rewinds. */
 import * as THREE from "three";
 
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
@@ -8,19 +13,16 @@ const smooth = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 
 export function makeShots(world, groundY) {
   const { cols, rows } = world;
-  const centre = new THREE.Vector3(cols / 2, 0, rows / 2);
   function centroid(cells) { let x = 0, z = 0; for (const i of cells) { x += i % cols + 0.5; z += Math.floor(i / cols) + 0.5; } return [x / cells.length, z / cells.length]; }
   function extent(cells) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const i of cells) { const c = i % cols, r = Math.floor(i / cols); x0 = Math.min(x0, c); x1 = Math.max(x1, c + 1); z0 = Math.min(z0, r); z1 = Math.max(z1, r + 1); } return Math.max(x1 - x0, z1 - z0); }
 
-  // a pose from a target, a distance, an azimuth (radians, 0 = looking north
-  // from the south), an elevation angle
   function orbit(tx, tz, dist, az, el, fov) {
     const ty = groundY(clamp(tx, 0, cols), clamp(tz, 0, rows)) + 0.4;
     const px = tx + dist * Math.cos(el) * Math.sin(az), pz = tz + dist * Math.cos(el) * Math.cos(az), py = ty + dist * Math.sin(el);
     const gy = groundY(clamp(px, 0, cols), clamp(pz, 0, rows));
-    return { pos: [px, Math.max(py, gy + 1.25), pz], target: [tx, ty, tz], fov: fov || 42 };
+    return { pos: [px, Math.max(py, gy + 1.25), pz], target: [tx, ty, tz], fov: fov || 40 };
   }
-  function focusCells(b) {
+  function subject(b) {
     if (b.kind === "burn" || b.kind === "after" || b.kind === "flash") return b.fire.cells;
     if (b.kind === "ignite") return [b.ign];
     if (b.kind === "held") return b.held.concat(b.pressed);
@@ -28,7 +30,6 @@ export function makeShots(world, groundY) {
     return b.focus || b.cut || b.stand || null;
   }
   const wideDist = Math.max(cols, rows * 1.9) * 0.72;
-  // the homes the fire reached: the village square nearest the last fire that reached one
   const endVillage = [];
   if (((world.log.game.ending || {}).reason) === "village") {
     const b0 = world.frames[0].board; const vill = [];
@@ -38,64 +39,46 @@ export function makeShots(world, groundY) {
       const burned = hit.fire.burned_cells.map(x => globalThis.PyroLog.parseCell(x, cols));
       const near = vill.map(v => [v, Math.min(...burned.map(b => Math.hypot(b % cols - v % cols, Math.floor(b / cols) - Math.floor(v / cols))))]).sort((a, b) => a[1] - b[1]);
       const best = near[0][0];
-      for (const [v, d] of near) if (Math.hypot(v % cols - best % cols, Math.floor(v / cols) - Math.floor(best / cols)) <= 2) endVillage.push(v);
+      for (const [v] of near) if (Math.hypot(v % cols - best % cols, Math.floor(v / cols) - Math.floor(best / cols)) <= 2) endVillage.push(v);
     } else endVillage.push(...vill);
   }
 
-  function shot(b) {
-    const cells = focusCells(b);
+  // the bearing drifts with the clock: a slow orbit, a full turn in about six minutes
+  const AZ0 = 0.35, AZ_RATE = 0.017;
+  function bearing(t) { return AZ0 + AZ_RATE * t; }
+
+  // what the camera wants for a beat: target, distance, elevation, as functions of progress
+  function want(b, p) {
+    const cells = subject(b);
     const [cx, cz] = cells && cells.length ? centroid(cells) : [cols / 2, rows / 2];
     const ext = cells && cells.length ? extent(cells) : Math.max(cols, rows);
-    const seed = (b.i * 0.618) % 1;
+    const wide = { tx: cols / 2, tz: rows / 2, dist: wideDist, el: 0.55, fov: 40 };
     switch (b.kind) {
-      case "end":
-        if (endVillage.length) { const [vx, vz] = centroid(endVillage); return p => orbit(vx, vz, 6.5 - 0.5 * p, -0.6 + 0.5 * p, 0.6, 38); }
-      case "open":
-        return p => orbit(cols / 2, rows / 2 + 0.5, wideDist * (1.02 - 0.06 * p), 0.18 - 0.08 * p, 0.5, 42);
-      case "rewind":
-        return p => orbit(cols / 2, rows / 2, wideDist * 1.05, -0.3 + 0.2 * p, 0.7, 40);
-      case "hold":
-        return b.night === 0 ? p => orbit(cols / 2, rows / 2, wideDist * 1.05, -0.5 + 0.35 * p, 0.6, 42)
-                             : p => orbit(cols / 2, rows / 2, wideDist * 0.9, 0.1 + 0.1 * p, 0.55, 42);
-      case "clear": case "taken":
-        return p => orbit(cx, cz, 4.5 + ext * 0.9, (seed - 0.5) * 1.6 + 0.25 * p, 0.55, 40);
-      case "dig":
-        return p => orbit(cx, cz, 4.5 + ext * 0.7, (seed - 0.5) * 2.0 + 0.45 * p, 0.62, 38);
-      case "water": case "ews": case "quiet":
-        return p => orbit(cols / 2, rows / 2, wideDist * 0.85, 0.2 + 0.08 * p, 0.5, 42);
-      case "grow":
-        return p => orbit(cx, cz, 6 + ext * 0.75 - 1.2 * p, (seed - 0.5) * 1.2 + 0.15 * p, 0.5, 42);
-      case "connected": case "fuel":
-        return p => orbit(cx, cz, 4 + ext * 1.0 + 1.5 * p, -0.6 + 0.9 * p, 0.35 + 0.3 * p, 40);
-      case "ignite":
-        return p => orbit(cx, cz, 5.0 + 0.5 * p, (seed - 0.5) * 3 + 0.12 * p, 0.42 + 0.05 * p, 36);
-      case "burn":
-        return p => orbit(cx, cz, 4.5 + ext * 0.9 + 1.5 * p, (seed - 0.5) * 2.4 + 0.3 * p, 0.3 + 0.12 * p, 40);
-      case "held": {
-        // from the burning side, looking across the line into the forest it saved
-        const [hx, hz] = centroid(b.held), [px, pz] = centroid(b.pressed);
-        const az = Math.atan2(px - hx, pz - hz);
-        return p => orbit(hx, hz, 4.8 + ext * 0.35, az + 0.35 - 0.3 * p, 0.52 + 0.05 * p, 38);
-      }
-      case "capped": case "village":
-        return p => orbit(cx, cz, 4 + ext * 0.7, (seed - 0.5) * 2 + 0.3 * p, 0.3, 38);
-      case "after":
-        return p => orbit(cx, cz, 5 + ext * 0.9 + 6 * p, (seed - 0.5) * 2 + 0.2 * p, 0.32 + 0.3 * p, 40);
-      case "crit":
-        return b.final ? p => orbit(cols / 2, rows / 2, wideDist * 0.95, 0.1 + 0.05 * p, 0.6, 40)
-                       : p => orbit(cx, cz, 5 + ext * 0.9, -0.7 + 0.5 * p, 0.45, 40);
-      case "cut":
-        return p => orbit(cx, cz, 4.2 + ext * 0.7, -0.4 + 0.35 * p, 0.38 + 0.08 * p, 38);
-      default:
-        return p => orbit(cols / 2, rows / 2, wideDist, 0.1, 0.55, 42);
+      case "open": return { ...wide, dist: wideDist * (1.04 - 0.06 * p), el: 0.5 };
+      case "lift": case "rewind": return wide;
+      case "hold": return b.night === 0 ? { ...wide, dist: wideDist * 1.02, el: 0.6 } : { ...wide, dist: wideDist * 0.9 };
+      case "clear": case "taken": return { tx: cx, tz: cz, dist: 5.5 + ext * 0.9, el: 0.52, fov: 40 };
+      case "dig": return { tx: cx, tz: cz, dist: 5 + ext * 0.7, el: 0.55, fov: 40 };
+      case "water": case "ews": case "quiet": return { ...wide, dist: wideDist * 0.85 };
+      case "grow": return { tx: cx, tz: cz, dist: 7 + ext * 0.75 - 0.8 * p, el: 0.5, fov: 40 };
+      case "connected": case "fuel": return { tx: cx, tz: cz, dist: 5 + ext * 1.0 + 1.2 * p, el: 0.38 + 0.2 * p, fov: 40 };
+      case "ignite": return { tx: cx, tz: cz, dist: 6.5 - 1.5 * p, el: 0.42 - 0.06 * p, fov: 38 };
+      case "burn": return { tx: cx, tz: cz, dist: 5 + ext * 0.9 + 1.2 * p, el: 0.36 + 0.1 * p, fov: 40 };
+      case "held": return { tx: cx, tz: cz, dist: 4.8 + ext * 0.35, el: 0.4, fov: 38 };
+      case "capped": case "village": return { tx: cx, tz: cz, dist: 5 + ext * 0.7, el: 0.4, fov: 40 };
+      case "after": return { tx: cx, tz: cz, dist: 6 + ext * 0.9 + 5 * p, el: 0.36 + 0.28 * p, fov: 40 };
+      case "end": return endVillage.length ? { tx: centroid(endVillage)[0], tz: centroid(endVillage)[1], dist: 6.5 - 0.5 * p, el: 0.6, fov: 38 } : wide;
+      case "crit": return b.final ? { ...wide, dist: wideDist * 0.95, el: 0.6 } : { tx: cx, tz: cz, dist: 6 + ext * 0.9, el: 0.45, fov: 40 };
+      case "cut": return { tx: cx, tz: cz, dist: 5.2 + ext * 0.7, el: 0.42, fov: 38 };
+      default: return wide;
     }
   }
-  const CUTS = new Set(["ignite", "held", "crit", "cut", "fuel", "connected", "burn"]);
-  return { shot, isCut: b => CUTS.has(b.kind), centre };
+  function pose(w, t) { return orbit(w.tx, w.tz, w.dist, bearing(t), w.el, w.fov); }
+  return { want, pose, bearing, isCut: b => b.kind === "rewind" };
 }
 
-export function lerpPose(a, b, t) {
+export function lerpWant(a, b, t) {
   const l = (x, y) => x + (y - x) * t;
-  return { pos: [l(a.pos[0], b.pos[0]), l(a.pos[1], b.pos[1]), l(a.pos[2], b.pos[2])], target: [l(a.target[0], b.target[0]), l(a.target[1], b.target[1]), l(a.target[2], b.target[2])], fov: l(a.fov, b.fov) };
+  return { tx: l(a.tx, b.tx), tz: l(a.tz, b.tz), dist: l(a.dist, b.dist), el: l(a.el, b.el), fov: l(a.fov, b.fov) };
 }
 export { smooth };

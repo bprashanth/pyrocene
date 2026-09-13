@@ -244,9 +244,8 @@ class ReplayNames(unittest.TestCase):
     def test_only_people_who_went_out_and_owned_ground(self):
         g = play(5, stage=1)
         beats = g.replay_beats()
-        self.assertGreater(len(beats), 1)
-        self.assertEqual(beats[0]["badges"], [], "the opening board names nobody")
-        for k, beat in enumerate(beats):
+        self.assertGreaterEqual(len(beats), 1)
+        for k, beat in enumerate(beats, start=1):
             for b in beat["badges"]:
                 p = next(x for x in g.players.values() if x.name == b["name"])
                 self.assertFalse(p.alive)
@@ -254,6 +253,7 @@ class ReplayNames(unittest.TestCase):
                 self.assertIn(p.role, (LANTANA, NATIVE_P),
                               "the specialists own no ground, so they get no badge")
                 self.assertTrue(b["cells"])
+                self.assertIn(b["by"], ("night", "vote"))
 
     def test_every_landowner_who_went_out_is_named_once(self):
         g = play(8, stage=1)
@@ -262,6 +262,17 @@ class ReplayNames(unittest.TestCase):
                     if not p.alive and p.role in (LANTANA, NATIVE_P) and p.patch]
         self.assertEqual(sorted(named), sorted(expected))
         self.assertEqual(len(named), len(set(named)), "nobody is named twice")
+
+    def test_the_two_kinds_of_removal_are_told_apart(self):
+        """Most nights two people go out, one taken by lantana and one voted out
+        by the room. The replay has to say which is which or it is only telling
+        the room that two people are gone."""
+        g = play(6, stage=1)
+        kinds = {b["by"] for beat in g.replay_beats() for b in beat["badges"]}
+        self.assertTrue(kinds, "somebody must have gone out")
+        for p in g.players.values():
+            if not p.alive:
+                self.assertIn(p.out_by, ("night", "vote"))
 
     def test_play_frames_carry_no_names(self):
         g = play(11, stage=1, rounds=3)

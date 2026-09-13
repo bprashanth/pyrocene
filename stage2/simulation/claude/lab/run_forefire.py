@@ -73,9 +73,13 @@ def run(fuel, alt, ign_xy, minutes=40, step=30, wind=None, wind_reduction=0.4, l
         inside = np.zeros(ny * nx, dtype=bool)
         polys = []
         for p in paths:
-            if len(p.vertices) < 4: continue
-            inside |= p.contains_points(pts)
-            polys.append([[float(vx / scale), float((Ly - vy) / scale)] for vx, vy in p.vertices if np.isfinite(vx) and np.isfinite(vy)])
+            # ForeFire prints an occasional NaN node; a NaN inside a polygon
+            # makes the point-in-polygon test return bands of garbage, which
+            # once looked like a fire racing along the river
+            verts = np.array([[vx, vy] for vx, vy in p.vertices if np.isfinite(vx) and np.isfinite(vy)])
+            if len(verts) < 4: continue
+            inside |= mpath.Path(verts).contains_points(pts)
+            polys.append([[float(vx / scale), float((Ly - vy) / scale)] for vx, vy in verts])
         newly = inside & np.isnan(arrival)
         arrival[newly] = t
         fronts.append({"t": t, "polys": polys})

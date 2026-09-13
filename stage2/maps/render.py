@@ -69,26 +69,6 @@ def _wrap(text: str, w: int):
     return out or [""]
 
 
-def curtain_svg(round_no: int, max_rounds: int, name: str) -> str:
-    """What the projector holds during a stage 1 round.
-
-    Stage 1 is played in the room with the app only keeping score, and the map
-    is kept back until the end so the replay lands as a reveal. So the screen
-    shows the night and nothing else.
-    """
-    m = style(name)
-    paper = getattr(m, "PAPER", None) or getattr(m, "INK", "#0d131b")
-    accent = getattr(m, "LANTANA", None) or getattr(m, "LANT_INK", None) or "#f0a92b"
-    body = getattr(m, "TEXT", None) or getattr(m, "INK", "#ddd")
-    out = [f'<text x="{base.W/2}" y="{base.H/2 - 26}" text-anchor="middle" '
-           f'style="font-size:26px;letter-spacing:.42em;font-weight:800" fill="{accent}">'
-           f'P Y R O C E N E</text>',
-           f'<text x="{base.W/2}" y="{base.H/2 + 30}" text-anchor="middle" '
-           f'style="font-size:19px;letter-spacing:.10em" fill="{body}" opacity=".55">'
-           f'Night {round_no} of {max_rounds}</text>']
-    return base.shell("".join(out), ".x{}", paper)
-
-
 def lobby_svg(n: int, name: str) -> str:
     m = style(name)
     paper = getattr(m, "PAPER", None) or getattr(m, "INK", "#0d131b")

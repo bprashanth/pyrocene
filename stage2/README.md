@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 61 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 63 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -55,14 +55,16 @@ No internet needed. xterm.js is vendored, the rest is the standard library.
 no nightly choice. The room plays as it would with a deck of cards and this app
 only keeps score.
 
-**The projector holds the night number and nothing else.** The board is kept
-back on purpose, so the replay at the end lands as a reveal rather than as a
-recap. After each night and each vote the console offers two buttons:
+**The map stays on the projector the whole time.** After each night and each
+vote the console offers two buttons:
 
 | Button | |
 |---|---|
-| Continue | Applies the round and shows nothing. Press this to keep the room moving. |
+| Continue | Applies the round without playing it. The map updates quietly and the room is not interrupted. |
 | Show what happened | Puts the card and the animation up, the same as stage 2. |
+
+Press Continue all evening and the room plays Mafia at its own pace with the
+board sitting there for anyone who wants to look.
 
 **It ends as plain Mafia ends.** Every lantana out, or every native out, or both
 the ecologist and the ranger out. That last one is stage 1 only: with no fire
@@ -71,7 +73,10 @@ conclusion. Stage 2 keeps going in the same spot, because a fire can burn
 lantana back and turn a hopeless board around.
 
 When it ends, press **Replay the map** and then **Next night** to walk the
-forest forward one night at a time. No cards, no narration, just the land.
+forest forward one night at a time. Each press runs the same hold-then-turn
+transition the game uses live: the board greys out, the squares that are about
+to move are picked out, they turn over, and the map comes back. No cards and no
+narration, just the land.
 
 Then press **Start stage 2**. The same people, the same names, the same phones
 and the same forest, with roles dealt again so nobody carries over what they
@@ -87,9 +92,18 @@ forest.
 
 **In the replay, and only there, the night that took somebody puts their name
 over their ground.** So when the room reaches night three and a stand has gone
-bare, the name of whoever was voted out on night three is sitting on it. The
-ecologist and the ranger own no ground and are never named. During play no name
-is ever drawn, because that is the thing the room is there to work out.
+bare, the name of whoever went out on night three is sitting on it.
+
+Most nights take two people, and they go for different reasons, so they are
+drawn differently:
+
+| | |
+|---|---|
+| Voted out by the room, in daylight | teal name, solid border |
+| Taken by lantana in the night | purple name, dashed border |
+
+The ecologist and the ranger own no ground and are never named. During play no
+name is ever drawn, because that is the thing the room is there to work out.
 
 ## The round
 

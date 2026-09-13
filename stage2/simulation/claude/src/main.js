@@ -13,7 +13,7 @@ import "../audio.js";
 import { buildScene } from "./scene.js";
 import { makeFire } from "./fire.js";
 import { makeOverlays } from "./overlays.js";
-import { makeShots, lerpPose, smooth } from "./camera.js";
+import { makeShots, lerpWant, smooth } from "./camera.js";
 import { makeState } from "./state.js";
 
 const P = globalThis.PyroLog;
@@ -196,14 +196,19 @@ async function start() {
   }
 
   // ---- camera ------------------------------------------------------------------
-  const startPose = [];
-  function poseAt(i, local) {
-    const b = beats[i], fn = shots.shot(b), p = clamp(local / b.dur, 0, 1);
-    const cur = fn(p);
+  // The camera's wants (target, distance, elevation) ease from each beat's
+  // start to its own over BLEND seconds; the bearing is a function of the
+  // clock alone, so the picture never jumps except at a rewind.
+  const BLEND = 3.0;
+  const startWant = [];
+  function wantAt(i, local) {
+    const b = beats[i], p = clamp(local / b.dur, 0, 1);
+    const cur = shots.want(b, p);
     if (shots.isCut(b) || i === 0) return cur;
-    const s = startPose[i] || (startPose[i] = poseAt(i - 1, beats[i - 1].dur));
-    return lerpPose(s, cur, smooth(local / 1.6));
+    const s = startWant[i] || (startWant[i] = wantAt(i - 1, beats[i - 1].dur));
+    return lerpWant(s, cur, smooth(local / BLEND));
   }
+  function poseAt(i, local) { return shots.pose(wantAt(i, local), beats[i].t0 + local); }
 
   // ---- timeline and HUD --------------------------------------------------------
   const segs = $("segs"), marks = $("marks");

@@ -50,6 +50,12 @@ class Room:
         self.cursor = 0
         self.replay: list = []        # the map, round by round, for the walk-through
         self.replay_at = 0
+        self.replaying = False        # a night of the replay is on screen now
+        # Bumped whenever the room starts over. Animation threads carry the
+        # value they began with and stop as soon as it changes, so a reset in
+        # the middle of a replay does not leave the old one painting frames over
+        # the new game. That happened, and it looked like the card had vanished.
+        self.epoch = 0
         self.mode = "idle"            # idle | explain | playing | replay
         self.frame = (frames.render_lobby(0, self.game.seed) if STYLE == "ansi"
                       else mapstyle.lobby_svg(0, STYLE))
@@ -94,6 +100,7 @@ class Room:
         d["log"] = self.game.log_meta["file"]
         d["replay_at"] = self.replay_at
         d["replay_total"] = len(self.replay)
+        d["replaying"] = self.replaying
         return d
 
     def me_payload(self, p):
@@ -135,21 +142,6 @@ class Room:
             self.paint(mapstyle.lobby_svg(len(g.players), STYLE), kind="lobby")
         self.broadcast_state()
 
-    def quiet(self):
-        """Hold the projector on the night number and nothing else.
-
-        Stage 1 is played in the room with this app only keeping score, and the
-        map is kept back for the replay at the end. Showing the board as it
-        changes would spend the reveal a night at a time.
-        """
-        self.mode = "idle"
-        g = self.game
-        if STYLE == "ansi":
-            self.paint(frames.render_card(f"Night {g.round}", "", g.view(), None), kind="quiet")
-        else:
-            self.paint(mapstyle.curtain_svg(g.round, g.cfg["max_rounds"], STYLE), kind="quiet")
-        self.broadcast_state()
-
     def skip(self):
         """Apply everything the round produced without showing any of it.
 
@@ -159,7 +151,7 @@ class Room:
         if self.mode in ("playing", "replay"):
             return
         self.steps, self.cursor = [], 0
-        self.quiet() if self.game.cfg["stage"] == 1 else self.show_map()
+        self.show_map()
 
     def next_stage(self):
         """Carry the room from stage 1 into stage 2.
@@ -183,38 +175,59 @@ class Room:
         self.game = g
         self.steps, self.cursor = [], 0
         self.replay, self.replay_at = [], 0
+        self.replaying = False
+        self.epoch += 1
         self.show_map()
 
     def begin(self, steps: list):
         self.steps = steps
         self.cursor = 0
         if not steps:
-            return self.quiet() if self.game.cfg["stage"] == 1 else self.show_map()
+            return self.show_map()
         self.show_card()
 
     # --- the replay -----------------------------------------------------------
     def start_replay(self):
-        """Walk the map forward one round at a time, with no cards and no
-        narration. For the end of a stage 1 game, when the room has played all
-        night without seeing what their voting did to the forest."""
+        """Walk the evening again, one night per press.
+
+        Each press runs the same haze-hold-turn-settle transition the game uses
+        during play, so the room sees which squares are about to move before
+        they move, with whoever went out that night named over their ground.
+        """
         self.replay = self.game.replay_beats()
         if not self.replay:
             return
         self.replay_at = 0
         self.mode = "replay"
-        self.paint(self.draw_frame(self.replay[0]), kind="replay")
+        self.paint(self.draw_frame(
+            self.game._frame("settle", "", self.game.snapshots[0])), kind="replay")
         self.broadcast_state()
 
     def step_replay(self):
-        if self.mode != "replay":
+        if self.mode != "replay" or self.replaying:
             return
-        self.replay_at += 1
         if self.replay_at >= len(self.replay):
-            self.replay = []
-            self.replay_at = 0
+            self.replay, self.replay_at = [], 0
             return self.show_map()
-        self.paint(self.draw_frame(self.replay[self.replay_at]), kind="replay")
+        step = self.replay[self.replay_at]
+        self.replaying = True
         self.broadcast_state()
+        epoch = self.epoch
+
+        def run():
+            for f in step["beats"]:
+                if self.epoch != epoch:
+                    return
+                self.paint(self.draw_frame(f), kind=f["kind"])
+                if not FAST:
+                    time.sleep(f["hold_ms"] / 1000)
+            with self.lock:
+                if self.epoch != epoch:
+                    return
+                self.replay_at += 1
+                self.replaying = False
+                self.broadcast_state()
+        threading.Thread(target=run, daemon=True).start()
 
     def advance(self):
         """Play the animation for the card on screen, then put up the next card."""
@@ -225,23 +238,25 @@ class Room:
         step = self.steps[self.cursor]
         self.mode = "playing"
         self.broadcast_state()
+        epoch = self.epoch
 
         def run():
             for f in step["beats"]:
+                if self.epoch != epoch:
+                    return
                 self.paint(self.draw_frame(f), kind=f["kind"])
                 if not FAST:
                     time.sleep(f["hold_ms"] / 1000)
             with self.lock:
+                if self.epoch != epoch:
+                    return
                 self.cursor += 1
                 if self.cursor < len(self.steps):
                     self.show_card()
                 else:
                     self.steps = []
                     self.cursor = 0
-                    if self.game.cfg["stage"] == 1:
-                        self.quiet()
-                    else:
-                        self.show_map()
+                    self.show_map()
         threading.Thread(target=run, daemon=True).start()
 
     def map_facts(self) -> dict:
@@ -456,8 +471,7 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get("lantana"):
                         g.lantana_override = int(body["lantana"])
                     g.start()
-                    # Stage 1 keeps the board back for the replay at the end.
-                    ROOM.quiet() if g.cfg["stage"] == 1 else ROOM.show_map()
+                    ROOM.show_map()
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/eliminate":
                     g.eliminate(body["id"])
@@ -517,6 +531,8 @@ class Handler(BaseHTTPRequestHandler):
                                      config={"stage": ROOM.stage})
                     ROOM.steps, ROOM.cursor = [], 0
                     ROOM.replay, ROOM.replay_at = [], 0
+                    ROOM.replaying = False
+                    ROOM.epoch += 1
                     ROOM.show_map()
                     return self._json(200, ROOM.gm_payload())
         except (ValueError, KeyError) as e:

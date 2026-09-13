@@ -87,8 +87,8 @@
     </div>
     <p class="hint" id="stepsleft"></p>
     <p class="hint" id="skiphint" hidden>Continue applies the round without
-      showing it, so the room is not interrupted. The map is kept for the replay
-      at the end.</p>
+      playing it, so the room is not interrupted. The map stays on screen and
+      updates quietly.</p>
   </div>
 
   <div id="night" class="card" hidden>
@@ -138,9 +138,9 @@
 
   <div id="replaybox" class="card" hidden>
     <h2>Replay the map</h2>
-    <p class="hint">Walk the forest forward one night at a time, with no cards and
-      no narration. For the end of a stage 1 game, when the room has played all
-      evening without seeing what their voting did.</p>
+    <p class="hint">Walk the forest forward one night at a time, with the squares
+      that changed picked out first and whoever went out that night named over
+      their ground.</p>
     <div class="row">
       <button id="replay" class="primary">Replay the map</button>
       <button id="replaystop" hidden>Back to the game</button>
@@ -201,9 +201,10 @@
     // One button that walks the replay. Hiding it once the replay started left
     // the game master with no way to move it forward.
     $("#replay").textContent = replaying ? "Next night" : "Replay the map";
+    $("#replay").disabled = !!s.replaying;
     $("#replaystop").hidden = !replaying;
     $("#replaypos").textContent = replaying
-      ? `showing night ${s.replay_at} of ${s.replay_total - 1}` : "";
+      ? (s.replaying ? "playing..." : `night ${s.replay_at} of ${s.replay_total}`) : "";
     $("#count").textContent = s.players.length;
     $("#round").textContent = s.round;
     $("#maxr").textContent = s.max_rounds;

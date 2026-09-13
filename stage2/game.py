@@ -59,6 +59,7 @@ class Player:
     alive: bool = True
     patch: list = field(default_factory=list)   # cells owned at the start
     out_round: int = 0
+    out_by: str = ""                            # "night" (lantana took them) or "vote"
 
     def public(self) -> dict:
         return {"id": self.id, "name": self.name, "alive": self.alive,
@@ -329,6 +330,7 @@ class Game:
             p = self.players[pid]
             p.alive = False
             p.out_round = r
+            p.out_by = "night"
             self.log_player(pid, p.role, "removed")
             before = self.view()
             cells, _ = self._apply_elimination(p)
@@ -373,6 +375,7 @@ class Game:
                 p = self.players[pid]
                 p.alive = False
                 p.out_round = r
+                p.out_by = "vote"
                 self.log_player(pid, p.role, "removed")
                 before = self.view()
                 cells, _ = self._apply_elimination(p)
@@ -565,29 +568,36 @@ class Game:
                 "beats": [self._frame("ending", end["text"])], "cells": []}
 
     def replay_beats(self) -> list:
-        """The map at the end of every round, one frame each.
+        """The evening again, one night per press, shown the way it would have
+        been shown live.
 
-        For the end of a stage 1 game: the room played Mafia all night without
-        seeing a map, and this walks them through what their voting did to the
-        forest. No cards and no narration, just the land changing.
-
-        Each frame carries the names of whoever went out that round and owned
-        ground, so the room can put a night in the game against a change on the
-        map. This is the only place names are ever drawn. During play it would
-        hand out exactly what the room is meant to be working out.
+        This used to be one still frame per night, which put the whole night's
+        change on screen at once and left the room to spot the difference
+        themselves. It now runs the same haze-hold-turn-settle transition the
+        game uses during play, so the squares that moved are picked out before
+        they move, and whoever went out that night is named over their ground.
         """
         out = []
-        for k, v in enumerate(self.snapshots):
-            # out_round is 0 for anyone still in, so the opening board carries no
-            # badges and a round only names the people it actually took.
-            badges = [{"name": p.name, "cells": list(p.patch)}
+        for k in range(1, len(self.snapshots)):
+            before, after = self.snapshots[k - 1], self.snapshots[k]
+            moved = self._changed(before, after)
+            badges = [{"name": p.name, "cells": list(p.patch), "by": p.out_by or "vote"}
                       for p in self.players.values()
-                      if not p.alive and p.out_round == k and k > 0
+                      if not p.alive and p.out_round == k
                       and p.patch and p.role in (LANTANA, NATIVE_P)]
-            out.append({"kind": "settle", "text": "", "fire": [], "focus": [], "halo": [],
-                        "held": [], "haze": False, "view": v, "hold_ms": 0,
-                        "badges": badges})
+            beats = self._transition(before, after, moved, "creep") if moved else [
+                self._frame("settle", "", after)]
+            for f in beats:
+                f["badges"] = badges
+            out.append({"round": k, "badges": badges, "beats": beats})
         return out
+
+    @staticmethod
+    def _changed(before: dict, after: dict) -> list:
+        """Squares whose cover or thickness differs between two boards."""
+        was = {c["index"]: (c["cover"], c.get("stage", 0)) for c in before["cells"]}
+        return sorted(c["index"] for c in after["cells"]
+                      if was.get(c["index"]) != (c["cover"], c.get("stage", 0)))
 
     def cell_name(self, i: int) -> str:
         c = self.state.cells[i]

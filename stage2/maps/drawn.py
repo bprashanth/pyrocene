@@ -28,8 +28,10 @@ DUG = "#efe6d2"
 ROOF = "#fbf6ea"
 DIM = "#8b8371"
 GOOD = "#4f7a3f"
-# The one colour used for a person rather than for the land.
-NAMED = "#1f6f7a"
+# Two colours used for people rather than for the land. The room's own doing is
+# read in one, what lantana did in the dark is read in the other.
+NAMED = "#1f6f7a"          # voted out by the room, in daylight
+TAKEN = "#8d2f7a"          # taken by lantana during the night
 
 CSS = """
 .ttl{font-size:17px;letter-spacing:.34em;font-weight:800}
@@ -184,9 +186,16 @@ def render(scene) -> str:
         keep = [i for i in (b.get("cells") or []) if scene.cover.get(i) != "water"]
         if not keep:
             continue
+        # Two people go out most nights and they go out for different reasons.
+        # Lantana takes one in the dark; the room votes the other out in
+        # daylight. Same colour for both left the map saying only "these two are
+        # gone", which is the least interesting half of what happened.
+        night = b.get("by") == "night"
+        ink = TAKEN if night else NAMED
+        dash = ' stroke-dasharray="7 5"' if night else ""
         d = cut(keep, 0.3)
-        B.append(f'<path d="{d}" fill="none" stroke="{NAMED}" stroke-width="2.4" '
-                 f'opacity=".5" stroke-linejoin="round" filter="url(#rough)" '
+        B.append(f'<path d="{d}" fill="none" stroke="{ink}" stroke-width="2.4" '
+                 f'opacity=".55" stroke-linejoin="round"{dash} filter="url(#rough)" '
                  f'fill-rule="evenodd"/>')
         rs = [scene.rc(i) for i in keep]
         mr = sum(r for r, _ in rs) / len(rs)
@@ -202,7 +211,7 @@ def render(scene) -> str:
             mr, mc = max(rs, key=score)
         cy = y0 + (mr + 0.5) * u
         cx = x0 + (mc + 0.5) * u
-        B.append(base.label(cx, cy, b.get("name", ""), NAMED, PAPER,
+        B.append(base.label(cx, cy, b.get("name", ""), ink, PAPER,
                             size=max(12, u * 0.58), weight=700, track=0.06))
 
     # --- homes --------------------------------------------------------------
@@ -288,8 +297,13 @@ def render(scene) -> str:
     if scene.territory and scene.game_stage == 1:
         keys.append((f'<rect width="20" height="20" fill="none" stroke="{INK}" '
                      f'stroke-width="1.3" stroke-dasharray="2 4" opacity=".6"/>', "one player's ground"))
-    leg = base.legend(base.PAD, base.H - 86, keys, INK,
-                      gap=min(152, int((base.W - base.PAD * 2) / max(1, len(keys)))))
+    if scene.badges:
+        keys.append((f'<rect width="20" height="20" fill="none" stroke="{NAMED}" '
+                     f'stroke-width="2.2"/>', "voted out"))
+        keys.append((f'<rect width="20" height="20" fill="none" stroke="{TAKEN}" '
+                     f'stroke-width="2.2" stroke-dasharray="5 4"/>', "taken in the night"))
+    leg = base.legend(base.PAD, base.H - 86, keys, INK, gap=196,
+                      width=base.W - base.PAD * 2)
     note = (f'<text x="{base.PAD}" y="{base.H-34}" class="note" fill="{INK}">'
             f'{base.esc(scene.note)}</text>' if scene.note else "")
     return base.shell("".join(B) + head + bar + leg + note, CSS, PAPER)

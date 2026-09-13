@@ -66,6 +66,16 @@ def page(w=1280, h=820):
     return _browser.new_context(viewport={"width": w, "height": h}).new_page()
 
 
+def settled(limit=200):
+    """Wait for an animated replay step to finish."""
+    for _ in range(limit):
+        s = api("/api/state")
+        if not s.get("replaying"):
+            return s
+        time.sleep(0.05)
+    raise AssertionError("the replay never settled")
+
+
 def drain(limit=40):
     for _ in range(limit):
         s = api("/api/state")
@@ -188,18 +198,18 @@ class StageOneContinue(unittest.TestCase):
         self.assertEqual(st["step"], "day", "the round still moved on")
         self.assertLessEqual(st["health"], before)
 
-    def test_the_projector_keeps_the_map_back(self):
-        """Stage 1 holds the board for the replay, so a round in progress shows
-        the night and nothing else."""
+    def test_the_projector_stays_on_the_map(self):
+        """Continue skips the cards, not the map. The board stays up through the
+        whole evening so the room can look at it whenever they want."""
         fresh(seed=29)
-        frame = api("/api/frame")["frame"]
-        self.assertIn("Night 1", frame)
-        self.assertNotIn("legend", frame.lower())
+        self.assertIn("forest", api("/api/frame")["frame"], "the map is up from the start")
         who = next(p["id"] for p in api("/api/state")["players"] if p["alive"])
         api("/api/gm/eliminate", {"id": who})
         api("/api/gm/night", {})
         api("/api/gm/skip", {})
-        self.assertIn("P Y R O C E N E", api("/api/frame")["frame"])
+        after = api("/api/frame")["frame"]
+        self.assertIn("forest", after, "and still up after a round is applied")
+        self.assertIn("one player's ground", after)
 
     def test_the_console_offers_it_and_drops_the_animation(self):
         fresh(seed=31)
@@ -316,25 +326,41 @@ class Replay(unittest.TestCase):
             play_round("native")
         st = api("/api/state")
         self.assertTrue(st["can_replay"])
-        rounds = st["round"]
 
         api("/api/gm/replay", {})
         s = api("/api/state")
         self.assertEqual(s["mode"], "replay")
-        self.assertEqual(s["replay_at"], 0)
+        self.assertEqual(s["replay_at"], 0, "it opens on the board as it started")
         total = s["replay_total"]
-        self.assertGreaterEqual(total, rounds, "one frame per night, plus the start")
+        self.assertGreaterEqual(total, 1)
+        self.assertEqual(total, len(st["history"]), "one step per night played")
 
-        seen = [s["replay_at"]]
+        seen = []
         for _ in range(total + 2):
             if api("/api/state")["mode"] != "replay":
                 break
             api("/api/gm/replay", {})
-            s = api("/api/state")
+            s = settled()
             if s["mode"] == "replay":
                 seen.append(s["replay_at"])
-        self.assertEqual(seen, list(range(total)), "every night, in order, once")
+        self.assertEqual(seen, list(range(1, total + 1)), "every night, in order, once")
         self.assertEqual(api("/api/state")["mode"], "idle", "it hands the game back")
+
+    def test_each_night_of_the_replay_is_animated(self):
+        """A still frame per night made the room hunt for the difference. Each
+        press now runs the same hold-then-turn transition as live play."""
+        fresh(seed=5)
+        for _ in range(3):
+            if api("/api/state")["phase"] != "playing":
+                break
+            play_round("native")
+        api("/api/gm/replay", {})
+        opening = api("/api/frame")["frame"]
+        api("/api/gm/replay", {})
+        s = settled()
+        self.assertEqual(s["replay_at"], 1)
+        self.assertNotEqual(api("/api/frame")["frame"], opening,
+                            "the board has to move when a night is played")
 
     def test_the_forest_visibly_declines_across_the_replay(self):
         """The whole point of the replay is the room seeing what their voting

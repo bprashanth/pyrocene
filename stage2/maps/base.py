@@ -28,13 +28,24 @@ def health_bar(x, y, w, pct, ink, good, warn, bad, track, label="FOREST"):
   <text x="{x + w + 18}" y="{y + 13}" class="pct" fill="{col}">{pct}%</text>'''
 
 
-def legend(x, y, items, ink, gap=196):
-    """items: list of (swatch_svg_fn, label). Each swatch draws at 0,0 in a
-    20x20 box; we translate it into place."""
+def legend(x, y, items, ink, gap=196, width=None, row_h=30):
+    """items: list of (swatch_svg, label). Each swatch draws at 0,0 in a 20x20
+    box and is translated into place.
+
+    Wraps onto more than one row when the keys do not fit across the page.
+    Squeezing the gap instead used to push labels through the swatch of the key
+    after them, which is worse than using a second line.
+    """
+    span = width if width is not None else (W - x * 2)
+    per_row = max(1, int(span // gap)) if gap else len(items)
+    rows = -(-len(items) // per_row)
+    # Lift the block so a second row grows upward, not off the bottom.
+    y0 = y - (rows - 1) * row_h
     out = []
     for k, (swatch, label) in enumerate(items):
-        tx = x + k * gap
-        out.append(f'<g transform="translate({tx},{y})">{swatch}'
+        tx = x + (k % per_row) * gap
+        ty = y0 + (k // per_row) * row_h
+        out.append(f'<g transform="translate({tx},{ty})">{swatch}'
                    f'<text x="30" y="15" class="leg" fill="{ink}">{label}</text></g>')
     return "".join(out)
 
