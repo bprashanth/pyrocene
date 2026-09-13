@@ -489,20 +489,26 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def addresses() -> list:
-    """Every address this machine can be reached on, best guess first.
+    """Every address this machine can be reached on, the useful one first.
 
-    A room needs a URL to hand out and the answer differs by situation: the wifi
-    address for phones in the room, a Tailscale address for someone testing from
-    another network. Printing one guess sent people to the wrong one.
+    A room needs a URL to hand out, and "the default route" is the wrong guess
+    on any laptop with both wifi and ethernet. On a wired desk machine the
+    default route is the ethernet address, and every phone in the room is on
+    wifi, on a different subnet, unable to reach it. So sort by what the room
+    actually needs: wifi, then ethernet, then Tailscale.
     """
-    out = []
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("10.255.255.255", 1))
-        out.append((s.getsockname()[0], "this machine's default route"))
-        s.close()
-    except OSError:
-        pass
+    seen, rows = set(), []
+
+    def kind(dev: str, ip: str) -> tuple:
+        """(sort rank, note). Lower rank is offered first."""
+        if ip.startswith("100.") or dev.startswith("tailscale"):
+            return 2, "tailscale, reachable from your other devices"
+        if dev.startswith(("wl", "wlan", "wifi")):
+            return 0, "wifi, hand this one to phones in the room"
+        if dev.startswith(("en", "eth")):
+            return 1, "ethernet, only reachable from this wired network"
+        return 3, f"interface {dev}"
+
     try:
         import subprocess
         raw = subprocess.run(["ip", "-4", "-o", "addr", "show"], capture_output=True,
@@ -514,16 +520,27 @@ def addresses() -> list:
             dev, ip = parts[1], parts[3].split("/")[0]
             if ip.startswith("127.") or dev.startswith(("docker", "br-", "veth")):
                 continue
-            note = ("tailscale, reachable from your other devices"
-                    if ip.startswith("100.") else
-                    "wifi or ethernet, for phones in the room")
-            if ip not in [a for a, _ in out]:
-                out.append((ip, note))
-            else:
-                out = [(a, note if a == ip else n) for a, n in out]
+            if ip in seen:
+                continue
+            seen.add(ip)
+            rank, note = kind(dev, ip)
+            rows.append((rank, ip, note))
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
-    return out or [("127.0.0.1", "this machine only")]
+
+    if not rows:
+        # No `ip` command. Fall back to asking the kernel which source address
+        # it would use to reach the internet.
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("10.255.255.255", 1))
+            rows.append((0, s.getsockname()[0], "this machine's default route"))
+            s.close()
+        except OSError:
+            pass
+
+    rows.sort(key=lambda r: r[0])
+    return [(ip, note) for _, ip, note in rows] or [("127.0.0.1", "this machine only")]
 
 
 def lan_ip() -> str:
