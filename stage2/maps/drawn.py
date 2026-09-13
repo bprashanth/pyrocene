@@ -28,6 +28,8 @@ DUG = "#efe6d2"
 ROOF = "#fbf6ea"
 DIM = "#8b8371"
 GOOD = "#4f7a3f"
+# The one colour used for a person rather than for the land.
+NAMED = "#1f6f7a"
 
 CSS = """
 .ttl{font-size:17px;letter-spacing:.34em;font-weight:800}
@@ -172,6 +174,36 @@ def render(scene) -> str:
         if t:
             B.append(f'<g opacity="{0.2 if hazed else 0.42}" filter="url(#rough)">'
                      + "".join(t) + "</g>")
+
+    # --- who went out that round, in the replay only -----------------------
+    # The room has just played an evening of Mafia and is now watching the
+    # ground change. A name over the patch is what lets them put night three in
+    # the game against the bare patch that appeared on night three. Never drawn
+    # during play: there it would hand over exactly what the room is working out.
+    for b in scene.badges:
+        keep = [i for i in (b.get("cells") or []) if scene.cover.get(i) != "water"]
+        if not keep:
+            continue
+        d = cut(keep, 0.3)
+        B.append(f'<path d="{d}" fill="none" stroke="{NAMED}" stroke-width="2.4" '
+                 f'opacity=".5" stroke-linejoin="round" filter="url(#rough)" '
+                 f'fill-rule="evenodd"/>')
+        rs = [scene.rc(i) for i in keep]
+        mr = sum(r for r, _ in rs) / len(rs)
+        mc = sum(c for _, c in rs) / len(rs)
+        # Sit the name inside the patch but away from the homes marker, which
+        # carries its own label and was being written over.
+        avoid = [scene.rc(i) for i in scene.of("village")]
+        if avoid:
+            def score(rc):
+                r, c = rc
+                far = min(abs(r - vr) + abs(c - vc) for vr, vc in avoid)
+                return min(far, 6) - 0.35 * (abs(r - mr) + abs(c - mc))
+            mr, mc = max(rs, key=score)
+        cy = y0 + (mr + 0.5) * u
+        cx = x0 + (mc + 0.5) * u
+        B.append(base.label(cx, cy, b.get("name", ""), NAMED, PAPER,
+                            size=max(12, u * 0.58), weight=700, track=0.06))
 
     # --- homes --------------------------------------------------------------
     for i in scene.of("village"):

@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 44 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 51 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -73,13 +73,18 @@ lantana back and turn a hopeless board around.
 When it ends, press **Replay the map** and then **Next night** to walk the
 forest forward one night at a time. No cards, no narration, just the land.
 
-The replay draws a faint dashed boundary around the ground each player started
-with. Those boundaries never move, so the room can watch one shape change hands
-over the evening and tie it back to the night somebody went out. That is the
-frame for the explanation: a lantana patch cleared leaves bare ground, which can
-be taken again, and a lantana patch left alone spreads past its own boundary
-into the forest. No names and no roles are drawn, so nothing is given away that
-the room has not already worked out.
+Through the whole of stage 1 the map draws a faint dashed boundary around the
+ground each player started with. Those boundaries never move, so the room can
+watch one shape change hands over the evening. That is the frame for the
+explanation: a lantana patch cleared leaves bare ground, which can be taken
+again, and a lantana patch left alone spreads past its own boundary into the
+forest.
+
+**In the replay, and only there, the night that took somebody puts their name
+over their ground.** So when the room reaches night three and a stand has gone
+bare, the name of whoever was voted out on night three is sitting on it. The
+ecologist and the ranger own no ground and are never named. During play no name
+is ever drawn, because that is the thing the room is there to work out.
 
 ## The round
 
@@ -93,6 +98,13 @@ Every night the room makes exactly one choice. That is the whole tension.
 The night and the day are separate moments. Each change gets one card the room
 reads and then one animation, and the game master presses through them, so
 nothing important flashes past.
+
+**Water is a break.** Lantana creeps outward from ground it already holds, and a
+creeping front cannot cross a river. Its seed is carried by birds, which is how
+new patches appear at a distance, but that is a jump to somewhere else rather
+than a front advancing, and the game does not model it. So the river stops
+spread, stops bare ground being taken from the far bank, and splits what counts
+as one stand when fire severity is worked out.
 
 **Eliminations.** A lantana player out leaves their ground bare, and bare
 ground goes to whatever is next to it. A native player out lets lantana take
@@ -187,6 +199,7 @@ python3 -m unittest stage2.tests.test_isolation      # the live game must not mo
 python3 -m unittest stage2.tests.e2e.test_journeys   # the game and the console
 python3 -m unittest stage2.tests.e2e.test_stages     # stage 1, Continue, the replay, the SVG map
 python3 -m unittest stage2.tests.test_styles         # every map style renders
+python3 -m unittest stage2.tests.test_rules         # water as a break, replay names
 SHOTS=1 SHOT_DIR=/tmp/shots python3 -m unittest stage2.tests.e2e.test_journeys
 python3 -m stage2.sim --games 250                    # balance, whole games in memory
 python3 -m stage2.sim --trace 7

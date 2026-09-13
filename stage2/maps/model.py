@@ -25,6 +25,7 @@ class Scene:
     held: set = field(default_factory=set)         # trench cells the fire ran into
     haze: bool = False                             # push everything but focus back
     territory: list = field(default_factory=list)  # cell lists, one per player's starting patch
+    badges: list = field(default_factory=list)     # replay only: [{"name", "cells"}]
     game_stage: int = 2                            # 1 has no fire and no resilience
     title: str = ""
     note: str = ""
@@ -67,6 +68,7 @@ def from_view(view: dict, **overlay) -> Scene:
         held=set(overlay.get("held") or []),
         haze=bool(overlay.get("haze")),
         territory=[list(t) for t in (view.get("territories") or [])],
+        badges=list(overlay.get("badges") or []),
         game_stage=int(view.get("stage", 2)),
         title=overlay.get("title", ""), note=overlay.get("note", ""),
     )

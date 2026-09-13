@@ -27,6 +27,29 @@ FIRELINE, WATER_ACT, EWS = "fireline", "water", "ews"
 ACTIONS = (FIRELINE, WATER_ACT, EWS)
 
 
+
+def across_water(s, a: int, b: int) -> bool:
+    """True when a and b touch only at a corner and that corner is open water.
+
+    Lantana creeps outward from a stand it already holds, and a creeping front
+    cannot cross a river. Its seed is carried by birds, which is how new patches
+    turn up at a distance, but that is a jump to somewhere else rather than a
+    front advancing. Diagonal neighbours let a stand step around the corner of a
+    one-cell-wide channel and appear on the far bank with nothing joining it.
+
+    The map already treats water as a break when a fire runs into it and when a
+    trench is dug, so it has to be a break here too. Without this the river is a
+    break for everything except the thing the room is trying to contain.
+    """
+    ca, cb = s.cells[a], s.cells[b]
+    dr, dc = cb.r - ca.r, cb.c - ca.c
+    if abs(dr) != 1 or abs(dc) != 1:
+        return False
+    side_a = s.cells[(ca.r + dr) * s.cols + ca.c]
+    side_b = s.cells[ca.r * s.cols + (ca.c + dc)]
+    return side_a.cover == WATER and side_b.cover == WATER
+
+
 @dataclass
 class Player:
     id: str
@@ -507,10 +530,24 @@ class Game:
         For the end of a stage 1 game: the room played Mafia all night without
         seeing a map, and this walks them through what their voting did to the
         forest. No cards and no narration, just the land changing.
+
+        Each frame carries the names of whoever went out that round and owned
+        ground, so the room can put a night in the game against a change on the
+        map. This is the only place names are ever drawn. During play it would
+        hand out exactly what the room is meant to be working out.
         """
-        return [{"kind": "settle", "text": "", "fire": [], "focus": [], "halo": [],
-                 "held": [], "haze": False, "view": v, "hold_ms": 0}
-                for v in self.snapshots]
+        out = []
+        for k, v in enumerate(self.snapshots):
+            # out_round is 0 for anyone still in, so the opening board carries no
+            # badges and a round only names the people it actually took.
+            badges = [{"name": p.name, "cells": list(p.patch)}
+                      for p in self.players.values()
+                      if not p.alive and p.out_round == k and k > 0
+                      and p.patch and p.role in (LANTANA, NATIVE_P)]
+            out.append({"kind": "settle", "text": "", "fire": [], "focus": [], "halo": [],
+                        "held": [], "haze": False, "view": v, "hold_ms": 0,
+                        "badges": badges})
+        return out
 
     def cell_name(self, i: int) -> str:
         c = self.state.cells[i]
@@ -571,6 +608,8 @@ class Game:
                 n = s.cells[ni]
                 if n.cover not in (NATIVE, BARE) or n.fireline or ni in new:
                     continue
+                if across_water(s, c.index, ni):
+                    continue
                 candidates.add(ni)
                 p = base
                 if d == s.wind:
@@ -597,7 +636,8 @@ class Game:
         for c in s.cells:
             if c.cover != BARE or c.fireline:
                 continue
-            lant = [ni for ni, _ in neighbors8(s, c.index) if s.cells[ni].cover == INVASIVE]
+            lant = [ni for ni, _ in neighbors8(s, c.index)
+                    if s.cells[ni].cover == INVASIVE and not across_water(s, c.index, ni)]
             if lant:
                 if rng.random() < cfg["reinvade_p"]:
                     src = rng.choice(lant)
@@ -634,7 +674,8 @@ class Game:
                 comp.append(i)
                 for ni, _ in neighbors8(s, i):
                     n = s.cells[ni]
-                    if ni not in seen and n.cover == INVASIVE and n.stage == DENSE:
+                    if (ni not in seen and n.cover == INVASIVE and n.stage == DENSE
+                            and not across_water(s, i, ni)):
                         seen.add(ni)
                         q.append(ni)
             out.append(comp)
@@ -1150,7 +1191,8 @@ class Game:
         idx = {"latest": self.log_meta["file"], "games": []}
         if os.path.exists(idx_path):
             try:
-                idx = json.load(open(idx_path, encoding="utf-8"))
+                with open(idx_path, encoding="utf-8") as fh:
+                    idx = json.load(fh)
             except (json.JSONDecodeError, OSError):
                 pass
         idx["latest"] = self.log_meta["file"]

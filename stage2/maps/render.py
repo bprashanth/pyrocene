@@ -23,7 +23,8 @@ def style(name: str):
 def frame_svg(beat: dict, name: str) -> str:
     sc = from_view(beat["view"], fire=beat.get("fire"), focus=beat.get("focus"),
                    halo=beat.get("halo"), held=beat.get("held"),
-                   haze=beat.get("haze"), note=beat.get("text", ""))
+                   haze=beat.get("haze"), note=beat.get("text", ""),
+                   badges=beat.get("badges"))
     return style(name).render(sc)
 
 
