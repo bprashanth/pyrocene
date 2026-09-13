@@ -100,6 +100,27 @@ keeps guessing and lantana can lie about it.
 | No native forest left | Loss. |
 | Night 8 with lantana still in | Loss. A room that only shelters never wins. |
 
+## Show animation
+
+When a game finishes, the game master page offers **Show animation**. It opens a
+post-game replay in a new tab, built from that game's event log, and plays back
+the evening in under a minute: the forest as it started, lantana spreading night
+by night, each fire where it began and how far it ran, and the ending.
+
+This is for the moment after the room has stopped playing and is still in the
+room. A scoreboard says the forest ended at 45%. The replay shows them the night
+it happened.
+
+The replays live in `stage2/simulation/<name>/`. Any directory there with an
+`index.html` is picked up automatically and appears as a button, so there can be
+more than one. They are given the log to load through a `?log=` parameter and
+fetch it themselves; they run entirely in the browser and do not import anything
+from this package. `stage2/simulation/SPEC.md` is the contract, and
+`stage2/simulation/sample-game.json` is a real finished game to develop against.
+
+Those directories are owned by whoever is building a replay. Nothing in the game
+depends on them, and the buttons simply do not appear if none exist.
+
 ## Changing the words
 
 Every line the players see is in `stage2/text/`. Grep the sentence, edit it,
@@ -167,3 +188,38 @@ out, every square that changed and what it changed from and to, the resilience
 action and its cells, and the fire with its ignition square, cause, severity,
 burned squares and the trench edges it pushed against. Enough to build a
 post-game sequence without reading any of this code.
+
+## What is where
+
+| | |
+|---|---|
+| `server.py` | The whole HTTP server. Routes, SSE, the room's state machine. |
+| `game.py` | Board, resolution, spread, fire, trenches, animation frames, the log. |
+| `config.py` | Every tunable. Nothing else holds a number that matters. |
+| `text.py`, `text/` | Every sentence a player or the projector ever shows. |
+| `render.py`, `frames.py` | Turning game state into what the projector paints. |
+| `maps/` | Six cartographic styles and the geometry they share. Own readme. |
+| `static/` | `gm.html`, `phone.html`, `projector.html`, and vendored xterm. |
+| `engine/` | Frozen copy of the live game's engine. Do not re-point at the original. |
+| `sim.py` | Plays whole games in memory. Used for balance, never at runtime. |
+| `tests/` | 39 tests. `test_isolation.py` is the one that guards the live game. |
+| `logs/` | Written as games are played. `index.json` names the latest. |
+| `simulation/` | Post-game replays. Not owned by the game. |
+
+## Keeping the live game out of this
+
+The single-player game at pyrocene.netlify.app is live, and stage 2 must not be
+able to affect it, including by accident.
+
+- `stage2/engine/` is a snapshot taken once. Stage 2 imports only from there.
+- `tests/test_isolation.py` parses every file under `stage2/` with `ast` and
+  fails if any of them imports `engine`, `terminal`, `game` or `web`. Reading the
+  syntax tree catches an import anywhere in a file, which grepping the top of it
+  would not.
+- `netlify.toml` has a `[context.branch-deploy]` block whose build command does
+  nothing, so pushing this branch does not rebuild the site.
+- `git diff --stat main -- engine terminal web game` must come back empty.
+
+The cost is that a fix in the live engine does not reach stage 2 until somebody
+copies it across. That is the intended trade. Stage 2 is a different game that
+happens to share physics.
