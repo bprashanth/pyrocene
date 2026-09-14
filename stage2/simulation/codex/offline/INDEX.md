@@ -3,6 +3,10 @@
 Canonical index for the post-game film experiments made on 13 September 2026.
 Use the `v2` files for review. Earlier renders remain as iteration evidence.
 
+## Real rainforest LiDAR follow-up
+
+The current study replaces the prototype's procedural cloud and generated plates with one film built from a real Amazon fire photograph plus genuine ForestScan and EBA airborne/terrestrial LiDAR. Its review gallery is `http://100.82.28.38:8022/`; exact hashes, raw data, manifests and reproduction paths are in [the real-LiDAR index](../lidar/INDEX.md). Every displayed word is editable in [`../lidar/captions.json`](../lidar/captions.json).
+
 ## Review
 
 The comparison gallery is served from the render box at:

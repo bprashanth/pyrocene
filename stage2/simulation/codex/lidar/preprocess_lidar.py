@@ -92,13 +92,23 @@ def save_cloud(output: Path, xyz: np.ndarray, height: np.ndarray, intensity: np.
     output.with_suffix(".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def prepare_als(source_path: Path, output: Path, maximum: int, seed: int) -> None:
+def prepare_als(source_path: Path, output: Path, maximum: int, seed: int,
+                center_x: float | None = None, center_y: float | None = None,
+                half_size: float | None = None) -> None:
     las = laspy.read(source_path)
     xyz_all = np.column_stack((las.x, las.y, las.z)).astype(np.float64)
     finite = np.isfinite(xyz_all).all(axis=1)
     xyz_all = xyz_all[finite]
     classification_all = np.asarray(las.classification, dtype=np.uint8)[finite]
     intensity_all = np.asarray(las.intensity, dtype=np.float32)[finite]
+    crop_note = "full source tile"
+    if center_x is not None and center_y is not None and half_size is not None:
+        crop = ((np.abs(xyz_all[:, 0] - center_x) <= half_size) &
+                (np.abs(xyz_all[:, 1] - center_y) <= half_size))
+        xyz_all = xyz_all[crop]
+        classification_all = classification_all[crop]
+        intensity_all = intensity_all[crop]
+        crop_note = f"square crop centered at ({center_x}, {center_y}), half-size {half_size} m"
 
     # A robust classified-ground surface is adequate for the cinematic height view.
     ground = xyz_all[classification_all == 2]
@@ -140,6 +150,7 @@ def prepare_als(source_path: Path, output: Path, maximum: int, seed: int) -> Non
         "las_version": str(las.header.version),
         "point_format": int(las.header.point_format.id),
         "crs": str(las.header.parse_crs()) if las.header.parse_crs() else "not encoded in LAS header",
+        "spatial_crop": crop_note,
     })
 
 
@@ -226,24 +237,85 @@ def prepare_tls(source_path: Path, dem_path: Path, output: Path, maximum: int, s
     })
 
 
+def prepare_segmented_tls(source_path: Path, output: Path, maximum: int, seed: int) -> None:
+    """Prepare an FSCT-segmented tile while retaining its measured semantic labels.
+
+    ForestScan's labels distinguish terrain (0), leaf (1), and wood (3). They do
+    not identify species, fuel condition, or flammability.
+    """
+    count, offset, dtype = read_ply_header(source_path)
+    raw = np.memmap(source_path, dtype=dtype, mode="r", offset=offset, shape=(count,))
+    xyz_all = np.column_stack((raw["x"], raw["y"], raw["z"])).astype(np.float64)
+    labels_all = np.rint(np.asarray(raw["label"])).astype(np.uint8)
+    finite = np.isfinite(xyz_all).all(axis=1)
+    xyz_all, labels_all = xyz_all[finite], labels_all[finite]
+    terrain = xyz_all[labels_all == 0]
+    if len(terrain) < 100:
+        raise ValueError("Segmented tile has too few terrain-labelled returns")
+    terrain_tree = cKDTree(terrain[:, :2])
+    _, nearest = terrain_tree.query(xyz_all[:, :2], k=1, workers=-1)
+    height_all = xyz_all[:, 2] - terrain[nearest, 2]
+    valid = np.isfinite(height_all) & (height_all >= -0.5) & (height_all <= 75.0)
+    xyz_all, height_all, labels_all = xyz_all[valid], height_all[valid], labels_all[valid]
+    refl_all = np.asarray(raw["refl"], dtype=np.float32)[finite][valid]
+
+    take = stratified_sample(height_all, maximum, seed)
+    xyz = xyz_all[take]
+    xyz[:, 2] = height_all[take]
+    xyz, center = normalize_xy(xyz)
+    intensity = refl_all[take]
+    lo, hi = np.percentile(intensity, (2, 98))
+    intensity = np.clip((intensity - lo) / max(1e-6, hi - lo), 0, 1)
+    classification = labels_all[take]
+    source = {
+        "dataset": "ForestScan FSCT-segmented TLS, Paracou plot FG6c2, French Guiana",
+        "doi": "10.5285/931973DB09AF41568853702EFE135F29",
+        "license": "CC BY 4.0",
+        "source_file": str(source_path.resolve()),
+        "source_file_sha256": sha256(source_path),
+        "sensor": "RIEGL VZ-400i terrestrial laser scanner (TLS)",
+        "acquisition": "October 2022",
+        "plot": "FG6c2, Paracou, French Guiana",
+    }
+    counts = {str(label): int(np.sum(labels_all == label)) for label in np.unique(labels_all)}
+    save_cloud(output, xyz, height_all[take], intensity, classification, source, {
+        "ground_normalization": "nearest ForestScan terrain-labelled return",
+        "source_point_count": int(count),
+        "xy_center_plot_coordinates": center,
+        "ply_properties": list(dtype.names or ()),
+        "source_semantic_label_counts": counts,
+        "semantic_labels": {"0": "terrain", "1": "leaf", "3": "wood"},
+        "semantic_warning": "Labels are structural FSCT classes, not species or fuel labels.",
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="kind", required=True)
     als = sub.add_parser("als")
     als.add_argument("source", type=Path)
     als.add_argument("output", type=Path)
+    als.add_argument("--center-x", type=float)
+    als.add_argument("--center-y", type=float)
+    als.add_argument("--half-size", type=float)
     tls = sub.add_parser("tls")
     tls.add_argument("source", type=Path)
     tls.add_argument("dem", type=Path)
     tls.add_argument("output", type=Path)
-    for command in (als, tls):
+    segmented = sub.add_parser("segmented-tls")
+    segmented.add_argument("source", type=Path)
+    segmented.add_argument("output", type=Path)
+    for command in (als, tls, segmented):
         command.add_argument("--maximum", type=int, default=650_000)
         command.add_argument("--seed", type=int, default=1701)
     args = parser.parse_args()
     if args.kind == "als":
-        prepare_als(args.source, args.output, args.maximum, args.seed)
-    else:
+        prepare_als(args.source, args.output, args.maximum, args.seed,
+                    args.center_x, args.center_y, args.half_size)
+    elif args.kind == "tls":
         prepare_tls(args.source, args.dem, args.output, args.maximum, args.seed)
+    else:
+        prepare_segmented_tls(args.source, args.output, args.maximum, args.seed)
 
 
 if __name__ == "__main__":

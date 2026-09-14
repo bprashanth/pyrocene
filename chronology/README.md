@@ -28,6 +28,12 @@ Read in filename order.
 | [2026-09-13T1100](2026-09-13T1100-two-replays-claude.md) | Two post-game films from one agent: paper, then a night forest |
 | [2026-09-13T1200](2026-09-13T1200-testing-the-transition.md) | Driving the stage 1 to stage 2 handover, and what is missing |
 | [2026-09-13T1230](2026-09-13T1230-three-film-studies.md) | When real-time 3D was the wrong deliverable |
+| [2026-09-13T1630](2026-09-13T1630-fire-lab.md) | Board, then a real fire model, then a picture: the fire lab |
+| [2026-09-13T1900](2026-09-13T1900-real-fires.md) | Real fires on the game's board |
+| [2026-09-14T0200](2026-09-14T0200-beneath-the-canopy.md) | Beneath the canopy: cinema anchored to real measurements |
+| [2026-09-14T0945](2026-09-14T0945-amazon-fire-legacy.md) | A real Amazon fire legacy, and the point cloud we refused to invent |
+| [2026-09-14T1230](2026-09-14T1230-one-real-lidar-film.md) | Removing generated imagery and making one restrained LiDAR film |
+| [2026-09-14T1525](2026-09-14T1525-lidar-final.md) | Freezing the LiDAR final before the hyperspectral experiments |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
