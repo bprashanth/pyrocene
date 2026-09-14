@@ -13,8 +13,7 @@ This document is the claim contract for any continuation of the frozen LiDAR fil
 | Nouragues liana TLS / structural studies | Highlight validated liana-stem geometry if the labelled artifact is present | Lianas can contribute a recognizable structural form in lower/mid-canopy layers | Calling lianas invasive, non-native, dry, or intrinsically flammable |
 | Nouragues 2012 liana map with 2019 ALS | Same-camera comparison of a tile with about one percent overlap and a tile with about 72 percent overlap | Later airborne scans can provide structural context for the previously mapped liana zone | Point-level liana labels, a controlled comparison, or persistence at every mapped pixel |
 | Hawaii wet-forest invasive TLS | Recolor published cross-sections grouped by measured strawberry guava abundance | Higher abundance is associated with a shorter denser forest in the sampled transects | A time sequence, a registered comparison, or a fuel measurement |
-| Hawaii rainforest imaging spectroscopy | Show the published native/invasive classification in the same palette | Imaging spectroscopy and field evidence can identify canopy composition that geometry alone cannot | Registration to the newer TLS transects or species labels outside the publication map |
-| Nouragues gap/microclimate studies | Amber light field and lower-layer reveal as an explanatory bridge | Canopy gaps can alter light, temperature, and humidity near the ground | A rendered overlay is a measured temperature, humidity, fuel-moisture, or fire-risk map |
+| Hawaii rainforest imaging spectroscopy | Show the published LiDAR height, spectral composition, and invasive classification for a common 53 hectare footprint | Co-registered LiDAR and imaging spectroscopy can screen canopy geometry and then identify canopy composition | Registration to the newer TLS transects, species labels outside the publication map, or any inference of fuel or flammability |
 | Hawaii hyperspectral + LiDAR studies | Mention only as the next evidence step, if needed | Species identity, including invasive plants, requires spectral and/or field evidence in addition to geometry | Assigning an invasive species label to any current point cloud |
 
 The Amazon scans are post-fire observations several years after the documented 2015 fire. Captions must say **post-fire structural legacy** or **observed canopy change**, not “the fire immediately created this gap.”
@@ -25,7 +24,6 @@ The following may be rendered as graphics, provided they are visually distinct f
 
 - Height-band isolation and canopy peel: a selection of existing points, not a new layer of vegetation.
 - Same-camera wipes: a comparison device; it does not imply simultaneous measurement.
-- Amber “sun” wedges, cyan/amber grading, and vignette changes: conceptual light/microclimate pathways, not sensor measurements.
 - A finite `chm_delta` mask: a spatial emphasis of measured canopy-height difference; NaN/out-of-overlap cells must remain absent.
 - A leaf/wood or liana highlight: only the exact source classification or validated stem extraction, never an inferred species class.
 - Cosmetic removal of publication panel letters: the covered pixels are excluded from interpretation and the operation must be disclosed in the output manifest.
@@ -37,10 +35,6 @@ Use the existing near-black background and cyan, magenta, green, amber, ivory, a
 Every continuation should retain a boundary equivalent to:
 
 > LiDAR shows where structure sits. It does not identify species, fuel, or moisture by itself.
-
-For gap sequences, use language equivalent to:
-
-> Gaps can expose lower layers to more light and heat, and humidity can change. This is a microclimate pathway, not a measurement of fuel dryness.
 
 For species or invasion sequences, use language equivalent to:
 

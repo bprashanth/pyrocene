@@ -11,12 +11,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 LIDAR_DIR = Path(__file__).resolve().parents[1] / "lidar"
 sys.path.insert(0, str(LIDAR_DIR))
 from render_lidar_films import (  # noqa: E402
-    AMBER, CYAN, GREEN, IVORY, MAGENTA, MUTED, Cloud, PointPainter,
+    CYAN, GREEN, IVORY, MAGENTA, MUTED, Cloud, PointPainter,
     clamp, grade, interval, lerp, sha256, smooth,
 )
 
@@ -160,7 +160,8 @@ def crop_fill(image: Image.Image, size: tuple[int, int], zoom=1.0,
 
 
 class ScientificPanels:
-    def __init__(self, seely: Path, liana: Path, asner: Path, size: tuple[int, int]):
+    def __init__(self, seely: Path, liana: Path,
+                 asner_aligned: Path, size: tuple[int, int]):
         self.size = size
         source = Image.open(seely).convert("RGB")
         self.seely = {
@@ -170,20 +171,62 @@ class ScientificPanels:
         }
         liana_source = Image.open(liana).convert("RGB")
         self.liana = liana_source.crop((440, 8, 610, 342))
-        asner_source = Image.open(asner).convert("RGB")
-        self.spectral = asner_source.crop((0, 132, 494, 260))
-        spectral_original = np.asarray(self.spectral).copy()
-        for x0, y0, x1, y1 in ((47, 50, 86, 94), (135, 50, 176, 94),
-                                (240, 50, 282, 94), (420, 45, 463, 90)):
-            height = y1 - y0
-            patch = Image.fromarray(spectral_original[96:126, x0:x1], "RGB").resize(
-                (x1 - x0, height), Image.Resampling.BILINEAR)
-            replacement = self.spectral.copy()
-            replacement.paste(patch, (x0, y0))
-            mask = Image.new("L", self.spectral.size, 0)
-            ImageDraw.Draw(mask).rectangle((x0 + 3, y0 + 3, x1 - 3, y1 - 3), fill=255)
-            mask = mask.filter(ImageFilter.GaussianBlur(5))
-            self.spectral = Image.composite(replacement, self.spectral, mask)
+        aligned_source = Image.open(asner_aligned).convert("RGB")
+        aligned_crops = {
+            "lidar": aligned_source.crop((352, 5, 673, 335)),
+            "composition": aligned_source.crop((10, 491, 331, 821)),
+            "detection": aligned_source.crop((694, 491, 1015, 821)),
+        }
+        self.aligned = {
+            "lidar": self._style_aligned(aligned_crops["lidar"], "lidar"),
+            "composition": self._style_aligned(aligned_crops["composition"], "composition"),
+            "detection": self._style_aligned(aligned_crops["detection"], "detection"),
+        }
+
+    @staticmethod
+    def _style_aligned(source: Image.Image, mode: str) -> Image.Image:
+        array = np.asarray(source, dtype=np.uint8)
+        rgb = array.astype(np.float32)
+        brightness = rgb.mean(axis=2)
+        active = brightness > 18
+        styled = np.zeros_like(array)
+        styled[:] = INK
+        if mode == "lidar":
+            values = brightness[active]
+            low, high = np.percentile(values, (3, 97))
+            value = np.clip((brightness - low) / max(1, high - low), 0, 1)
+            result = np.zeros_like(rgb)
+            first = value <= 0.30
+            middle = (value > 0.30) & (value <= 0.68)
+            last = value > 0.68
+            amount = np.clip(value / 0.30, 0, 1)[..., None]
+            result[first] = (np.asarray(MAGENTA) * (1 - amount[first]) +
+                             np.asarray(CYAN) * amount[first])
+            amount = np.clip((value - 0.30) / 0.38, 0, 1)[..., None]
+            result[middle] = (np.asarray(CYAN) * (1 - amount[middle]) +
+                              np.asarray(GREEN) * amount[middle])
+            amount = np.clip((value - 0.68) / 0.32, 0, 1)[..., None]
+            result[last] = (np.asarray(GREEN) * (1 - amount[last]) +
+                            np.asarray(IVORY) * amount[last])
+            styled[active] = result[active].astype(np.uint8)
+        elif mode == "composition":
+            red, green, blue = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+            weights = np.stack((red, green, blue), axis=2)
+            weights /= np.maximum(weights.sum(axis=2, keepdims=True), 1)
+            result = (weights[..., 0:1] * np.asarray(MAGENTA) +
+                      weights[..., 1:2] * np.asarray(GREEN) +
+                      weights[..., 2:3] * np.asarray(CYAN))
+            contrast = np.clip((brightness / 155.0)[..., None], 0.55, 1.18)
+            styled[active] = np.clip(result * contrast, 0, 255)[active].astype(np.uint8)
+        else:
+            red, green, blue = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+            invasive = active & (red > blue * 1.08) & (red > 70)
+            native = active & (green >= red * 0.72) & ~invasive
+            screened = active & ~(invasive | native)
+            styled[invasive] = MAGENTA
+            styled[native] = CYAN
+            styled[screened] = (45, 57, 57)
+        return Image.fromarray(styled, "RGB")
 
     def point_panel(self, source: Image.Image, mode: str, zoom: float = 1.0,
                     reveal: float = 1.0) -> Image.Image:
@@ -230,20 +273,19 @@ class ScientificPanels:
         canvas = Image.alpha_composite(canvas, glow)
         return canvas.convert("RGB")
 
-    def spectral_panel(self, zoom: float, mix: float) -> Image.Image:
+    def aligned_panel(self, mode: str, zoom: float = 1.0) -> Image.Image:
         width, height = self.size
-        source = ImageEnhance.Brightness(self.spectral).enhance(0.55 + 0.45 * clamp(mix))
-        source = ImageEnhance.Color(source).enhance(1.12)
-        source = ImageEnhance.Contrast(source).enhance(1.06)
+        source = self.aligned[mode]
         background = Image.new("RGB", self.size, INK)
-        target_w = round(width * 0.84 * zoom)
-        target_h = round(target_w * source.height / source.width)
+        target_h = round(height * 0.76 * zoom)
+        target_w = round(target_h * source.width / source.height)
+        source = source.filter(ImageFilter.GaussianBlur(0.42))
         panel = source.resize((target_w, target_h), Image.Resampling.LANCZOS)
         x = (width - target_w) // 2
-        y = round(height * 0.46 - target_h / 2)
+        y = round(height * 0.43 - target_h / 2)
         background.paste(panel, (x, y))
-        bloom = background.filter(ImageFilter.GaussianBlur(10))
-        return Image.blend(background, bloom, 0.08)
+        bloom = background.filter(ImageFilter.GaussianBlur(5))
+        return Image.blend(background, bloom, 0.06)
 
 
 def tls_camera(cloud: Cloud, t: float):
@@ -291,57 +333,14 @@ def render_invasive(t: float, panels: ScientificPanels) -> tuple[Image.Image, st
         return Image.blend(low, moderate, interval(t, 8, 13)), "height_legend"
     if t < 20:
         return Image.blend(moderate, high, interval(t, 13, 18)), "height_legend"
-    spectral = panels.spectral_panel(1.0 + 0.025 * interval(t, 25, 35), interval(t, 23, 29))
-    return Image.blend(high, spectral, interval(t, 20, 25)), (
-        "spectral_legend" if t >= 24 else "height_legend")
-
-
-def explanatory_light(image: Image.Image, amount: float, t: float) -> Image.Image:
-    width, height = image.size
-    overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay, "RGBA")
-    cx = width * 0.54
-    top = height * 0.09
-    bottom = height * 0.82
-    spread = width * (0.035 + 0.11 * amount)
-    for index in range(7):
-        offset = (index - 3) / 3
-        ray_top = cx + offset * spread * 0.15
-        ray_bottom = cx + offset * spread * 0.78 + math.sin(index * 4.1) * spread * 0.12
-        ray_width = spread * (0.035 + 0.014 * ((index * 5) % 3))
-        draw.polygon(((ray_top - ray_width, top), (ray_top + ray_width, top),
-                      (ray_bottom + ray_width * 2.8, bottom),
-                      (ray_bottom - ray_width * 2.8, bottom)),
-                     fill=(*AMBER, round((27 + index % 3 * 6) * amount)))
-    for ring in range(9, 0, -1):
-        radius_x = spread * ring / 9
-        radius_y = height * 0.052 * ring / 9
-        draw.ellipse((cx - radius_x, bottom - radius_y,
-                      cx + radius_x, bottom + radius_y),
-                     fill=(*AMBER, round(5.2 * amount * (10 - ring))))
-    for index in range(28):
-        phase = (index * 0.618 + t * 0.08) % 1.0
-        x = cx + math.sin(index * 5.7) * spread * phase
-        y = top + phase * (bottom - top)
-        radius = 1 + (index % 3)
-        draw.ellipse((x - radius, y - radius, x + radius, y + radius),
-                     fill=(*AMBER, round(74 * amount)))
-    overlay = overlay.filter(ImageFilter.GaussianBlur(10))
-    return Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
-
-
-def render_gap(t: float, painter: PointPainter, als: Cloud) -> tuple[Image.Image, str]:
-    eye, target, fov = als_camera(als, t)
-    peel = 0.54 * interval(t, 7, 15)
-    image = painter.render(als, eye, target, fov, "canopy-peel" if t >= 7 else "all", peel)
-    light = interval(t, 10, 18)
-    image = explanatory_light(image, light, t)
-    if t >= 18:
-        warmth = interval(t, 18, 27)
-        amber = Image.new("RGB", image.size, (42, 22, 8))
-        image = Image.blend(image, amber, 0.08 * warmth)
-        image = ImageEnhance.Contrast(image).enhance(1.0 + 0.07 * warmth)
-    return image, "height_legend"
+    lidar_map = panels.aligned_panel("lidar", 1.0 + 0.02 * interval(t, 18, 24))
+    composition = panels.aligned_panel("composition", 1.02)
+    detection = panels.aligned_panel("detection", 1.02 + 0.018 * interval(t, 30, 36))
+    if t < 23:
+        return Image.blend(high, lidar_map, interval(t, 18, 23)), "height_legend"
+    if t < 30:
+        return Image.blend(lidar_map, composition, interval(t, 23, 27.5)), "composition_legend"
+    return Image.blend(composition, detection, interval(t, 30, 34)), "spectral_legend"
 
 
 def encode_one(args, film_key: str, copy: dict, tls: Cloud, als: Cloud, als_liana: Cloud,
@@ -369,11 +368,10 @@ def encode_one(args, film_key: str, copy: dict, tls: Cloud, als: Cloud, als_lian
             elif film_key == "invasive_identity":
                 image, legend = render_invasive(t, panels)
             else:
-                image, legend = render_gap(t, painter, als)
+                raise ValueError(f"Unsupported candidate {film_key}")
             draw_interface(image, copy, film_key, t, fonts, scale, legend)
             image = grade(image, frame + {"liana_structure": 91000,
-                                          "invasive_identity": 92000,
-                                          "gap_microclimate": 93000}[film_key])
+                                          "invasive_identity": 92000}[film_key])
             process.stdin.write(np.asarray(image, dtype=np.uint8).tobytes())
             if frame % max(1, args.fps * 2) == 0:
                 print(f"{film_key}: {frame}/{total}", flush=True)
@@ -399,15 +397,13 @@ def encode_one(args, film_key: str, copy: dict, tls: Cloud, als: Cloud, als_lian
             "als_liana_zone": als_liana.manifest,
             "seely_figure": str(args.seely_figure),
             "liana_figure": str(args.liana_figure),
-            "asner_figure": str(args.asner_figure),
+            "asner_aligned_figure": str(args.asner_aligned_figure),
             "captions": str(args.captions)
         },
         "evidence_boundary": {
             "liana_panel": "Published model labels are recolored but their measured pixel geometry is preserved",
             "seely_panels": "Published TLS plots are grouped by field measured invasive abundance and recolored by height for continuity",
-            "spectral_panel": "Published classification figure from a separate Hawaiian rainforest study and not registered to the Seely transects",
-            "spectral_annotation_edit": "Four publication panel labels are cosmetically replaced with adjacent source texture and those covered pixels are excluded from interpretation",
-            "microclimate": "Amber light and warmth are explanatory graphics and not sensor pixels"
+            "spectral_panel": "Published aligned LiDAR height spectral composition and invasive detection panels from one fifty three hectare Hawaiian forest stand"
         }
     }
     output.with_suffix(".manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -421,9 +417,9 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--als-liana", type=Path, required=True)
     result.add_argument("--seely-figure", type=Path, required=True)
     result.add_argument("--liana-figure", type=Path, required=True)
-    result.add_argument("--asner-figure", type=Path, required=True)
+    result.add_argument("--asner-aligned-figure", type=Path, required=True)
     result.add_argument("--captions", type=Path, default=Path(__file__).with_name("captions.json"))
-    result.add_argument("--candidate", choices=("all", "liana_structure", "invasive_identity", "gap_microclimate"), default="all")
+    result.add_argument("--candidate", choices=("all", "liana_structure", "invasive_identity"), default="all")
     result.add_argument("--output-dir", type=Path, required=True)
     result.add_argument("--size", default="1920x1080")
     result.add_argument("--fps", type=int, default=24)
@@ -436,7 +432,8 @@ def main() -> None:
     copy = load_copy(args.captions)
     tls, als, als_liana = Cloud.load(args.tls), Cloud.load(args.als), Cloud.load(args.als_liana)
     size = tuple(map(int, args.size.lower().split("x")))
-    panels = ScientificPanels(args.seely_figure, args.liana_figure, args.asner_figure, size)
+    panels = ScientificPanels(args.seely_figure, args.liana_figure,
+                              args.asner_aligned_figure, size)
     names = tuple(copy["films"]) if args.candidate == "all" else (args.candidate,)
     for name in names:
         print(encode_one(args, name, copy, tls, als, als_liana, panels))

@@ -24,6 +24,14 @@
       ["NATIVE CANOPY", "SPECTRAL CLASS", "cyan"]
     ]
   },
+  "composition_legend": {
+    "title": "SPECTRAL COMPOSITION",
+    "rows": [
+      ["LIVE CANOPY", "PHOTOSYNTHETIC", "green"],
+      ["DEAD MATERIAL", "NONPHOTOSYNTHETIC", "cyan"],
+      ["BARE OR SHADE", "SCREENED", "magenta"]
+    ]
+  },
   "films": {
     "liana_structure": {
       "duration": 32,
@@ -38,24 +46,13 @@
     },
     "invasive_identity": {
       "duration": 36,
-      "location": "ISLAND OF HAWAII : WET RAINFOREST : LIDAR AND IMAGING SPECTROSCOPY",
+      "location": "ISLAND OF HAWAII : WET RAINFOREST : COREGISTERED LIDAR AND IMAGING SPECTROSCOPY",
       "sentences": [
         {"start": 1, "end": 8, "text": "Wet rainforest does not have one structure"},
         {"start": 9, "end": 18, "text": "Higher strawberry guava abundance coincides with a shorter denser forest"},
-        {"start": 19, "end": 27, "text": "LiDAR shows how the structure differs"},
-        {"start": 27, "end": 33, "text": "Imaging spectroscopy identifies canopy composition"},
-        {"start": 33, "end": 36, "text": "Together they locate structure and species"}
-      ]
-    },
-    "gap_microclimate": {
-      "duration": 34,
-      "location": "NOURAGUES POINT CLOUD : FRENCH GUIANA : EXPLANATORY LIGHT LAYER",
-      "sentences": [
-        {"start": 1, "end": 8, "text": "Canopy gaps expose the lower forest"},
-        {"start": 9, "end": 18, "text": "Sensors in French Guiana found gaps were hotter and less humid"},
-        {"start": 19, "end": 26, "text": "In the eastern Amazon El Nino heat reached the forest understory"},
-        {"start": 26, "end": 31, "text": "Exposure and drought can increase fire risk"},
-        {"start": 31, "end": 34, "text": "Structure marks the pathway but does not prove fuel"}
+        {"start": 19, "end": 24, "text": "LiDAR screens the same Hawaiian canopy by height"},
+        {"start": 24, "end": 30, "text": "Imaging spectroscopy separates live canopy from dead material and shade"},
+        {"start": 30, "end": 36, "text": "The final layer identifies invasive tree cover"}
       ]
     }
   }

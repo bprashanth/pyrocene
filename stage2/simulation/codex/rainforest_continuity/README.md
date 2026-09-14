@@ -1,6 +1,6 @@
 # Rainforest continuity film studies
 
-These three silent candidates continue the frozen 56 second LiDAR film without
+These two silent candidates continue the frozen 56 second LiDAR film without
 changing biome or visual language. They use near black space, measured returns,
 height colors, slow camera movement, one sentence and one typed location. No
 generated forest imagery is used.
@@ -13,14 +13,13 @@ generated forest imagery is used.
   classifier image in which model-labelled liana stems are recolored magenta.
 - `invasive-identity.mp4` uses published terrestrial LiDAR cross-sections from
   wet Hawaiian rainforest grouped by measured strawberry guava abundance. It
-  then enters a published airborne imaging-spectroscopy classification from a
-  separate Hawaiian rainforest study.
-- `gap-microclimate.mp4` stays in the Nouragues airborne point cloud and adds a
-  restrained explanatory light field. The point returns are measured. The light
-  field and warm grade are explicitly explanatory rather than sensor pixels.
+  then enters three co-registered panels from one published 53 hectare Hawaiian
+  forest stand: LiDAR height, spectral composition, and invasive tree detection.
+  The footprint and crop remain fixed so spatial features can be followed.
 
 These are edit modules rather than finals. The old dry-forest hyperspectral set
-is retired and absent from the active gallery.
+and the unsupported gap-light experiment are retired and absent from the active
+gallery.
 
 ## Edit every word on screen
 
@@ -41,9 +40,8 @@ under `/mnt/seagate/videos/pyrocene/rainforest-continuity/artifacts/`.
   CC BY 4.0.
 - Liana stem extraction: Krishnamoorthy et al 2019, published classifier figure.
 - Hawaiian invasive structure: Seely et al 2025, CC BY 4.0 figure.
-- Hawaiian invasive imaging spectroscopy: Asner et al 2008, published figure.
-- Gap microclimate: Hardwick et al 2017 and later Amazon field studies provide
-  the textual evidence; the film does not represent raw sensor measurements.
+- Hawaiian invasive imaging spectroscopy: Asner et al 2008 Figure 3, published
+  LiDAR and AVIRIS processing layers for one 53 hectare stand.
 
 The exact source and claim limits are in
 [`EVIDENCE_BOUNDARIES.md`](EVIDENCE_BOUNDARIES.md). The Asner 2008 figure is for
@@ -69,10 +67,13 @@ frames directly to FFmpeg.
   They are not point-level liana labels and are not a controlled time series.
 - The liana stem close-up is a recolored published classifier result. It is not
   an open raw point cloud.
-- The Seely structural transects and Asner spectral map are separate Hawaiian
-  studies. Their dissolve is conceptual rather than spatial registration.
+- The Seely structural transects and the Asner fused-data sequence are separate
+  Hawaiian studies. The transition between those studies is conceptual.
+- Within the Asner sequence, the LiDAR height, spectral composition, and final
+  invasive detection panels are co-registered views of the same 53 hectare
+  stand. A common crop excludes publication labels without inventing pixels.
 - Lianas are a structural rainforest example. They are not presented as
   non-native plants or as proof of fuel.
 - LiDAR geometry does not measure fuel chemistry, moisture or flammability.
-- The spectral publication labels are cosmetically removed for the film. Those
-  covered pixels are not interpreted.
+- The Asner map panels are enlarged from the best available published figure.
+  No generative upscaling or fabricated spatial detail is used.

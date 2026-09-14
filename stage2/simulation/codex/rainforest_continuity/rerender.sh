@@ -21,6 +21,6 @@ PYTHON=${PYROCENE_RAINFOREST_PYTHON:-/tmp/pyrocene-rainforest-venv/bin/python}
   --als-liana "$ARTIFACTS/nouragues-als-liana-zone.npz" \
   --seely-figure "$DATA/hawaii/seely-2025-figures/figure-3.png" \
   --liana-figure "$DATA/nouragues/liana-paper-figures/gr2.jpg" \
-  --asner-figure "$DATA/hawaii/asner-2008-pnas-figures/figure-1.jpg" \
+  --asner-aligned-figure "$DATA/hawaii/asner-rse-pdf-images/image-004.jpg" \
   --captions "$ROOT/captions.json" \
   --output-dir "$OUTPUT" "$@"
