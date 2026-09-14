@@ -2,7 +2,7 @@
 
 Review gallery: `http://100.82.28.38:8022/`
 
-The reviewing laptop must be connected to the same Tailscale network. The gallery root is `/mnt/seagate/videos/pyrocene/lidar/` and is currently served on all interfaces at port 8022.
+The reviewing laptop must be connected to the same Tailscale network. Port 8022 now serves the combined review root at `/mnt/seagate/videos/pyrocene/`. The frozen LiDAR files remain under `lidar/`.
 
 ## Final masters
 
