@@ -37,6 +37,7 @@ Read in filename order.
 | [2026-09-14T1540](2026-09-14T1540-hyperspectral-studies.md) | From measured structure to measured forest content |
 | [2026-09-14T1830](2026-09-14T1830-rainforest-continuity.md) | Retiring the biome break and keeping structure and composition in one rainforest |
 | [2026-09-14T2355](2026-09-14T2355-aligned-spectral-footprint.md) | Replacing a soft spectral strip with three aligned views of one forest footprint |
+| [2026-09-15T0032](2026-09-15T0032-spectral-openings.md) | From spectral variation to one field-tested signature |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

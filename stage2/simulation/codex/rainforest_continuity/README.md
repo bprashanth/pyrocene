@@ -1,9 +1,9 @@
 # Rainforest continuity film studies
 
-These two silent candidates continue the frozen 56 second LiDAR film without
-changing biome or visual language. They use near black space, measured returns,
-height colors, slow camera movement, one sentence and one typed location. No
-generated forest imagery is used.
+Two silent candidates and one focused experiment continue the frozen 56 second
+LiDAR film without changing its visual language. They use near black space,
+measured or published remote-sensing imagery, slow camera movement, one sentence
+and one typed location. No generated forest imagery is used.
 
 ## Candidates
 
@@ -16,6 +16,12 @@ generated forest imagery is used.
   then enters three co-registered panels from one published 53 hectare Hawaiian
   forest stand: LiDAR height, spectral composition, and invasive tree detection.
   The footprint and crop remain fixed so spatial features can be followed.
+- `spectral-openings-v1.mp4` starts with published false-color CAO-AVIRIS
+  imagery of Wao Kele O Puna. It explains how canopy openings can allow lower
+  leaves to contribute to a mixed airborne pixel, selects one published field
+  site, and dissolves to the linked BSVM spectral-similarity detail. Field data
+  trained the strawberry-guava target signature. The film does not present its
+  selection box as a measured canopy gap.
 
 These are edit modules rather than finals. The old dry-forest hyperspectral set
 and the unsupported gap-light experiment are retired and absent from the active
@@ -23,9 +29,12 @@ gallery.
 
 ## Edit every word on screen
 
-All renderer-added words are in [`captions.json`](captions.json). The renderer
-rejects periods, em dashes, arrows and middle dots. Edit the JSON and run
-[`rerender.sh`](rerender.sh). The frozen LiDAR master is never an output target.
+The two candidates use [`captions.json`](captions.json). The spectral-openings
+experiment uses
+[`spectral_openings_captions.json`](spectral_openings_captions.json). Edit the
+appropriate JSON and run [`rerender.sh`](rerender.sh) or
+[`rerender_spectral_openings.sh`](rerender_spectral_openings.sh). The frozen
+LiDAR master is never an output target.
 
 ## Source chain
 
@@ -42,6 +51,10 @@ under `/mnt/seagate/videos/pyrocene/rainforest-continuity/artifacts/`.
 - Hawaiian invasive structure: Seely et al 2025, CC BY 4.0 figure.
 - Hawaiian invasive imaging spectroscopy: Asner et al 2008 Figure 3, published
   LiDAR and AVIRIS processing layers for one 53 hectare stand.
+- Hawaiian subcanopy invasive imaging spectroscopy: Barbosa et al 2016 Figures
+  1 and 4, CC BY 4.0. The CAO-AVIRIS sensor recorded 427 channels from 380 to
+  2510 nanometres. The classifier target was trained from field-identified
+  strawberry-guava crowns.
 
 The exact source and claim limits are in
 [`EVIDENCE_BOUNDARIES.md`](EVIDENCE_BOUNDARIES.md). The Asner 2008 figure is for
@@ -54,6 +67,7 @@ The environment needs Python 3 with NumPy, Pillow, laspy and lazrs, plus FFmpeg.
 
 ```bash
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender.sh
+PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_openings.sh
 ```
 
 Outputs are deterministic 1920 by 1080 H.264 at 24 frames per second with no
@@ -77,3 +91,10 @@ frames directly to FFmpeg.
 - LiDAR geometry does not measure fuel chemistry, moisture or flammability.
 - The Asner map panels are enlarged from the best available published figure.
   No generative upscaling or fabricated spatial detail is used.
+- The Barbosa selection box is a published field-site footprint transferred
+  between its two paper figures. It is not a LiDAR-derived gap boundary. The
+  gap sentence describes the documented mixed-signal mechanism and not a gap
+  measurement displayed in the film.
+- The Barbosa BSVM panel is a continuous similarity result for a field-trained
+  strawberry-guava signature. Recoloring preserves the published spatial
+  pattern but does not turn species identity into fuel evidence.
