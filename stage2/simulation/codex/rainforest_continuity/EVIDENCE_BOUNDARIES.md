@@ -1,0 +1,68 @@
+# Rainforest continuity: evidence boundaries
+
+This document is the claim contract for any continuation of the frozen LiDAR film. It is deliberately conservative: a point cloud records geometry and return attributes; it does not, by itself, identify species, fuel chemistry, moisture, temperature, humidity, or fire behaviour.
+
+## What the real sources support
+
+| Source | Safe visual use | Safe claim | Do not claim |
+|---|---|---|---|
+| Paracou TLS, `paracou-fg5c1-tls-091.npz` | Close-range layered forest structure; height-band peels | Forest structure is vertically heterogeneous and lower layers can be hidden by canopy | That a height band is an invasive plant, fuel, or a fire pathway |
+| Paracou segmented TLS, `paracou-fg6c2-tls-175-segmented.npz` | Highlight measured terrain/leaf/wood classes in the existing palette | The scan contains distinct structural return classes | That leaf/wood classes are species, lianas, fuel load, or moisture |
+| Paracou ALS, `paracou-fg5c1-als-2019.npz` | Airborne canopy-scale structure and continuity | ALS observes canopy-scale spatial structure | That canopy height or density is biomass, dryness, or a fire probability |
+| Central Amazon repeated ALS, 2017/2018 pair | Same-camera epoch wipe; finite `chm_delta` canopy-loss emphasis | Repeated scans can show a post-fire structural legacy and canopy change | Immediate fire damage, pre-fire fuel conditions, causal fire spread, or recovery rate beyond the documented dates |
+| Nouragues liana TLS / structural studies | Highlight validated liana-stem geometry if the labelled artifact is present | Lianas can contribute a recognizable structural form in lower/mid-canopy layers | Calling lianas invasive, non-native, dry, or intrinsically flammable |
+| Nouragues 2012 liana map with 2019 ALS | Same-camera comparison of a tile with about one percent overlap and a tile with about 72 percent overlap | Later airborne scans can provide structural context for the previously mapped liana zone | Point-level liana labels, a controlled comparison, or persistence at every mapped pixel |
+| Hawaii wet-forest invasive TLS | Recolor published cross-sections grouped by measured strawberry guava abundance | Higher abundance is associated with a shorter denser forest in the sampled transects | A time sequence, a registered comparison, or a fuel measurement |
+| Hawaii rainforest imaging spectroscopy | Show the published native/invasive classification in the same palette | Imaging spectroscopy and field evidence can identify canopy composition that geometry alone cannot | Registration to the newer TLS transects or species labels outside the publication map |
+| Nouragues gap/microclimate studies | Amber light field and lower-layer reveal as an explanatory bridge | Canopy gaps can alter light, temperature, and humidity near the ground | A rendered overlay is a measured temperature, humidity, fuel-moisture, or fire-risk map |
+| Hawaii hyperspectral + LiDAR studies | Mention only as the next evidence step, if needed | Species identity, including invasive plants, requires spectral and/or field evidence in addition to geometry | Assigning an invasive species label to any current point cloud |
+
+The Amazon scans are post-fire observations several years after the documented 2015 fire. Captions must say **post-fire structural legacy** or **observed canopy change**, not “the fire immediately created this gap.”
+
+## Explanatory visuals
+
+The following may be rendered as graphics, provided they are visually distinct from measured returns and are captioned as explanations:
+
+- Height-band isolation and canopy peel: a selection of existing points, not a new layer of vegetation.
+- Same-camera wipes: a comparison device; it does not imply simultaneous measurement.
+- Amber “sun” wedges, cyan/amber grading, and vignette changes: conceptual light/microclimate pathways, not sensor measurements.
+- A finite `chm_delta` mask: a spatial emphasis of measured canopy-height difference; NaN/out-of-overlap cells must remain absent.
+- A leaf/wood or liana highlight: only the exact source classification or validated stem extraction, never an inferred species class.
+- Cosmetic removal of publication panel letters: the covered pixels are excluded from interpretation and the operation must be disclosed in the output manifest.
+
+Use the existing near-black background and cyan, magenta, green, amber, ivory, and muted-gray palette. Do not add charts, axes, metric panels, invented points, or synthetic temperature/humidity values.
+
+## Required boundary language
+
+Every continuation should retain a boundary equivalent to:
+
+> LiDAR shows where structure sits. It does not identify species, fuel, or moisture by itself.
+
+For gap sequences, use language equivalent to:
+
+> Gaps can expose lower layers to more light and heat, and humidity can change. This is a microclimate pathway, not a measurement of fuel dryness.
+
+For species or invasion sequences, use language equivalent to:
+
+> Geometry alone is not species identity. Spectral or field evidence is required.
+
+## Prohibited claims
+
+Do not state or visually imply that:
+
+1. magenta low returns are lianas, invasive plants, or combustible fuel unless a visible legend explicitly switches to a published source classification;
+2. dense understory or liana structure is inherently dry or flammable;
+3. canopy loss proves the timing, direction, or mechanism of fire spread;
+4. point density equals biomass, fuel load, live/dead status, or moisture;
+5. amber/cyan overlays are measured temperature, humidity, light, or fire risk;
+6. the Amazon 2017/2018 comparison is a pre-fire-versus-post-fire experiment;
+7. a structural class label is a taxonomic or invasive-species label;
+8. a gap necessarily causes ignition or a particular fire outcome.
+
+## Renderer QA contract
+
+- Preserve the frozen MP4 and its SHA-256; render continuations to a separate output path.
+- Keep camera/projection identical across wipes and epoch comparisons.
+- Assert that every plotted return comes from the source arrays and that gap masks use only finite matched-grid values.
+- Keep captions editable and provenance/date labels visible at projector size.
+- Verify silent, deterministic 1920x1080/24fps output and absence of graphs or unsupported numeric claims.

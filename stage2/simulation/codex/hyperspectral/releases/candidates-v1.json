@@ -1,6 +1,9 @@
 {
   "schema": "pyrocene-hyperspectral-candidate-set/1",
-  "status": "review-candidates",
+  "status": "retired",
+  "retired_at": "2026-09-14T18:20:00+05:30",
+  "retirement_reason": "The candidates break rainforest visual and ecological continuity",
+  "archive": "/mnt/seagate/videos/pyrocene-retired/hyperspectral-2026-09-14/",
   "created_at": "2026-09-14T15:59:31+05:30",
   "gallery": "http://100.82.28.38:8022/",
   "common": {

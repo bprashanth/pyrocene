@@ -1,0 +1,62 @@
+{
+  "schema": "pyrocene-rainforest-continuity/1",
+  "header": "PYROCENE: FOREST STRUCTURE STUDY",
+  "height_legend": {
+    "title": "MEASURED HEIGHT ABOVE GROUND",
+    "rows": [
+      ["CANOPY", "10 m +", "green"],
+      ["UNDERSTORY", "2 TO 10 m", "cyan"],
+      ["LOW STRATUM", "0 TO 2 m", "magenta"],
+      ["GROUND", "0 m", "ground"]
+    ]
+  },
+  "class_legend": {
+    "title": "MODEL LABELS FROM LIDAR",
+    "rows": [
+      ["LIANA STEM", "MODEL LABEL", "magenta"],
+      ["SURROUNDING FOREST", "OTHER RETURNS", "cyan"]
+    ]
+  },
+  "spectral_legend": {
+    "title": "IMAGING SPECTROSCOPY",
+    "rows": [
+      ["INVASIVE CANOPY", "SPECTRAL CLASS", "magenta"],
+      ["NATIVE CANOPY", "SPECTRAL CLASS", "cyan"]
+    ]
+  },
+  "films": {
+    "liana_structure": {
+      "duration": 32,
+      "location": "NOURAGUES : FRENCH GUIANA : 2012 LIANA MAP WITH 2019 AIRBORNE LIDAR",
+      "sentences": [
+        {"start": 1, "end": 7, "text": "One tile barely overlaps a mapped liana zone"},
+        {"start": 7, "end": 14, "text": "Another lies mainly inside the mapped liana zone"},
+        {"start": 15, "end": 23, "text": "A separate terrestrial scan identified liana stems"},
+        {"start": 23, "end": 28, "text": "Lianas can pass through several forest layers"},
+        {"start": 28, "end": 32, "text": "This is structure not a measure of fuel"}
+      ]
+    },
+    "invasive_identity": {
+      "duration": 36,
+      "location": "ISLAND OF HAWAII : WET RAINFOREST : LIDAR AND IMAGING SPECTROSCOPY",
+      "sentences": [
+        {"start": 1, "end": 8, "text": "Wet rainforest does not have one structure"},
+        {"start": 9, "end": 18, "text": "Higher strawberry guava abundance coincides with a shorter denser forest"},
+        {"start": 19, "end": 27, "text": "LiDAR shows how the structure differs"},
+        {"start": 27, "end": 33, "text": "Imaging spectroscopy identifies canopy composition"},
+        {"start": 33, "end": 36, "text": "Together they locate structure and species"}
+      ]
+    },
+    "gap_microclimate": {
+      "duration": 34,
+      "location": "NOURAGUES POINT CLOUD : FRENCH GUIANA : EXPLANATORY LIGHT LAYER",
+      "sentences": [
+        {"start": 1, "end": 8, "text": "Canopy gaps expose the lower forest"},
+        {"start": 9, "end": 18, "text": "Sensors in French Guiana found gaps were hotter and less humid"},
+        {"start": 19, "end": 26, "text": "In the eastern Amazon El Nino heat reached the forest understory"},
+        {"start": 26, "end": 31, "text": "Exposure and drought can increase fire risk"},
+        {"start": 31, "end": 34, "text": "Structure marks the pathway but does not prove fuel"}
+      ]
+    }
+  }
+}

@@ -1,5 +1,11 @@
 # Hyperspectral candidate index
 
+> **Retired 14 September 2026.** These three candidates broke the visual and
+> ecological continuity of the rainforest LiDAR narrative. Their rendered files
+> were moved intact to
+> `/mnt/seagate/videos/pyrocene-retired/hyperspectral-2026-09-14/` and removed
+> from the active gallery. The source data remain available for research.
+
 Review gallery: `http://100.82.28.38:8022/`
 
 The reviewing laptop must be connected to the same Tailscale network. Port 8022 serves `/mnt/seagate/videos/pyrocene/`, with the frozen LiDAR final under `lidar/` and the candidates under `hyperspectral/`.

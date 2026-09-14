@@ -1,5 +1,10 @@
 # Hyperspectral film experiments
 
+> **Retired study.** None of these candidates will be used in the current film.
+> Moving from humid rainforest LiDAR to dry deciduous landscapes broke the sense
+> that the audience was watching one investigation. The active replacement is
+> [`../rainforest_continuity/`](../rainforest_continuity/).
+
 This pipeline renders three silent candidate films that can follow the frozen LiDAR final. It uses real NEON bidirectional surface reflectance, the official NEON and NASA canopy-water method, and published Mudumalai AVIRIS NG invasive-species evidence. It contains no generated imagery.
 
 ## Narrative treatments
