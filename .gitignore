@@ -222,3 +222,8 @@ web/py/
 .prompt/
 stage2/logs/
 stage2/maps/out/
+
+# Editor swap files
+*.swp
+*.swo
+*~
