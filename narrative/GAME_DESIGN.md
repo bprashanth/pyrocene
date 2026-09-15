@@ -316,7 +316,7 @@ has to say it.
 
 ## 7. Piece four: the films
 
-**Docs:** [`stage2/simulation/codex/NOTES.md`](../stage2/simulation/codex/NOTES.md), [`stage2/simulation/codex/VNEXT.md`](../stage2/simulation/codex/VNEXT.md), [`lidar/README.md`](../stage2/simulation/codex/lidar/README.md), [`rainforest_continuity/README.md`](../stage2/simulation/codex/rainforest_continuity/README.md), [`hyperspectral/README.md`](../stage2/simulation/codex/hyperspectral/README.md)
+**Docs:** [`stage2/simulation/codex/README.md`](../stage2/simulation/codex/README.md), [`lidar/README.md`](../stage2/simulation/codex/lidar/README.md), [`rainforest_continuity/README.md`](../stage2/simulation/codex/rainforest_continuity/README.md)
 
 The films are the ones under `codex/`. The `claude/` directory holds an earlier
 parallel attempt and the lab. It is not the film source.
@@ -570,7 +570,7 @@ on purpose.
 | [`stage2/maps/README.md`](../stage2/maps/README.md) | The six map styles |
 | [`stage2/simulation/SPEC.md`](../stage2/simulation/SPEC.md) | The event log contract |
 | [`stage2/simulation/claude/lab/README.md`](../stage2/simulation/claude/lab/README.md) | The fire lab |
-| [`stage2/simulation/codex/VNEXT.md`](../stage2/simulation/codex/VNEXT.md) | The film plan and the evidence lanes |
+| [`stage2/simulation/codex/README.md`](../stage2/simulation/codex/README.md) | The canonical Codex Linux event films, playback links, evidence limits and production map |
 
 ### The online game
 
