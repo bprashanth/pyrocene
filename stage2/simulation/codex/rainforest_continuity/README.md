@@ -7,17 +7,19 @@ and one typed location. No generated forest imagery is used.
 
 ## Candidates
 
-- `amazon-spectral-triptych-v1.mp4` joins the three clearest eight second studies
-  into one 32.5 second sequence: selected spectral signature, resolution stack,
-  then Amazon EMIT at 60 metres. Each scene completes before a one second dip
-  through the film's near-black background resets the viewpoint. The selected
-  and EMIT cameras drift only 3.5 degrees during their gradual lifts. The stack
-  remains a nearly fixed side view.
+- `amazon-spectral-seamless-v1.mp4` joins the three clearest visual ideas in one
+  uninterrupted 32.5 second camera path. It establishes the fine selected
+  signature, dollies outward while the resolution planes rise, returns to the
+  mapped footprint while those planes collapse and retraces the opening move
+  with Amazon EMIT cells in place of the fine signature. There are no cuts or
+  fades. Only two narrative sentences appear.
 
 The earlier `amazon-signature-generalization-guided-v1.mp4` and
 `amazon-signature-generalization-continuous-v1.mp4` remain reproducible but were
 removed from active review. Their continuous flight through the measurement
 planes made the change of scale harder to understand.
+`amazon-spectral-triptych-v1.mp4` also remains reproducible but was superseded
+because its dark chapter transitions interrupted the single-movie experience.
 
 - `liana-structure.mp4` compares two real 2019 Nouragues airborne LiDAR tiles.
   About one percent of one tile and about 72 percent of the other overlap the
@@ -91,6 +93,11 @@ The replacement three-scene edit uses
 [`spectral_triptych_captions.json`](spectral_triptych_captions.json) and
 [`rerender_spectral_triptych.sh`](rerender_spectral_triptych.sh). It reuses the
 same deterministic artifacts as the three spectral-resolution studies.
+The active seamless edit uses
+[`spectral_seamless_captions.json`](spectral_seamless_captions.json) and
+[`rerender_spectral_seamless.sh`](rerender_spectral_seamless.sh). Its custom
+plane compositor keeps off-screen corners valid during the return move so the
+layers collapse continuously instead of disappearing at the viewport edge.
 The rerender script also creates smaller 1080p fast-start copies under
 `/mnt/seagate/videos/pyrocene/rainforest-continuity/review/` for smooth review
 through the simple server on port 8022. Download links retain the 1440p masters.
@@ -141,6 +148,7 @@ PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_openings.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_resolution_studies.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_signature_generalization.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_triptych.sh
+PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_seamless.sh
 ```
 
 The two longer candidates are deterministic 1920 by 1080 H.264. The three
