@@ -410,6 +410,8 @@ class Handler(BaseHTTPRequestHandler):
         p = u.path
         if p in ("/", "/index.html"):
             return self._file("phone.html", "text/html; charset=utf-8")
+        if p == "/start":
+            return self._file("start.html", "text/html; charset=utf-8")
         if p == "/gm":
             return self._file("gm.html", "text/html; charset=utf-8")
         if p == "/projector":

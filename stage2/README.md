@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 77 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 82 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -31,6 +31,10 @@ python3 -m stage2.server --help        # --host --port --style --stage --seed --
 
 It prints every address it answers on. Hand out the wifi one for phones in the
 room; the others are for you.
+
+**`/start` is the jump off page** for the whole evening: the three screens of
+each stage, the fire lab, the films and the single player game. Open it on your
+own laptop and work down it.
 
 1. Open the **projector** address on the big screen, full screen the browser.
 2. Open the **game master** address on your own laptop.

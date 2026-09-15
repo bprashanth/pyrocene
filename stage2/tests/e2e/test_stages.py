@@ -14,6 +14,7 @@ import sys
 import time
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from playwright.sync_api import sync_playwright
@@ -239,6 +240,66 @@ class StageOneMap(unittest.TestCase):
         frame = api("/api/frame")["frame"]
         self.assertIn("one player's ground", frame)
         self.assertNotIn(">fire<", frame, "stage 1 cannot burn, so the legend must not say so")
+
+
+class StartPage(unittest.TestCase):
+    """The jump off page for the whole evening. One person opens this and works
+    down it, so every link on it has to go somewhere."""
+
+    def test_it_serves_and_names_every_piece(self):
+        pg = page(1280, 900)
+        errors = []
+        pg.on("pageerror", lambda e: errors.append(str(e)))
+        pg.goto(BASE + "/start")
+        pg.wait_for_selector(".tile", timeout=8000)
+        self.assertEqual(pg.locator(".tile").count(), 5)
+        text = pg.inner_text("main")
+        for name in ("Stage 1", "Stage 2", "Fire lab",
+                     "Forest structure studies", "Stage 3"):
+            self.assertIn(name, text)
+        self.assertEqual(errors, [])
+
+    def test_the_room_links_point_at_the_three_screens(self):
+        pg = page(1280, 900)
+        pg.goto(BASE + "/start")
+        pg.wait_for_selector(".tile", timeout=8000)
+        hrefs = [pg.locator(".ways a").nth(i).get_attribute("href")
+                 for i in range(pg.locator(".ways a").count())]
+        self.assertEqual(hrefs, ["/", "/gm", "/projector"] * 2)
+
+    def test_every_link_on_it_resolves(self):
+        """A dead link on this page is a dead end in front of a room."""
+        pg = page(1280, 900)
+        pg.goto(BASE + "/start")
+        pg.wait_for_selector(".tile", timeout=8000)
+        n = pg.locator("a").count()
+        local = []
+        for i in range(n):
+            href = pg.locator("a").nth(i).get_attribute("href")
+            if href and href.startswith("/"):
+                local.append(href)
+        self.assertGreaterEqual(len(local), 7)
+        for href in sorted(set(local)):
+            with urllib.request.urlopen(BASE + href, timeout=10) as r:
+                self.assertEqual(r.status, 200, href)
+
+    def test_the_film_link_follows_the_host_you_came_in_on(self):
+        """Built from location.hostname so the same page works over wifi, over
+        tailscale and on the laptop itself."""
+        pg = page(1280, 900)
+        pg.goto(BASE + "/start")
+        pg.wait_for_selector("#films", timeout=8000)
+        href = pg.get_attribute("#films", "href")
+        self.assertIn(":8022/", href)
+        self.assertIn(urllib.parse.urlparse(BASE).hostname, href)
+
+    def test_it_says_almost_nothing(self):
+        """The whole point is that it is a board, not a page to read."""
+        pg = page(1280, 900)
+        pg.goto(BASE + "/start")
+        pg.wait_for_selector(".tile", timeout=8000)
+        words = pg.inner_text("main").split()
+        self.assertLess(len(words), 40, f"too much text: {len(words)} words")
 
 
 class Handover(unittest.TestCase):

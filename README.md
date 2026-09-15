@@ -19,6 +19,36 @@ dramatic consequence of letting invasives go dense, not the main event.
 > **[narrative/GAME_DESIGN.md](narrative/GAME_DESIGN.md)**. For the room game
 > itself, see [stage2/README.md](stage2/README.md).
 
+## Run the whole evening
+
+Two commands. The first serves the room game, the phones, the projector and the
+fire lab. The second serves the films.
+
+```bash
+python3 -m stage2.server                                   # stage 2
+python3 -m stage2.server --stage 1                         # start at stage 1
+python3 -m http.server 8022 --directory /mnt/seagate/videos/pyrocene   # the films
+```
+
+Then open **`/start`** on the address the server prints. That page is the jump
+off point for everything:
+
+| Tile | Goes to |
+|---|---|
+| Stage 1, Stage 2 | player at `/`, game master at `/gm`, map at `/projector` |
+| Fire lab | `/simulation/claude/lab/?run=sample` on the same server |
+| Forest structure studies | the film gallery on port 8022 |
+| Stage 3 | [pyrocene.netlify.app](https://pyrocene.netlify.app) |
+
+Stage 1 and Stage 2 point at the same three screens because they are the same
+server. Which stage the room is in is set when you start it, or from the game
+master console, which offers **Start stage 2** when stage 1 ends and **Back to
+stage 1** for a rehearsal.
+
+The server prints every address it answers on and leads with the wifi one,
+because the phones are on wifi. Hand that out. Nothing needs the internet except
+Stage 3.
+
 ## Run it
 
 Requires Python 3.10+ (no dependencies). From the repo root:
