@@ -22,6 +22,12 @@ and one typed location. No generated forest imagery is used.
   site, and dissolves to the linked BSVM spectral-similarity detail. Field data
   trained the strawberry-guava target signature. The film does not present its
   selection box as a measured canopy gap.
+- `amazon-neon-spectral-overlay-snippet-v1.mp4` is an eight second visual-method
+  test. It keeps the Amazon point-cloud height palette visible while colors from
+  a real 426-band NEON reflectance cube appear on the same points. Amber lines
+  outline one unsupervised spectral cluster. The persistent source credit calls
+  this an educational composite because the LiDAR and spectroscopy come from
+  different forests.
 
 These are edit modules rather than finals. The old dry-forest hyperspectral set
 and the unsupported gap-light experiment are retired and absent from the active
@@ -35,6 +41,12 @@ experiment uses
 appropriate JSON and run [`rerender.sh`](rerender.sh) or
 [`rerender_spectral_openings.sh`](rerender_spectral_openings.sh). The frozen
 LiDAR master is never an output target.
+
+The short overlay uses
+[`spectral_overlay_snippet_captions.json`](spectral_overlay_snippet_captions.json)
+and [`rerender_spectral_overlay_snippet.sh`](rerender_spectral_overlay_snippet.sh).
+Its spectral artifact is prepared by
+[`prepare_neon_signature_field.py`](prepare_neon_signature_field.py).
 
 ## Source chain
 
@@ -55,6 +67,9 @@ under `/mnt/seagate/videos/pyrocene/rainforest-continuity/artifacts/`.
   1 and 4, CC BY 4.0. The CAO-AVIRIS sensor recorded 427 channels from 380 to
   2510 nanometres. The classifier target was trained from field-identified
   strawberry-guava crowns.
+- NEON Soaproot Saddle imaging spectroscopy: DP3.30006.002, 426 bands at one
+  metre resolution, acquired 10 June 2024, CC BY 4.0. This supplies only the
+  spectral-heterogeneity texture for the educational overlay snippet.
 
 The exact source and claim limits are in
 [`EVIDENCE_BOUNDARIES.md`](EVIDENCE_BOUNDARIES.md). The Asner 2008 figure is for
@@ -98,3 +113,7 @@ frames directly to FFmpeg.
 - The Barbosa BSVM panel is a continuous similarity result for a field-trained
   strawberry-guava signature. Recoloring preserves the published spatial
   pattern but does not turn species identity into fuel evidence.
+- The short Amazon and NEON overlay is not a registered scientific product.
+  Principal-component colors and an unsupervised nine-class clustering explain
+  a possible workflow. They do not transfer a California observation or label
+  into the Amazon.
