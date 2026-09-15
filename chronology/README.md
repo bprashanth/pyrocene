@@ -39,6 +39,7 @@ Read in filename order.
 | [2026-09-14T2355](2026-09-14T2355-aligned-spectral-footprint.md) | Replacing a soft spectral strip with three aligned views of one forest footprint |
 | [2026-09-15T0032](2026-09-15T0032-spectral-openings.md) | From spectral variation to one field-tested signature |
 | [2026-09-15T1005](2026-09-15T1005-spectral-resolution.md) | One spectral signature at airborne, satellite and point-cloud scales |
+| [2026-09-15T1630](2026-09-15T1630-gaps-to-satellite.md) | One fixed bearing from a canopy gap to a forest-scale model |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

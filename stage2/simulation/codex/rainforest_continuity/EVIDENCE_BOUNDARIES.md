@@ -18,6 +18,7 @@ This document is the claim contract for any continuation of the frozen LiDAR fil
 | Amazon LiDAR plus NEON spectral educational composite | Demonstrate stable structural color, additive spectral variation, and classifier boundaries while both sources remain credited | Spectral dimensionality can reveal heterogeneity and a classifier can outline a repeated pattern | Calling the sources co-located, treating the unsupervised cluster as a species, or inferring invasive plants, fuel, moisture, or fire risk |
 | Amazon LiDAR plus co-located NASA EMIT | Render the selected signature as whole 60 metre cells over the exact LiDAR footprint | Real satellite imaging spectroscopy can separate repeated spectral patterns at its native pixel scale | Calling the unsupervised cluster a species or implying that a 60 metre cell locates individual plants or lower-stratum fuel |
 | Amazon EMIT, Sentinel-2 and LiDAR resolution stack | Separate the same 900 metre footprint into 60 metre, 10 metre and point-return layers | Measurement resolution determines which spatial features can be separated | Calling the three acquisitions contemporaneous or treating the stack as a fused classifier product |
+| Fixed-bearing Amazon gap-to-satellite sequence | Connect a LiDAR-derived structural opening mask, an explicitly non-co-located fine spectral texture, real Amazon EMIT similarity and a visibly illustrative model surface | Fine spectroscopy could test composition near structural openings and satellite spectroscopy can screen a broader area for similar spectral responses | Calling the fine texture an Amazon observation, calling EMIT similarity a species class or presenting the final surface as measured fuel load or calibrated fire risk |
 | Hawaii hyperspectral + LiDAR studies | Mention only as the next evidence step, if needed | Species identity, including invasive plants, requires spectral and/or field evidence in addition to geometry | Assigning an invasive species label to any current point cloud |
 
 The Amazon scans are post-fire observations several years after the documented 2015 fire. Captions must say **post-fire structural legacy** or **observed canopy change**, not “the fire immediately created this gap.”
@@ -31,6 +32,8 @@ The following may be rendered as graphics, provided they are visually distinct f
 - A finite `chm_delta` mask: a spatial emphasis of measured canopy-height difference; NaN/out-of-overlap cells must remain absent.
 - A leaf/wood or liana highlight: only the exact source classification or validated stem extraction, never an inferred species class.
 - Cosmetic removal of publication panel letters: the covered pixels are excluded from interpretation and the operation must be disclosed in the output manifest.
+- A composition-risk surface: only as an explicitly labelled model illustration
+  that states it is not measured fuel load and not calibrated fire risk.
 
 Use the existing near-black background and cyan, magenta, green, amber, ivory, and muted-gray palette. Do not add charts, axes, metric panels, invented points, or synthetic temperature/humidity values.
 

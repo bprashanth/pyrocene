@@ -1,11 +1,22 @@
 # Rainforest continuity film studies
 
-Two silent candidates and five focused experiments continue the frozen 56 second
+Two silent candidates and seven focused experiments continue the frozen 56 second
 LiDAR film without changing its visual language. They use near black space,
 measured or published remote-sensing imagery, slow camera movement, one sentence
 and one typed location. No generated forest imagery is used.
 
 ## Candidates
+
+- `amazon-signature-generalization-guided-v1.mp4` is a 36 second fixed-bearing
+  continuation study. It starts at the frozen film's final Amazon camera pose,
+  marks a fine educational spectral signature only around LiDAR-derived
+  structural openings, lifts that local selection into an airborne-scale plane,
+  then expands to whole 60 metre NASA EMIT cells over the same Amazon footprint.
+  The final heat surface is visibly labelled as an illustrative model rather
+  than measured fuel load or calibrated fire risk.
+- `amazon-signature-generalization-continuous-v1.mp4` is the same evidence chain
+  in a tighter 30 second edit. It removes one explanatory caption and shortens
+  the holds without changing the camera bearing or the underlying layers.
 
 - `liana-structure.mp4` compares two real 2019 Nouragues airborne LiDAR tiles.
   About one percent of one tile and about 72 percent of the other overlap the
@@ -67,6 +78,14 @@ The Earth Engine exports are reproducible with
 [`download_amazon_spectral_layers.py`](download_amazon_spectral_layers.py), and
 [`prepare_amazon_spectral_layers.py`](prepare_amazon_spectral_layers.py)
 creates the deterministic render artifact.
+
+The two gap-to-satellite edits use
+[`signature_generalization_captions.json`](signature_generalization_captions.json)
+and [`rerender_signature_generalization.sh`](rerender_signature_generalization.sh).
+[`prepare_signature_generalization.py`](prepare_signature_generalization.py)
+creates their deterministic gap, signature, EMIT-similarity and illustrative
+model layers. The renderer keeps the camera at a minus 31 degree bearing and
+changes only distance and elevation, so the map never orbits during the lift.
 The rerender script also creates smaller 1080p fast-start copies under
 `/mnt/seagate/videos/pyrocene/rainforest-continuity/review/` for smooth review
 through the simple server on port 8022. Download links retain the 1440p masters.
@@ -115,6 +134,7 @@ The environment needs Python 3 with NumPy, Pillow, laspy and lazrs, plus FFmpeg.
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_openings.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_resolution_studies.sh
+PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_signature_generalization.sh
 ```
 
 The two longer candidates are deterministic 1920 by 1080 H.264. The three
@@ -159,3 +179,15 @@ fixed-time RGB frames directly to FFmpeg.
 - The 2017 LiDAR, September 2024 Sentinel-2 and October 2024 EMIT observations
   are co-located but not contemporaneous. The stack demonstrates measurement
   scale and does not claim that the forest was unchanged between acquisitions.
+- In the gap-to-satellite sequence, structural openings are computed from the
+  Amazon LiDAR on an approximately 6 metre grid using a maximum-height threshold.
+  They are not species, fuel or fire-risk measurements.
+- The fine violet pattern in that sequence is a California NEON spectral texture
+  restricted spatially to the Amazon opening margins for an explicitly labelled
+  educational composite. It is not an Amazon drone observation.
+- The coarse violet cells are the twenty nearest cells to one seed in a
+  standardized six-component space computed from 211 retained EMIT reflectance
+  bands. They mean similar spectra, not identical composition or species.
+- The final heat surface blends EMIT spectral similarity with LiDAR opening
+  proximity to demonstrate where composition could enter a model. It is not
+  measured fuel load and is not calibrated fire risk.
