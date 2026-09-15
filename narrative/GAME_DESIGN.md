@@ -10,6 +10,11 @@ fire. The **The move** blocks describe the same thing with the ecology taken out
 so you can do it for whatever you know. If you are here to copy the method and
 not to run our game, read the move blocks and then section 11.
 
+This is the worked example behind
+[bprashanth/gamesworkshop](https://github.com/bprashanth/gamesworkshop), which
+states the method on its own and sends people here for the detail. Keep the
+method there short and keep the evidence here, next to the code that earns it.
+
 ---
 
 ## 1. The problem
