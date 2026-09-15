@@ -14,6 +14,11 @@ grows.
 This repo is a **terminal prototype** of the v0.2 engine. Fire is now a rare,
 dramatic consequence of letting invasives go dense, not the main event.
 
+> This single player game is the last piece of a longer arc that starts with a
+> room of people playing Mafia. For how the whole thing fits together, read
+> **[narrative/GAME_DESIGN.md](narrative/GAME_DESIGN.md)**. For the room game
+> itself, see [stage2/README.md](stage2/README.md).
+
 ## Run it
 
 Requires Python 3.10+ (no dependencies). From the repo root:
