@@ -42,6 +42,7 @@ Read in filename order.
 | [2026-09-15T1630](2026-09-15T1630-gaps-to-satellite.md) | One fixed bearing from a canopy gap to a forest-scale model |
 | [2026-09-15T1640](2026-09-15T1640-three-readable-spectral-scenes.md) | Replacing a disorienting layer flight with three readable spectral scenes |
 | [2026-09-15T1650](2026-09-15T1650-one-reversible-spectral-shot.md) | Turning the three readable scenes into one reversible camera movement |
+| [2026-09-15T1900](2026-09-15T1900-one-end-to-end-film.md) | Joining structure and spectra without inventing another camera move |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

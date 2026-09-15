@@ -1,5 +1,20 @@
 # Rainforest continuity film studies
 
+## End-to-end final
+
+`pyrocene-forest-structure-and-spectra-v1.mp4` is the 88.125 second combined
+film. It preserves the frozen LiDAR master and joins it to
+`amazon-spectral-seamless-v1.mp4` at 55.6 seconds with a 0.4 second matched-map
+dissolve. The encoded end of the LiDAR film and start of the spectral film
+already have the same bearing, so the join adds no corrective rotation. The old
+caption clears before the new sentence appears.
+
+The master, manifest and QA sheets are under
+`/mnt/seagate/videos/pyrocene/final/` and
+`/mnt/seagate/videos/pyrocene/qa/combined-v1/`. The release record is
+[`releases/lidar-spectral-combined-v1.json`](releases/lidar-spectral-combined-v1.json).
+Rebuild it with [`assemble_lidar_spectral_final.sh`](assemble_lidar_spectral_final.sh).
+
 Two silent candidates and seven focused experiments continue the frozen 56 second
 LiDAR film without changing its visual language. They use near black space,
 measured or published remote-sensing imagery, slow camera movement, one sentence
@@ -149,6 +164,7 @@ PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_resolution_studie
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_signature_generalization.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_triptych.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_seamless.sh
+PYROCENE_RAINFOREST_PYTHON=/path/to/python ./assemble_lidar_spectral_final.sh
 ```
 
 The two longer candidates are deterministic 1920 by 1080 H.264. The three
