@@ -1,6 +1,6 @@
 # Rainforest continuity film studies
 
-Two silent candidates and one focused experiment continue the frozen 56 second
+Two silent candidates and five focused experiments continue the frozen 56 second
 LiDAR film without changing its visual language. They use near black space,
 measured or published remote-sensing imagery, slow camera movement, one sentence
 and one typed location. No generated forest imagery is used.
@@ -28,6 +28,18 @@ and one typed location. No generated forest imagery is used.
   outline one unsupervised spectral cluster. The persistent source credit calls
   this an educational composite because the LiDAR and spectroscopy come from
   different forests.
+- `amazon-neon-selected-signature-v2.mp4` keeps the Amazon LiDAR height palette
+  unchanged except for canopy returns selected by one unsupervised signature
+  from the same real NEON cube. Those returns become violet and their exact
+  source-mask contours become yellow. This remains a deliberately labelled
+  non-co-located educational composite.
+- `amazon-emit-60m-signature-v1.mp4` repeats that visual grammar using a real
+  NASA EMIT reflectance observation over the exact Amazon LiDAR footprint. The
+  selected signature occupies whole 60 metre cells, which are rendered as
+  visible blocks instead of being interpolated into false precision.
+- `amazon-resolution-stack-v1.mp4` explodes the same footprint into the real
+  15 by 16 EMIT grid, a real 90 by 90 Sentinel-2 layer and the measured LiDAR
+  returns. It is a resolution explanation, not a same-date fused product.
 
 These are edit modules rather than finals. The old dry-forest hyperspectral set
 and the unsupported gap-light experiment are retired and absent from the active
@@ -47,6 +59,17 @@ The short overlay uses
 and [`rerender_spectral_overlay_snippet.sh`](rerender_spectral_overlay_snippet.sh).
 Its spectral artifact is prepared by
 [`prepare_neon_signature_field.py`](prepare_neon_signature_field.py).
+
+The three resolution studies use
+[`spectral_resolution_captions.json`](spectral_resolution_captions.json) and
+[`rerender_spectral_resolution_studies.sh`](rerender_spectral_resolution_studies.sh).
+The Earth Engine exports are reproducible with
+[`download_amazon_spectral_layers.py`](download_amazon_spectral_layers.py), and
+[`prepare_amazon_spectral_layers.py`](prepare_amazon_spectral_layers.py)
+creates the deterministic render artifact.
+The rerender script also creates smaller 1080p fast-start copies under
+`/mnt/seagate/videos/pyrocene/rainforest-continuity/review/` for smooth review
+through the simple server on port 8022. Download links retain the 1440p masters.
 
 ## Source chain
 
@@ -70,6 +93,14 @@ under `/mnt/seagate/videos/pyrocene/rainforest-continuity/artifacts/`.
 - NEON Soaproot Saddle imaging spectroscopy: DP3.30006.002, 426 bands at one
   metre resolution, acquired 10 June 2024, CC BY 4.0. This supplies only the
   spectral-heterogeneity texture for the educational overlay snippet.
+- NASA EMIT L2A reflectance scene
+  `EMIT_L2A_RFL_001_20241019T180522_2429312_059`: 285 reflectance bands at a
+  nominal 60 metre scale, exported through Earth Engine over the exact Amazon
+  crop in EPSG 31981.
+- Copernicus Sentinel-2 surface reflectance scene
+  `20240908T141709_20240908T141835_T21MTS`: optical bands exported at 10 metres
+  over the same footprint. Its clear observation supplies only the
+  intermediate-resolution plane.
 
 The exact source and claim limits are in
 [`EVIDENCE_BOUNDARIES.md`](EVIDENCE_BOUNDARIES.md). The Asner 2008 figure is for
@@ -83,12 +114,14 @@ The environment needs Python 3 with NumPy, Pillow, laspy and lazrs, plus FFmpeg.
 ```bash
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_openings.sh
+PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_resolution_studies.sh
 ```
 
-Outputs are deterministic 1920 by 1080 H.264 at 24 frames per second with no
-audio. `prepare_sources.py` samples only source returns and records hashes and
-transforms in sibling manifests. `render_candidates.py` pipes fixed-time RGB
-frames directly to FFmpeg.
+The two longer candidates are deterministic 1920 by 1080 H.264. The three
+spectral-resolution studies are 2560 by 1440 H.264. All run at 24 frames per
+second with no audio. `prepare_sources.py` samples only source returns and
+records hashes and transforms in sibling manifests. The renderers pipe
+fixed-time RGB frames directly to FFmpeg.
 
 ## Scientific boundaries
 
@@ -117,3 +150,12 @@ frames directly to FFmpeg.
   Principal-component colors and an unsupervised nine-class clustering explain
   a possible workflow. They do not transfer a California observation or label
   into the Amazon.
+- The fine violet study has the same non-registration boundary. Violet means
+  one selected spectral signature from California and not a species label in
+  the Amazon.
+- The EMIT signature is an unsupervised six-class result computed from real
+  reflectance over the Amazon crop. It is not a species, invasive plant, fuel,
+  moisture or fire class.
+- The 2017 LiDAR, September 2024 Sentinel-2 and October 2024 EMIT observations
+  are co-located but not contemporaneous. The stack demonstrates measurement
+  scale and does not claim that the forest was unchanged between acquisitions.

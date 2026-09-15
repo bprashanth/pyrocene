@@ -38,6 +38,7 @@ Read in filename order.
 | [2026-09-14T1830](2026-09-14T1830-rainforest-continuity.md) | Retiring the biome break and keeping structure and composition in one rainforest |
 | [2026-09-14T2355](2026-09-14T2355-aligned-spectral-footprint.md) | Replacing a soft spectral strip with three aligned views of one forest footprint |
 | [2026-09-15T0032](2026-09-15T0032-spectral-openings.md) | From spectral variation to one field-tested signature |
+| [2026-09-15T1005](2026-09-15T1005-spectral-resolution.md) | One spectral signature at airborne, satellite and point-cloud scales |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
