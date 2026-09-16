@@ -84,7 +84,7 @@ because the room has already earned it.
 
 ## 4. Piece one: hidden lantana
 
-**Run it:** `python3 -m stage2.server --stage 1`
+**Run it:** `./run.sh --stage 1`
 **Docs:** [`stage2/README.md`](../stage2/README.md)
 
 Plain Mafia with the names changed. Lantana instead of mafia. Ranger instead of
@@ -316,6 +316,7 @@ has to say it.
 
 ## 7. Piece four: the films
 
+**Run it:** the films tile on `/start`, or `python3 -m stage2.films.serve`
 **Docs:** [`stage2/simulation/codex/README.md`](../stage2/simulation/codex/README.md), [`lidar/README.md`](../stage2/simulation/codex/lidar/README.md), [`rainforest_continuity/README.md`](../stage2/simulation/codex/rainforest_continuity/README.md)
 
 The films are the ones under `codex/`. The `claude/` directory holds an earlier

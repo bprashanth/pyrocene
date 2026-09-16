@@ -262,6 +262,8 @@ class ReplayShowsTheFire(unittest.TestCase):
                 break
             g.choose("resilience", None)
             g.resolve_vote()
+            if g.phase != "playing":
+                break
         return g
 
     def test_a_night_that_burned_burns_again_in_the_replay(self):
@@ -518,6 +520,82 @@ class Openings(unittest.TestCase):
             self.assertTrue(said[0]["text"].startswith("Forecast for next night:"),
                             said[0]["text"])
             self.assertLess(len(said[0]["text"]), 90, "no paragraph")
+
+
+class TheTrenchIsALine(unittest.TestCase):
+    """A firebreak is a strip cleared between the fuel and the thing being
+    defended. The walk that places it used to be free to pick a cell touching
+    several already in the chain, so ten cells came out as a three wide
+    staircase in a corner. Connected, but not a line, and not something anybody
+    digs."""
+
+    def _first_trench(self, seed):
+        rng = random.Random(seed * 7919)
+        g = Game(seed=seed)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        while g.phase == "playing":
+            prey = [p for p in g.players.values()
+                    if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+            if prey and rng.random() > 0.25:
+                g.eliminate(rng.choice(prey).id)
+            g.resolve_night()
+            if g.phase != "playing":
+                return g, []
+            before = {c.index for c in g.state.cells if c.fireline}
+            g.choose("resilience", "fireline")
+            g.resolve_vote()
+            dug = [c.index for c in g.state.cells
+                   if c.fireline and c.index not in before]
+            if dug:
+                return g, dug
+        return g, []
+
+    def test_no_cell_is_surrounded_by_its_own_trench(self):
+        """One square wide. A cell with four or more trench neighbours is a blob
+        and reads on the projector as a smudge rather than a break."""
+        checked = 0
+        for seed in range(1, 26):
+            g, dug = self._first_trench(seed)
+            if not dug:
+                continue
+            checked += 1
+            S = set(dug)
+            for i in dug:
+                n = sum(1 for j, _ in neighbors8(g.state, i) if j in S)
+                self.assertLess(n, 4, f"seed {seed}: the trench thickened")
+        self.assertGreater(checked, 15)
+
+    def test_it_reads_as_a_path_not_a_patch(self):
+        """Averaged over seeds, every cell should have about two neighbours,
+        which is what a line looks like. A solid block averages four or more."""
+        degrees = []
+        for seed in range(1, 26):
+            g, dug = self._first_trench(seed)
+            if len(dug) < 3:
+                continue
+            S = set(dug)
+            degrees += [sum(1 for j, _ in neighbors8(g.state, i) if j in S) for i in dug]
+        self.assertGreater(len(degrees), 40)
+        mean = sum(degrees) / len(degrees)
+        self.assertLess(mean, 2.4, f"mean neighbours {mean:.2f}, that is a patch")
+
+    def test_it_is_still_one_connected_run(self):
+        for seed in range(1, 21):
+            g, dug = self._first_trench(seed)
+            if not dug:
+                continue
+            S = set(dug)
+            seen = {dug[0]}
+            stack = [dug[0]]
+            while stack:
+                i = stack.pop()
+                for j, _ in neighbors8(g.state, i):
+                    if j in S and j not in seen:
+                        seen.add(j)
+                        stack.append(j)
+            self.assertEqual(len(seen), len(S), f"seed {seed}: the trench is in pieces")
 
 
 class ReplayNames(unittest.TestCase):

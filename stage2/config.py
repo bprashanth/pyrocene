@@ -83,6 +83,7 @@ CONFIG = {
     "line_reach": 3,           # how far out a line looks for something to protect
     "line_gap": 1,             # cells between the fuel and the trench
     "line_cells": 10,          # trench cells dug per resilience night
+    "line_band": 1,            # how far out from the asset the crew may dig
     "early_warning_caps_next_fire": False,   # discuss before turning this on
 
     # --- projector pacing, milliseconds per animation frame ---------------

@@ -1438,18 +1438,26 @@ class Game:
         def beside_water(i):
             return any(s.cells[ni].cover == WATER for ni, _ in neighbors8(s, i))
 
-        # candidate trench cells: the ring just outside what we are defending
-        rim = set()
-        for i in asset:
-            for ni, _ in neighbors8(s, i):
-                if ni in aset:
-                    continue
-                n = s.cells[ni]
-                if n.cover in (WATER, VILLAGE) or n.fireline:
-                    continue
-                if beside_water(ni):
-                    continue          # the river is already the break here
-                rim.add(ni)
+        # Ground the crew could dig: near enough to what we are defending to be
+        # worth it, far enough out that the walk has somewhere to go. One ring
+        # was too tight. Most of a forest block's edge is map edge or river
+        # bank, so a single ring left four or five usable cells and the line
+        # stopped almost as soon as it started.
+        rim, frontier = set(), set(asset)
+        for _ in range(cfg["line_band"]):
+            nxt = set()
+            for i in frontier:
+                for ni, _ in neighbors8(s, i):
+                    if ni in aset or ni in rim:
+                        continue
+                    n = s.cells[ni]
+                    if n.cover in (WATER, VILLAGE) or n.fireline:
+                        continue
+                    if beside_water(ni):
+                        continue      # the river is already the break here
+                    rim.add(ni)
+                    nxt.add(ni)
+            frontier = nxt
         if len(rim) < 3:
             return T("ember", "line.none_room")
 
@@ -1462,11 +1470,39 @@ class Game:
         start = min(rim, key=near_fuel)
         chosen = [start]
         taken = {start}
+
+        def keeps_it_thin(cand, end, prev):
+            """A firebreak is a line, so a new cell may only touch the end of the
+            chain and the cell just behind it. Touching the one behind is what a
+            corner looks like on a grid. Touching anything earlier means the
+            chain has folded back on itself and started to thicken.
+
+            Without this the walk was free to pick a cell that also touched two
+            or three cells further back, and ten cells came out as a three wide
+            staircase in a corner. That is not a break anybody digs, and on the
+            projector it read as a blob with a tail rather than as a line drawn
+            between the fuel and the thing being defended.
+            """
+            allowed = {end, prev}
+            touching = [ni for ni, _ in neighbors8(s, cand) if ni in taken]
+            if any(ni not in allowed for ni in touching):
+                return False
+            # Checking the candidate alone is not enough. The chain grows from
+            # both ends, and if they curl towards each other a cell placed
+            # earlier can end up boxed in by cells placed later. So also refuse
+            # anything that would crowd a cell already in the line.
+            for ni in touching:
+                deg = sum(1 for nj, _ in neighbors8(s, ni) if nj in taken)
+                if deg + 1 >= 4:
+                    return False
+            return True
+
         while len(chosen) < cfg["line_cells"]:
             grow = None
-            for end in (chosen[-1], chosen[0]):
+            for end, prev in ((chosen[-1], chosen[-2] if len(chosen) > 1 else None),
+                              (chosen[0], chosen[1] if len(chosen) > 1 else None)):
                 opts = [ni for ni, _ in neighbors8(s, end)
-                        if ni in rim and ni not in taken]
+                        if ni in rim and ni not in taken and keeps_it_thin(ni, end, prev)]
                 if opts:
                     pick = min(opts, key=near_fuel)
                     if grow is None or near_fuel(pick) < near_fuel(grow[1]):

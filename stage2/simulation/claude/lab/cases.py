@@ -74,7 +74,7 @@ def lahaina():
                1: dict(name="forest (green trees, yards)", Rhod=500, Md=0.25, sd=4500, e=0.3, Sigmad=0.4, me=0.30),
                5: dict(name="bare (grazed, gulch)", Rhod=500, Md=0.20, sd=6000, e=0.08, Sigmad=0.08, me=0.25)},
         plan=dict(cleared=cleared, line=line, text="fuel break along the town edge, fields next to it grazed"),
-        case=dict(id="lahaina", title="Lahaina, Maui, 8 August 2023", place="Lahaina, Maui, Hawaii", date="8 August 2023",
+        case=dict(id="lahaina", title="Lahaina, Maui", place="Lahaina, Maui, Hawaii", date="8 August 2023",
             fuel="guinea grass on abandoned fields (drawn as thick lantana)",
             sources=["https://ibhs.org/wp-content/uploads/FINAL-Lahaina-Conflagration.pdf", "https://journals.ametsoc.org/view/journals/wefo/39/8/WAF-D-23-0210.1.xml", "https://mauinow.com/2024/04/18/deadly-lahaina-fire-spread-incredibly-fast-racing-mauka-to-makai-within-90-minutes/", "https://www.civilbeat.org/2023/09/hawaii-needs-to-build-hundreds-more-miles-of-firebreaks-to-protect-against-wildfire/"]))
 
@@ -123,7 +123,7 @@ def bandipur():
                1: dict(name="forest floor (dry grass, leaf litter)", Rhod=500, Md=0.12, sd=5000, e=0.3, Sigmad=0.6, me=0.30),
                5: dict(name="bare (fields, cleared)", Rhod=500, Md=0.20, sd=6000, e=0.08, Sigmad=0.08, me=0.25)},
         plan=dict(cleared=cleared, line=line, text="fire lines along the highway and forest road, lantana cleared beside them"),
-        case=dict(id="bandipur", title="Bandipur Tiger Reserve, 21 to 25 February 2019", place="Bandipur Tiger Reserve, Karnataka", date="21 to 25 February 2019",
+        case=dict(id="bandipur", title="Bandipur Tiger Reserve", place="Bandipur Tiger Reserve, Karnataka", date="21 to 25 February 2019",
             fuel="lantana under dry deciduous forest",
             sources=["https://en.wikipedia.org/wiki/2019_Bandipur_forest_fires", "https://www.adb.org/adbi/publications/community-based-forest-fire-prevention-and-management-in-bandipur-tiger-reserve-karnataka-india"]))
 

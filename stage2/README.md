@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 82 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 85 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -24,10 +24,14 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 ## Run it in a room
 
 ```bash
-python3 -m stage2.server --stage 1     # plain Mafia, the map kept back
-python3 -m stage2.server               # stage 2: fire and the one choice a night
+./run.sh --stage 1                     # everything, starting on stage 1
+./run.sh                               # everything, starting on stage 2
 python3 -m stage2.server --help        # --host --port --style --stage --seed --fast
 ```
+
+`run.sh` at the repo root is the one command for an evening. It starts this
+server and the film gallery, prints the address to open, and stops both on
+ctrl-c. Run `stage2.server` on its own if you only want the room game.
 
 It prints every address it answers on. Hand out the wifi one for phones in the
 room; the others are for you.
@@ -284,7 +288,8 @@ Everything tunable is in `stage2/config.py`.
 | `reprieve_native_p` | 0.10 | It stays in the fuel rather than the forest |
 | `fire_cells` | 3 / 12 / 38 | Squares a fire of each severity can take |
 | `fire_round_ramp` | 0.22 | Extra reach per night as the season dries |
-| `line_cells` | 10 | Trench dug per resilience night |
+| `line_cells` | 10 | Most trench cells one resilience night may dig |
+| `line_band` | 1 | How far out from what is defended the crew may dig |
 | `bare_on_removal` | True | False turns a cleared lantana patch straight to forest |
 | `team_loss` | False | True ends the game when ecologist and ranger are both out. Forced on in stage 1 |
 | `village_defend_range` | 8 | Only trench the homes if fuel is this close |

@@ -31,6 +31,9 @@ FAST = os.environ.get("STAGE2_FAST") == "1"
 # Which map the projector draws. "ansi" is the terminal board the game
 # shipped with; the rest live in stage2/maps and are drawn as SVG.
 STYLE = os.environ.get("STAGE2_STYLE", "drawn")
+# Where the film gallery is. Its own port, because the masters are large and
+# live outside the repo; run.sh sets this so /start can link to it.
+FILMS_PORT = int(os.environ.get("PYROCENE_FILMS_PORT", "8022"))
 
 
 class Room:
@@ -328,12 +331,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _file(self, name: str, ctype: str):
+    def _file(self, name: str, ctype: str, subs: dict | None = None):
         path = os.path.join(STATIC, name)
         if not os.path.isfile(path):
             return self._json(404, {"error": "not found"})
         with open(path, "rb") as f:
             body = f.read()
+        for k, v in (subs or {}).items():
+            body = body.replace(k.encode(), str(v).encode())
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
@@ -411,7 +416,11 @@ class Handler(BaseHTTPRequestHandler):
         if p in ("/", "/index.html"):
             return self._file("phone.html", "text/html; charset=utf-8")
         if p == "/start":
-            return self._file("start.html", "text/html; charset=utf-8")
+            # The films run on their own port because the masters are hundreds
+            # of megabytes and live off the repo. run.sh tells us which one so
+            # the tile still points somewhere when the ports are moved.
+            return self._file("start.html", "text/html; charset=utf-8",
+                              {"__FILMS_PORT__": FILMS_PORT})
         if p == "/gm":
             return self._file("gm.html", "text/html; charset=utf-8")
         if p == "/projector":

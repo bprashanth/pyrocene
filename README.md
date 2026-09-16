@@ -21,23 +21,30 @@ dramatic consequence of letting invasives go dense, not the main event.
 
 ## Run the whole evening
 
-Two commands. The first serves the room game, the phones, the projector and the
-fire lab. The second serves the films.
+One script. It starts the room game and the film gallery, prints the single
+address to open, and stops both on ctrl-c.
 
 ```bash
-python3 -m stage2.server                                   # stage 2
-python3 -m stage2.server --stage 1                         # start at stage 1
-python3 -m http.server 8022 --directory /mnt/seagate/videos/pyrocene   # the films
+./run.sh                 # stage 2, game on 8020, films on 8022
+./run.sh --stage 1       # start the room on stage 1
+./run.sh --port 9000     # move the game server; films follow on 9002
 ```
 
-Then open **`/start`** on the address the server prints. That page is the jump
-off point for everything:
+Anything else you pass goes to the game server, so `--seed`, `--style` and
+`--fast` work too.
+
+The films are large and live outside the repo. The page that indexes them is
+source and lives in `stage2/films/`; only the masters sit on a drive. Point the
+script somewhere else with `PYROCENE_FILMS=/path/to/films` if they move.
+
+Open **`/start`** on the address it prints. That page is the jump off point for
+everything:
 
 | Tile | Goes to |
 |---|---|
 | Stage 1, Stage 2 | player at `/`, game master at `/gm`, map at `/projector` |
 | Fire lab | `/simulation/claude/lab/?run=sample` on the same server |
-| Forest structure studies | the film gallery on port 8022 |
+| Forest structure studies | the film gallery, on its own port |
 | Stage 3 | [pyrocene.netlify.app](https://pyrocene.netlify.app) |
 
 Stage 1 and Stage 2 point at the same three screens because they are the same
