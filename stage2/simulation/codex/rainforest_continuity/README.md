@@ -2,18 +2,26 @@
 
 ## End-to-end final
 
-`pyrocene-forest-structure-and-spectra-v1.mp4` is the 88.125 second combined
-film. It preserves the frozen LiDAR master and joins it to
-`amazon-spectral-seamless-v1.mp4` at 55.6 seconds with a 0.4 second matched-map
-dissolve. The encoded end of the LiDAR film and start of the spectral film
-already have the same bearing, so the join adds no corrective rotation. The old
-caption clears before the new sentence appears.
+`finding-fuel-corridors-v2.mp4` is the canonical 88.125 second film. Its compact
+copy removes the opening license line and literal color names while retaining
+attribution in the manifest and the educational-composite warning on screen.
+Legend rows are one swatch and one meaning.
+
+It joins `forest-structure-minimal-v2.mp4` to
+`amazon-spectral-seamless-minimal-v2.mp4` at 55.6 seconds with a 0.4 second
+matched-map dissolve. The source shots already have the same bearing, so the
+join adds no corrective rotation. The old caption clears before the new
+sentence appears.
 
 The master, manifest and QA sheets are under
 `/mnt/seagate/videos/pyrocene/final/` and
-`/mnt/seagate/videos/pyrocene/qa/combined-v1/`. The release record is
-[`releases/lidar-spectral-combined-v1.json`](releases/lidar-spectral-combined-v1.json).
-Rebuild it with [`assemble_lidar_spectral_final.sh`](assemble_lidar_spectral_final.sh).
+`/mnt/seagate/videos/pyrocene/qa/finding-fuel-corridors-v2/`. The release record
+is [`releases/finding-fuel-corridors-v2.json`](releases/finding-fuel-corridors-v2.json).
+Rebuild the two sources and assembly with
+[`render_finding_fuel_corridors.sh`](render_finding_fuel_corridors.sh).
+
+`pyrocene-forest-structure-and-spectra-v1.mp4` remains the prior combined
+checkpoint. It was not overwritten.
 
 Two silent candidates and seven focused experiments continue the frozen 56 second
 LiDAR film without changing its visual language. They use near black space,
@@ -165,6 +173,7 @@ PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_signature_generalization.s
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_triptych.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./rerender_spectral_seamless.sh
 PYROCENE_RAINFOREST_PYTHON=/path/to/python ./assemble_lidar_spectral_final.sh
+PYROCENE_RAINFOREST_PYTHON=/path/to/python ./render_finding_fuel_corridors.sh
 ```
 
 The two longer candidates are deterministic 1920 by 1080 H.264. The three

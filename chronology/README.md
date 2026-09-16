@@ -44,6 +44,7 @@ Read in filename order.
 | [2026-09-15T1650](2026-09-15T1650-one-reversible-spectral-shot.md) | Turning the three readable scenes into one reversible camera movement |
 | [2026-09-15T1900](2026-09-15T1900-one-end-to-end-film.md) | Joining structure and spectra without inventing another camera move |
 | [2026-09-15T1930](2026-09-15T1930-film-inventory.md) | Freezing the event pair and accounting for every retained intermediate video |
+| [2026-09-16T1000](2026-09-16T1000-less-writing.md) | Removing production commentary from the film and gallery |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

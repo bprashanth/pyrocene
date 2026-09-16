@@ -8,7 +8,7 @@ laptop playback:
 
 1. [Cinematic hybrid on port 8021](http://100.82.28.38:8021/) for the emotional
    bridge from the room's fire into a forest-scale reconstruction.
-2. [Forest Structure and Spectra on port 8022](http://100.82.28.38:8022/) for
+2. [Finding fuel corridors on port 8022](http://100.82.28.38:8022/) for
    the real-data explanation of how forest structure and composition can be
    observed.
 
@@ -18,7 +18,7 @@ playback advice are in the Codex README. The 8022 page opens with the canonical
 22 second cinematic hybrid and retains the other visual studies for comparison.
 
 The audience sequence is game replay, fire-model lab, cinematic hybrid, then
-the structure-and-spectra film. The lab tests the game board with a model. The
+Finding fuel corridors. The lab tests the game board with a model. The
 two films then move from emotional consequence to measured forest evidence.
 
 ## Browser replay implementations

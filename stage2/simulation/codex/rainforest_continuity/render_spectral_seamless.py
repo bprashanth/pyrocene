@@ -228,7 +228,8 @@ def draw_interface(image: Image.Image, copy: dict, source_key: str, t: float,
               font=fonts.header, fill=(*IVORY, round(238 * fade)))
 
     x1 = image.width - round(54 * scale)
-    x0 = x1 - round(410 * scale)
+    has_details = any(detail for _, detail, _ in copy["legends"][source_key])
+    x0 = x1 - round((410 if has_details else 315) * scale)
     y0 = round(42 * scale)
     y1 = y0 + round(137 * scale)
     rounded_glass(image, (x0, y0, x1, y1), round(12 * scale))
@@ -243,8 +244,9 @@ def draw_interface(image: Image.Image, copy: dict, source_key: str, t: float,
                      fill=(*color, round(245 * fade)))
         draw.text((x0 + round(40 * scale), y), name, font=fonts.legend,
                   fill=(*IVORY, round(225 * fade)))
-        draw.text((x0 + round(220 * scale), y), detail, font=fonts.legend,
-                  fill=(*MUTED, round(225 * fade)))
+        if detail:
+            draw.text((x0 + round(220 * scale), y), detail, font=fonts.legend,
+                      fill=(*MUTED, round(225 * fade)))
 
     sentence, sentence_alpha = active_sentence(copy, t)
     if sentence:
