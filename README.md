@@ -14,6 +14,48 @@ grows.
 This repo is a **terminal prototype** of the v0.2 engine. Fire is now a rare,
 dramatic consequence of letting invasives go dense, not the main event.
 
+> This single player game is the last piece of a longer arc that starts with a
+> room of people playing Mafia. For how the whole thing fits together, read
+> **[narrative/GAME_DESIGN.md](narrative/GAME_DESIGN.md)**. For the room game
+> itself, see [stage2/README.md](stage2/README.md).
+
+## Run the whole evening
+
+One script. It starts the room game and the film gallery, prints the single
+address to open, and stops both on ctrl-c.
+
+```bash
+./run.sh                 # stage 2, game on 8020, films on 8022
+./run.sh --stage 1       # start the room on stage 1
+./run.sh --port 9000     # move the game server; films follow on 9002
+```
+
+Anything else you pass goes to the game server, so `--seed`, `--style` and
+`--fast` work too.
+
+The films are large and live outside the repo. The page that indexes them is
+source and lives in `stage2/films/`; only the masters sit on a drive. Point the
+script somewhere else with `PYROCENE_FILMS=/path/to/films` if they move.
+
+Open **`/start`** on the address it prints. That page is the jump off point for
+everything:
+
+| Tile | Goes to |
+|---|---|
+| Stage 1, Stage 2 | player at `/`, game master at `/gm`, map at `/projector` |
+| Fire lab | `/simulation/claude/lab/?run=sample` on the same server |
+| Forest structure studies | the film gallery, on its own port |
+| Stage 3 | [pyrocene.netlify.app](https://pyrocene.netlify.app) |
+
+Stage 1 and Stage 2 point at the same three screens because they are the same
+server. Which stage the room is in is set when you start it, or from the game
+master console, which offers **Start stage 2** when stage 1 ends and **Back to
+stage 1** for a rehearsal.
+
+The server prints every address it answers on and leads with the wifi one,
+because the phones are on wifi. Hand that out. Nothing needs the internet except
+Stage 3.
+
 ## Run it
 
 Requires Python 3.10+ (no dependencies). From the repo root:

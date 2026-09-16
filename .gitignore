@@ -217,3 +217,13 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 web/py/
+
+# Local design prompts
+.prompt/
+stage2/logs/
+stage2/maps/out/
+
+# Editor swap files
+*.swp
+*.swo
+*~
