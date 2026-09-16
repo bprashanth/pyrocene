@@ -1,5 +1,10 @@
 # Before the next fire
 
+Current visual expansion: the same map now offers Communities, Audio and Camera
+traps through one Explore selector. Real reference material has authored game
+locations. The existing four missions and physical-map rules are unchanged.
+See `stage4/REFERENCE_LAYERS.md` for exact source and interpretation boundaries.
+
 Current checkpoint, 17 September: `/expedition.html` is the default. Close view
 morphs the selected square in place. Whole-tree structural references and a
 proportionate understorey replace the horizontally stretched slab. Species

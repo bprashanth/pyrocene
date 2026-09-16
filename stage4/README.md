@@ -184,3 +184,10 @@ Design: [DESIGN_BRIEF.md](DESIGN_BRIEF.md). Durable decisions:
 remain intact.
 
 Facilitator rehearsal notes and spoilers: [FACILITATOR.md](FACILITATOR.md).
+# Current visual reference layers
+
+The expedition's Explore selector adds Communities, Audio and Camera traps
+without leaving the map. See [reference layers](REFERENCE_LAYERS.md) for controls,
+sources, licenses, authored-placement limits and browser tests. Close view also
+uses proportionate ground structure and separate whole-tree references; see
+[in-place detail](INLINE_DETAIL.md).

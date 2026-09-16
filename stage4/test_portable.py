@@ -88,6 +88,18 @@ class PortablePlay(unittest.TestCase):
                     self.assertTrue(page.evaluate('pyroceneDiagnostics().tls'))
                     page.screenshot(path='/mnt/seagate/models/pyrocene/stage4/qa-explore/10-portable-plant.png')
                     page.locator('#book-close').click()
+                    for kind,sector in [('built',32),('camera',7),('audio',16)]:
+                        page.locator('#observation-kind').select_option(kind)
+                        expect(page.locator('#observation-kind')).to_be_enabled()
+                        page.locator(f'[data-observation="{sector}"]').click()
+                        page.wait_for_function('pyroceneDiagnostics().detailBlend===1')
+                        expect(page.locator('[data-view=forest]')).to_be_enabled()
+                        if kind!='built':page.locator('.observation-card canvas[data-loaded=true]').wait_for()
+                        if kind=='audio':
+                            page.locator('audio').evaluate('(a)=>a.play()')
+                            page.wait_for_function('document.querySelector("audio").currentTime>.25')
+                    page.locator('#observation-kind').select_option('plants')
+                    expect(page.locator('#observation-kind')).to_be_enabled()
                     for label in ['More','Sensor network','Sound recorders','Finish this field round']:
                         page.get_by_role('button',name=label,exact=True).click()
                     self.assertEqual(page.evaluate('pyroceneDiagnostics().network.day'),1)

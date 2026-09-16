@@ -40,6 +40,7 @@ APP_FILES = frozenset({"index.html", "mission.html", "app.mjs", "render.mjs", "m
 VENDOR_FILES = frozenset({"three.min.js", "THREE-LICENSE.txt"})
 APP_FILES = APP_FILES | {"field-network.mjs", "living-landscape.mjs"}
 APP_FILES |= {'field-media.mjs'}
+APP_FILES |= {'observation-layers.mjs'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(
@@ -69,6 +70,7 @@ EXPEDITION_ASSETS = {"tls-expanded.json"} | {
 REQUIRED_ASSETS = REQUIRED_ASSETS | EXPEDITION_ASSETS
 REQUIRED_ASSETS = REQUIRED_ASSETS | {"ash-cinematic-forest.png", "ash-cinematic-fire.png"}
 REQUIRED_ASSETS |= {'tree-structure.json', 'structure-015_T6.bin', 'structure-013_T5.bin', 'structure-013_T2.bin'}
+REQUIRED_ASSETS |= {'observations.json', 'reference-piha.ogg', 'reference-piha.jpg', 'reference-tapirus-terrestris.jpg', 'reference-panthera-onca-1049.jpg', 'reference-tayassu-pecari-8.jpg'}
 SERVED_ASSETS = REQUIRED_ASSETS | {"history.json", "forefire-bank.json", "forefire-reference.json", "tls-manifest.json", "tls-fg6c2-dense.bin", "tls-fg5c1-open.bin"}
 
 MIME_TYPES = {

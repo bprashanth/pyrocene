@@ -29,10 +29,12 @@ APP_FILES = ("index.html", "mission.html", "app.mjs", "render.mjs", "model.mjs",
 VENDOR_FILES = ("three.min.js", "THREE-LICENSE.txt")
 APP_FILES += ("field-network.mjs", "living-landscape.mjs")
 APP_FILES += ('field-media.mjs',)
+APP_FILES += ('observation-layers.mjs',)
 APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs")
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
 DOC_NAMES = (
+    "REFERENCE_LAYERS.md",
     "INLINE_DETAIL.md",
     "ASH.md",
     "ASH_BALANCE.md",
@@ -77,6 +79,7 @@ REQUIRED_ASSETS = (
 )
 DEFAULT_ASSETS = Path("/mnt/seagate/models/pyrocene/stage4/assets")
 REQUIRED_ASSETS += ('tree-structure.json', 'structure-015_T6.bin', 'structure-013_T5.bin', 'structure-013_T2.bin')
+REQUIRED_ASSETS += ('observations.json', 'reference-piha.ogg', 'reference-piha.jpg', 'reference-tapirus-terrestris.jpg', 'reference-panthera-onca-1049.jpg', 'reference-tayassu-pecari-8.jpg')
 REQUIRED_ASSETS += ("tls-expanded.json",) + tuple(
     f"tls-expanded-{crop}.bin" for crop in ["fg6c2-a", "fg6c2-b", "fg6c2-c", "fg6c2-d", "fg5c1-a", "fg5c1-b", "fg5c1-c", "fg5c1-d", "nou11-435", "nou11-437", "nou11-449"]
 ) + tuple(f"field-{taxon}.jpg" for taxon in ["urochloa_decumbens", "bertholletia_excelsa", "euterpe_oleracea", "mauritia_flexuosa", "hevea_brasiliensis", "theobroma_grandiflorum", "manihot_esculenta", "carapa_guianensis", "copaifera_reticulata", "paullinia_cupana", "bactris_gasipaes", "astrocaryum_vulgare"])

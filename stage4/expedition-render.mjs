@@ -72,7 +72,9 @@ export class ExpeditionForest extends ExplorationForest {
     this.exploreView=view;
     if(view==='close'){
       if(!Number.isInteger(id))throw Error('Choose a square first.');
-      const [cached]=await Promise.all([this._cachedPlot(id),this._move('ground')]);
+      // Photo/audio/building references do not need a TLS download or decoding.
+      const reference={plot:{id:'reference-'+this.observationKind,bounds:{x:[0,0],z:[0,0]}},anchors:[],count:0,fallback:[],group:{children:[{geometry:{attributes:{position:{array:new Float32Array()}}}}]}};
+      const [cached]=await Promise.all([this.observationPoints?Promise.resolve(reference):this._cachedPlot(id),this._move('ground')]);
       if(token!==this.viewToken)return false;
       this._enterTLS(cached);await this._blend(1,1000);
     }else await this._move(view==='overhead'?'overhead':'forest');
@@ -89,7 +91,8 @@ export class ExpeditionForest extends ExplorationForest {
     // Keep the measured understorey proportionate. Separate whole-tree scans
     // supply crowns that were cut off by the old five-metre tiles.
     for(let i=0;i<source.length;i+=3)if(source[i+1]<8){values.push(...transform(source.subarray(i,i+3)));kinds.push(0);}
-    this.structures?.forEach((tree,i)=>{
+    const understoreyCount=values.length/3;
+    if(!this.observationPoints)this.structures?.forEach((tree,i)=>{
       const p=tree.points,b=tree.bounds,s=Math.min(62/(b[1][1]||1),36/Math.max(b[1][0]-b[0][0],b[1][2]-b[0][2])),x=[-38,0,38][i],z=[-12,-28,-8][i];
       for(let n=0;n<p.length;n+=4){values.push(c.x+x+p[n]*s,p[n+1]*s,c.z+z+p[n+2]*s);kinds.push(p[n+3]);}
     });
@@ -100,7 +103,7 @@ export class ExpeditionForest extends ExplorationForest {
     // Labels anchor to actual returns; botanical identities are authored.
     this.tlsAnchors=[[-42,30],[0,42],[42,24]].map(([x,z],i)=>{
       let best=Infinity,anchor=this.tlsAnchors[i]||[c.x,2,c.z];
-      for(let n=0;n<count;n+=5){const h=positions[n*3+1];if(h<.3||h>10)continue;const d=(positions[n*3]-c.x-x)**2+(positions[n*3+2]-c.z-z)**2;
+      for(let n=0;n<understoreyCount;n+=5){const h=positions[n*3+1];if(h<.3||h>10)continue;const d=(positions[n*3]-c.x-x)**2+(positions[n*3+2]-c.z-z)**2;
         if(d<best){best=d;anchor=Array.from(positions.subarray(n*3,n*3+3));}}
       return anchor;
     });
@@ -119,8 +122,10 @@ export class ExpeditionForest extends ExplorationForest {
     this.tlsGroup.clear();this.tlsGroup.add(this.detailCloud);this.tlsGroup.visible=true;
     if(this.cloud)this.cloud.visible=true;if(this.selectionMesh)this.selectionMesh.visible=true;
     this.pointer.hidden=true;this._updateExploreVisibility();
+    this.detailEntered?.();
   }
   _leaveTLS(){
+    this.detailExited?.();
     this.detailBlend=0;if(this.detailUniform)this.detailUniform.value=0;
     if(this.sectorUniform)this.sectorUniform.value=-1;this.detailSector=-1;
     if(this.detailCloud){this.detailCloud.geometry.dispose();this.detailCloud.material.dispose();this.detailCloud=null;}

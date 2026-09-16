@@ -3,6 +3,7 @@ import { WORLD, ACTIVE, MISSIONS, fieldRecord, coordinate } from './world.mjs';
 import { STORAGE_KEY, fresh, restore, change, knownPlants, progress, usefulNext } from './expedition-state.mjs';
 import { fieldNetwork } from './field-network.mjs';
 import { phosphorImage } from './field-media.mjs';
+import { observationLayers } from './observation-layers.mjs';
 
 const $=id=>document.getElementById(id);
 let state=fresh(), view='forest', busy=false, catalogue=[], humans=[], photos={}, book=null, sort='found', mapPlants=new Set(), mapped=[], currentTab='traces';
@@ -22,18 +23,20 @@ const forest=new ExpeditionForest($('landscape'),{select:choose,specimen:meet,qu
 forest.reducedMotion=reduced;
 const network=fieldNetwork({radioFrame,radioBody:$('radio-body'),radioActions:$('radio-actions'),openDialog,toast,visit:async id=>{await camera('overhead');await choose(id);},overlay:async(ids,caption)=>{sensorMap=ids;sensorCaption=caption;mapped=[];await camera('overhead');update();},onChange:update});
 const currentWorld=()=>network.world()||WORLD;
-globalThis.pyroceneDiagnostics=()=>({...forest.performance(),view,tls:forest.tlsActive,tlsCrop:forest.currentTLS?.id,visited:state.visited.length,plants:knownPlants(state).length,mission:state.mission,completed:state.completed.length,prototype,network:network.stats()});
+const observations=observationLayers({forest,host:$('landscape'),select:choose,closeView:(v='close')=>camera(v),notes:showObservationNotes,toast});
+globalThis.pyroceneDiagnostics=()=>({...forest.performance(),view,observation:observations.kind(),tls:forest.tlsActive,tlsCrop:forest.currentTLS?.id,visited:state.visited.length,plants:knownPlants(state).length,mission:state.mission,completed:state.completed.length,prototype,network:network.stats()});
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function btn(text,action,cls){const b=el('button',text,cls);b.onclick=action;return b;}
 function link(text,url){const a=el('a',text);a.href=url;a.target='_blank';a.rel='noopener';return a;}
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4300);}
 function act(type,value){state=change(state,type,value);save();}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{toast('This browser cannot save your discoveries. You can still play.');}}
-function openDialog(id){for(const d of document.querySelectorAll('dialog[open]'))d.close();closeBook();$(id).showModal();}
+function openDialog(id){observations.pause();for(const d of document.querySelectorAll('dialog[open]'))d.close();closeBook();$(id).showModal();}
 for(const b of document.querySelectorAll('[data-close]'))b.onclick=()=>$(b.dataset.close).close();
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('plant-guide').hidden)closeBook();});
 
 function update(){
+  observations.setBusy(busy);
   const known=knownPlants(state), p=playProgress(), id=state.selected;
   $('plant-count').textContent=known.length;
   $('mission-number').textContent=prototype==='wander'?'FIELD WORK':`MISSION ${state.mission+1} / 4`;
@@ -42,10 +45,10 @@ function update(){
   $('radio-open').textContent=p[state.mission].done&&!state.completed.includes(state.mission)?'Radio - report ready':'Radio';
   $('place-context').hidden=id===null;
   $('place-coordinate').textContent=id===null?'':`FIELD POSITION ${coordinate(id)}`;
-  $('place-description').textContent=busy?'Looking closer.':view==='close'?'Choose a plant name.':'Choose a square, then Close view.';
+  $('place-description').textContent=busy?'Looking closer.':observations.kind()!=='plants'?(view==='close'?'Reference record - practice location.':'Choose a marked place.') :view==='close'?'Choose a plant name.':'Choose a square, then Close view.';
   document.querySelectorAll('[data-view]').forEach(b=>{b.disabled=busy||(b.dataset.view==='close'&&id===null);b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-pressed',String(b.dataset.view===view));});
   forest.setPlots([]);
-  forest.setSpecimens(state.visited.includes(id)?WORLD[id].speciesIds.map(sp=>({id:sp,speciesId:sp,label:catalogue.find(s=>s.id===sp)?.name||sp})):[]);
+  forest.setSpecimens(observations.kind()==='plants'&&state.visited.includes(id)?WORLD[id].speciesIds.map(sp=>({id:sp,speciesId:sp,label:catalogue.find(s=>s.id===sp)?.name||sp})):[]);
   forest.setFieldVisited(state.visited.includes(id));
   forest.setSettlement(false);
   const matches=ACTIVE.map(c=>({id:c.id,strength:c.speciesIds.filter(sp=>mapped.includes(sp)).length/3})).filter(c=>c.strength);
@@ -55,6 +58,7 @@ function update(){
 }
 async function choose(id){
   if(busy)return;
+  if(!observations.has(id)){toast('Choose a marked reference, or switch back to Plants to explore any square.');return;}
   if(!WORLD[id]?.active){toast('There are few measured returns here. Try another place or open Map.');return;}
   closeBook();act('select',id);forest.selectPlot(id);
   if(view==='close')await camera('close');else update();
@@ -64,18 +68,27 @@ async function camera(next){
   closeBook();$('plot-notes').hidden=true;
   busy=true;view=next;update();
   try{
+    observations.before(next,state.selected);
     if(await forest.setView(next,state.selected)===false)return;
-    if(next==='close'){
+    if(next==='close'&&observations.kind()==='plants'){
       act('scan');act('visit');
       for(const kind of ['traces','climate','people'])act('read',kind);
       showPlotNotes();
     }
+    observations.after(next,state.selected);
   }catch(e){toast(e.message);}
   finally{busy=false;update();}
 }
 function showPlotNotes(){
+  $('plot-notes').querySelector('.guide-heading span').textContent='Field notes';
   const body=$('plot-notes-body'),record=fieldRecord(state.selected,currentWorld());
   body.replaceChildren(el('p',record.climate.text+' '+record.climate.wind),el('p',record.traces.text),el('p',record.human.text));
+  $('plot-notes').hidden=false;
+}
+function showObservationNotes(title,paragraphs,source){
+  $('plot-notes').querySelector('.guide-heading span').textContent=title;
+  $('plot-notes-body').replaceChildren(...paragraphs.map(p=>el('p',p)));
+  if(source){const p=el('p');p.append(link(source.author||'Source',source.source),' - ',link(source.license,source.licenseUrl));$('plot-notes-body').append(p);}
   $('plot-notes').hidden=false;
 }
 function meet(id){
@@ -241,6 +254,12 @@ function sources(){
   openDialog('sources');const body=$('source-content');body.replaceChildren();
   const notes=[['Forest geometry','The airborne view is the measured EBA T_0638 crop from the film. Eleven ground crops vary the understorey. Three separate ForestScan tree references show woody structure and foliage. All now use uniform display scales. The tree references have no confirmed species names. Outside points stay unchanged. These are separate surveys placed together for the exercise, not registered scans of these squares. ForestScan tree data: CC BY 4.0, DOI 10.5285/931973DB09AF41568853702EFE135F29.','https://essd.copernicus.org/articles/18/1243/2026/index.html'],['Field records','Species assignments, crop placement, human accounts, temperatures, humidity, litter moisture, disturbance clues and wildlife encounters are authored practice data. A clickable point is not a measured plant identification. The species map is not a live classifier.'],['Fire comparison','The group lab compares reconstructions against the same training world. It is not an operational forecast or a reproduction of the historical fire. The 2023 mapped scar is shown separately.'],['Lia','A fictional field ecologist with an illustrated portrait and green radio treatment. Calls use local authored answers and cited research, not a live language model. They are not quotations or an endorsement.'],['Images','Real reference photographs use a green terminal treatment. Credits and licenses remain linked. Photos can show a leaf, fruit or flower rather than a whole plant. Green treatments retain the source image license.']];
   for(const [title,text,url]of notes){body.append(el('h2',title),el('p',text));if(url)body.append(link('Source',url));}
+  for(const [title,text,url] of [
+    ['Communities','Microsoft building footprints from Alter do Chao, Para. CDLA Permissive 2.0. Walls, game location and community story are illustrative.','https://github.com/microsoft/GlobalMLBuildingFootprints'],
+    ['Audio','Richard Ranft / The British Library Board. Screaming piha recorded in Tambopata, Peru, in 1985. CC BY 4.0. The waveform comes from the actual recording.','https://commons.wikimedia.org/wiki/File:Screaming_Piha_(Lipaugus_vociferans)_(W1CDR0000523_BD5).ogg'],
+    ['Bird reference','Hector Bottai. Screaming piha photographed near Manaus. CC BY-SA 4.0. The green treatment retains this license.','https://commons.wikimedia.org/wiki/File:Lipaugus_vociferans_-_Screaming_Piha;_Manaus,_Amazonas,_Brazil.jpg'],
+    ['Camera traps','Wildlife Conservation Society / LILA. Real frames labelled lowland tapir, jaguar and white-lipped peccary from Bolivia. CDLA Permissive 1.0. Locations on this map are authored. These references are separate from the simulated sensor-network exercise.','https://lila.science/datasets/wcscameratraps']
+  ])body.append(el('h2',title),el('p',text),link('Source',url));
   for(const h of humans){body.append(el('h2',h.title),el('p',h.summary));for(const s of h.sources){const p=el('p');p.append(link(s.title,s.url));body.append(p);}}
   for(const sp of catalogue){body.append(el('h2',sp.name));for(const s of sp.sources){const p=el('p');p.append(link(s.title,s.url));body.append(p);}const photo=photos[sp.photoAssetId||sp.id];if(photo){const p=el('p');p.append(link(photo.author,photo.sourcePage),' - ',link(photo.license,photo.licenseUrl));body.append(p);}}
 }

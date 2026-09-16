@@ -53,6 +53,7 @@ Read in filename order.
 | [2026-09-17T0025](2026-09-17T0025-stage4-ash.md) | Returning to the Stage 3 loop on the fictional Island of Ash |
 | [2026-09-17T0055](2026-09-17T0055-stage4-cinematic-ash.md) | Keeping Stage 3 rules while restoring the film and point-cloud interface |
 | [2026-09-17T0230](2026-09-17T0230-stage4-readable-structure.md) | Restored map, in-place detail and proportionate tree structure |
+| [2026-09-17T0236](2026-09-17T0236-stage4-reference-layers.md) | Real building, sound and camera references in the green map interface |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
