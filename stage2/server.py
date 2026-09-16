@@ -34,6 +34,7 @@ STYLE = os.environ.get("STAGE2_STYLE", "drawn")
 # Where the film gallery is. Its own port, because the masters are large and
 # live outside the repo; run.sh sets this so /start can link to it.
 FILMS_PORT = int(os.environ.get("PYROCENE_FILMS_PORT", "8022"))
+STAGE4_PORT = int(os.environ.get("PYROCENE_STAGE4_PORT", "8024"))
 
 
 class Room:
@@ -420,7 +421,7 @@ class Handler(BaseHTTPRequestHandler):
             # of megabytes and live off the repo. run.sh tells us which one so
             # the tile still points somewhere when the ports are moved.
             return self._file("start.html", "text/html; charset=utf-8",
-                              {"__FILMS_PORT__": FILMS_PORT})
+                              {"__FILMS_PORT__": FILMS_PORT, "__STAGE4_PORT__": STAGE4_PORT})
         if p == "/gm":
             return self._file("gm.html", "text/html; charset=utf-8")
         if p == "/projector":

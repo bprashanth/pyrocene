@@ -21,13 +21,13 @@ dramatic consequence of letting invasives go dense, not the main event.
 
 ## Run the whole evening
 
-One script. It starts the room game and the film gallery, prints the single
-address to open, and stops both on ctrl-c.
+One script. It starts the room game, film gallery and Stage 4 forest mission,
+prints the address to open, and stops all three on ctrl-c.
 
 ```bash
-./run.sh                 # stage 2, game on 8020, films on 8022
+./run.sh                 # room on 8020, films on 8022, Stage 4 on 8024
 ./run.sh --stage 1       # start the room on stage 1
-./run.sh --port 9000     # move the game server; films follow on 9002
+./run.sh --port 9000     # room on 9000, films on 9002, Stage 4 on 9004
 ```
 
 Anything else you pass goes to the game server, so `--seed`, `--style` and
@@ -46,6 +46,7 @@ everything:
 | Fire lab | `/simulation/claude/lab/?run=sample` on the same server |
 | Forest structure studies | the film gallery, on its own port |
 | Stage 3 | [pyrocene.netlify.app](https://pyrocene.netlify.app) |
+| Stage 4 / The Amazon | Central point-cloud forest exploration with Lia, room port +4 |
 
 Stage 1 and Stage 2 point at the same three screens because they are the same
 server. Which stage the room is in is set when you start it, or from the game
@@ -57,6 +58,10 @@ because the phones are on wifi. Hand that out. Nothing needs the internet except
 Stage 3.
 
 ## Run it
+
+For the new measured-point-cloud mission and its portable offline/USB build,
+see [stage4/README.md](stage4/README.md). The original terminal game below is
+unchanged.
 
 Requires Python 3.10+ (no dependencies). From the repo root:
 

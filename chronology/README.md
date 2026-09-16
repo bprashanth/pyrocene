@@ -45,6 +45,14 @@ Read in filename order.
 | [2026-09-15T1900](2026-09-15T1900-one-end-to-end-film.md) | Joining structure and spectra without inventing another camera move |
 | [2026-09-15T1930](2026-09-15T1930-film-inventory.md) | Freezing the event pair and accounting for every retained intermediate video |
 | [2026-09-16T1000](2026-09-16T1000-less-writing.md) | Removing production commentary from the film and gallery |
+| [2026-09-16T1800](2026-09-16T1800-stage4-design.md) | Digesting the existing journey and choosing the measured-forest mission |
+| [2026-09-16T1840](2026-09-16T1840-stage4-playable.md) | First complete mission, historical overlap and the fire-model disagreement |
+| [2026-09-16T1855](2026-09-16T1855-stage4-portable-v0.md) | Portable v0, exhaustive native stress-tests and actual browser verification |
+| [2026-09-16T2025](2026-09-16T2025-stage4-forest-discovery.md) | A quiet exploration opening, ground scans and a field guide |
+| [2026-09-16T2208](2026-09-16T2208-stage4-field-teams.md) | Four field missions, sensor teams and the shared paper memory map |
+| [2026-09-17T0025](2026-09-17T0025-stage4-ash.md) | Returning to the Stage 3 loop on the fictional Island of Ash |
+| [2026-09-17T0055](2026-09-17T0055-stage4-cinematic-ash.md) | Keeping Stage 3 rules while restoring the film and point-cloud interface |
+| [2026-09-17T0230](2026-09-17T0230-stage4-readable-structure.md) | Restored map, in-place detail and proportionate tree structure |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

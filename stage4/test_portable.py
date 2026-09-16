@@ -1,0 +1,126 @@
+"""Exercise the real extracted event copy, with no source-checkout dependency."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import socket
+import subprocess
+import tempfile
+import time
+import unittest
+import urllib.request
+import zipfile
+
+from playwright.sync_api import sync_playwright, expect
+
+
+class PortablePlay(unittest.TestCase):
+    def test_extracted_launcher_native_replay_and_history(self):
+        archive = Path('/mnt/seagate/models/pyrocene/stage4/pyrocene-stage4-v0.zip')
+        self.assertTrue(archive.is_file(), 'Build the actual release ZIP before this test')
+        with tempfile.TemporaryDirectory(prefix='pyrocene-event-copy-') as tmp:
+            root = Path(tmp)
+            with zipfile.ZipFile(archive) as z:
+                self.assertIsNone(z.testzip())
+                z.extractall(root)
+            manifest = json.loads((root/'stage4/assets/manifest.json').read_text())
+            for name, info in manifest['outputs'].items():
+                data = (root/'stage4/assets'/name).read_bytes()
+                self.assertEqual(len(data), info['bytes'], name)
+                self.assertEqual(hashlib.sha256(data).hexdigest(), info['sha256'], name)
+            bank = json.loads((root/'stage4/assets/forefire-bank.json').read_text())
+            self.assertEqual(bank['modelSha256'], hashlib.sha256((root/'stage4/model.mjs').read_bytes()).hexdigest())
+            self.assertEqual(len(bank['plans']), 253)
+            with socket.socket() as sock:
+                sock.bind(('127.0.0.1', 0))
+                port = sock.getsockname()[1]
+            base = f'http://127.0.0.1:{port}'
+            env = dict(os.environ)
+            env.pop('PYROCENE_STAGE4_ASSETS', None)
+            env.pop('PYTHONPATH', None)
+            process = subprocess.Popen(['sh', str(root/'run.sh'), '--port', str(port)],
+                cwd='/tmp', env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            try:
+                for _ in range(100):
+                    try:
+                        with urllib.request.urlopen(base+'/health', timeout=.5) as r:
+                            self.assertTrue(json.load(r)['ok'])
+                        break
+                    except OSError:
+                        if process.poll() is not None: self.fail(process.stdout.read().decode())
+                        time.sleep(.1)
+                else: self.fail('Extracted server did not become ready')
+                with sync_playwright() as pw:
+                    browser = pw.chromium.launch(headless=True,args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
+                    page = browser.new_page(viewport={'width':1440,'height':900})
+                    errors, external = [], []
+                    page.on('pageerror', lambda e: errors.append(str(e)))
+                    def route(r):
+                        if r.request.url.startswith(base): r.continue_()
+                        else: external.append(r.request.url); r.abort()
+                    page.route('**/*', route)
+                    page.goto(base)
+                    page.wait_for_selector('#loading', state='hidden')
+                    self.assertTrue(page.url.endswith('/expedition.html'))
+                    self.assertTrue(page.locator('.radio-portrait img').evaluate('(img)=>img.complete && img.naturalWidth>0 && img.getAttribute("src")==="lia-v1.png"'))
+                    page.goto(base+'/ash.html')
+                    page.wait_for_selector('#loading', state='hidden')
+                    self.assertIn('Island of Ash',page.title())
+                    page.locator('#type-open').click()
+                    for command in ['lidar','drone D4','remove D4','restore D4']:
+                        page.locator('#command').fill(command)
+                        page.locator('#go').click()
+                        expect(page.locator('#go')).to_be_enabled(timeout=30000)
+                    self.assertIn('SCAN',page.locator('#view-name').inner_text())
+                    self.assertEqual(page.locator('#cover').inner_text(),'86%')
+                    page.reload()
+                    page.wait_for_selector('#loading',state='hidden')
+                    self.assertEqual(page.locator('#night').inner_text(),'Night 5 / 14')
+                    page.goto(base+'/expedition.html')
+                    page.wait_for_selector('#loading', state='hidden')
+                    for label in ['Give me a hint','Show me a place','Close view']:
+                        page.get_by_role('button',name=label,exact=True).click()
+                    expect(page.locator('[data-specimen]')).to_have_count(3)
+                    expect(page.locator('[data-view=forest]')).to_be_enabled()
+                    page.locator('[data-specimen]').first.click()
+                    expect(page.locator('.plain-note')).to_be_visible()
+                    self.assertIn('Marandu grass',page.locator('#plant-guide').inner_text())
+                    self.assertTrue(page.evaluate('pyroceneDiagnostics().tls'))
+                    page.screenshot(path='/mnt/seagate/models/pyrocene/stage4/qa-explore/10-portable-plant.png')
+                    page.locator('#book-close').click()
+                    for label in ['More','Sensor network','Sound recorders','Finish this field round']:
+                        page.get_by_role('button',name=label,exact=True).click()
+                    self.assertEqual(page.evaluate('pyroceneDiagnostics().network.day'),1)
+                    page.goto(base+'/memory.html?blank=1')
+                    expect(page.locator('#status')).to_have_text('Paper map ready')
+                    page.get_by_role('button',name='Commit paper map',exact=True).click()
+                    page.get_by_role('button',name='Play fire',exact=True).click()
+                    expect(page.locator('#result')).to_be_visible()
+                    page.goto(base+'/mission.html')
+                    page.wait_for_selector('#loading', state='hidden')
+                    page.get_by_role('button',name='Enter the forest').click()
+                    page.locator('[data-action=lidar]').click()
+                    page.get_by_role('button',name='Build your protection plan →').click()
+                    for sector in (13,15):
+                        page.locator(f'#map [data-sector="{sector}"]').click()
+                        page.locator('#assign').click()
+                    page.get_by_role('button',name='Commit plan & run fire →').click()
+                    page.get_by_role('button',name='Stress-test this plan with ForeFire').click()
+                    page.get_by_role('button',name='Return to training model').wait_for()
+                    self.assertIn('ForeFire stress-test',page.locator('#fire-title').inner_text())
+                    page.get_by_role('button',name='Reveal the 2023 mapped fire').click()
+                    self.assertIn('MapBiomas',page.locator('#view-caption').inner_text())
+                    page.get_by_role('button',name='Finish mission').click()
+                    self.assertEqual(page.locator('#phase').inner_text(),'MISSION DEBRIEF')
+                    qa = Path('/mnt/seagate/models/pyrocene/stage4/qa')
+                    qa.mkdir(parents=True,exist_ok=True)
+                    page.screenshot(path=str(qa/'16-extracted-portable.png'))
+                    self.assertEqual(errors, [])
+                    self.assertEqual(external, [])
+                    browser.close()
+            finally:
+                process.terminate()
+                process.communicate(timeout=5)
+
+
+if __name__ == '__main__': unittest.main()

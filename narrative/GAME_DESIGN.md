@@ -573,7 +573,21 @@ on purpose.
 | [`stage2/simulation/claude/lab/README.md`](../stage2/simulation/claude/lab/README.md) | The fire lab |
 | [`stage2/simulation/codex/README.md`](../stage2/simulation/codex/README.md) | The canonical Codex Linux event films, playback links, evidence limits and production map |
 
-### The online game
+### Stage 4: Amazon field exploration
+
+The current continuation is the restored draggable Amazon point-cloud map.
+Teams use one laptop each, inspect selected squares in place, learn about
+plants and field conditions, then reconstruct a physical map for the fire lab.
+Close view reveals ground structure without a separate scan or field-team step.
+The Island of Ash Stage 3 experiment remains at its own route, not the default.
+See [the expedition guide](../stage4/EXPEDITION.md) and
+[the in-place detail notes](../stage4/INLINE_DETAIL.md).
+See [STAGE_4.md](STAGE_4.md) for the
+design decisions and [the runtime guide](../stage4/README.md) for play and
+offline delivery. The original four Stage 4 outlines are preserved as inputs,
+not claims that their proposed reconstruction was implemented.
+
+### The original online game
 
 | Doc | What is in it |
 |---|---|
