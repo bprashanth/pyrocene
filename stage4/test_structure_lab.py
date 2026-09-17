@@ -50,9 +50,9 @@ class StructureStudy(unittest.TestCase):
    self.page.locator('#structure-focus').select_option(focus);self.shot('lab-'+focus+'-v2');self.assertEqual(self.stats()['focus'],focus)
   self.click('Look through');expect(self.page.locator('#structure-slice')).to_be_visible()
   self.page.locator('#structure-slice').fill('8');self.page.locator('#structure-slice').dispatch_event('input');self.shot('lab-slice-v2');self.assertEqual(self.stats()['slice'],8)
-  self.click('Forest floor');self.page.locator('#structure-focus').select_option('litter');self.assertFalse(self.stats()['conditions'])
-  self.click('Check field conditions');self.assertTrue(self.stats()['conditions']);expect(self.page.locator('.structure-caption').last).to_contain_text('Dead leaves break')
-  self.shot('lab-floor-v2');self.click('Hide field conditions');self.assertFalse(self.stats()['conditions'])
+  self.click('Forest floor');self.page.locator('#structure-focus').select_option('litter');self.assertTrue(self.stats()['conditions'])
+  self.assertEqual(self.page.get_by_role('button',name='Check field conditions',exact=True).count(),0);expect(self.page.locator('.structure-caption').last).to_contain_text('Dead leaves break')
+  self.shot('lab-floor-v2')
  def test_species_opens_its_actual_modelled_form(self):
   self.start();self.page.locator('[data-plant=doliocarpus_dentatus]').click();self.click('See its structure')
   self.page.wait_for_function('pyroceneDiagnostics().structureLab.draws>0');self.assertTrue(self.stats()['focus'].startswith('species:'))
@@ -60,7 +60,7 @@ class StructureStudy(unittest.TestCase):
   self.page.keyboard.press('Escape');expect(self.page.locator('#structure-lab')).not_to_be_visible();expect(self.page.locator('#plant-guide')).to_be_visible()
  def test_damp_gap_is_not_presented_as_dry_fuel(self):
   self.start();self.click('More');self.click('Map');self.click('Explore C3');self.click('Close view');self.lab()
-  self.click('Forest floor');self.click('Check field conditions');self.shot('lab-damp-gap-v2')
+  self.click('Forest floor');self.shot('lab-damp-gap-v2')
   expect(self.page.locator('.structure-caption').last).to_contain_text('bends without breaking');self.assertGreater(self.stats()['models'][1]['gap'],0)
  def test_focused_section_moves_without_clipping_species_or_changing_compare(self):
   self.start();self.page.locator('[data-plant=doliocarpus_dentatus]').click();self.click('See its structure')

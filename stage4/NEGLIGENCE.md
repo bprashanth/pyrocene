@@ -2,8 +2,11 @@
 
 Cooperation is the renamed first mission. Its budgets, point-cloud exploration,
 one-patch proposals and committed recovery/fire comparison are unchanged.
-Commit it, then choose Six months later (or Negligence in the mission selector).
-Only the facilitator advances the room. Team links follow the shared transition.
+Commit it, then choose Negligence in the mission selector. There is no separate
+transition button. Either team or the facilitator can advance the shared room.
+Choosing Cooperation from Negligence resets both missions. Choosing Expedition
+from either mission resets the shared game and returns open team screens to
+Expedition. A backward choice is not a read-only revisit.
 
 Negligence inherits the exact first commitment and its remaining credits.
 Its candidates are the planted patch, plus new patches D (C4) and E (E5).
@@ -32,8 +35,11 @@ not a claim that one weeding at six months protects a site for ten years.
 
 The recovery slider is available throughout this mission, starting six months
 after the original planting. Its years are years since planting, not additional
-years after this visit. With care / Without care can be compared before making
-a proposal. Choosing a new clearing defaults the preview to Without care.
+years after this visit. With removal / Without removal can be compared before
+making a proposal. The main panel and structure lab always follow the selected
+patch, including D and E. Selecting a patch starts its With removal preview.
+In the planted patch this means careful establishment follow-up. In D and E it
+means a single clearance without planting, not repeated maintenance.
 
 The numbers describe a normalized cohort of 100 planted trees, not a census of
 the LiDAR patch. They are **declared teaching assumptions**, editable in
@@ -51,6 +57,14 @@ Both futures share the same initial state. One monotone succession function
 drives displayed survival, invasive cover, live growth, structure and fire fuels.
 The slider is reversible; no hidden damage accumulates from previewing a year.
 
+In the two unplanted clearings, initial invasive cover is authored as 85% (D)
+and 70% (E). Removal reduces it immediately to 8%. A normalized exponential
+regrowth curve approaches 95% at ten years in both removal and no-removal
+previews. Removal never produces more invasive cover than no removal at the
+same year. Sparse surviving native cover declines instead of becoming planted
+forest. The display says No trees planted rather than reporting a planted-tree
+survival rate. None of these clearing trajectories is empirically calibrated.
+
 ## Geometry and fire
 
 Measured canopy returns still provide native-growth geometry. In the planted
@@ -59,18 +73,22 @@ returns are relocated and repeated into uneven pink ground growth. They are
 neither scanned weeds from this future nor species identified in the source.
 Surrounding forest stays intact. Both WebGL and Canvas2D show the changing cloud.
 
-Structure uses the same selected year and care state on the right, with a fixed
+Structure uses the same selected year and removal state on the right, with a fixed
 closed-canopy reference on the left. Native geometry changes in height and
 density; modelled low grass and shrub geometry increases under neglect. A year
-slider and care comparison inside the lab update its geometry without closing
+slider and removal comparison inside the lab update its geometry without closing
 the view or resetting the camera. The reference does not change when scrubbing.
 Compare, Look through, plant highlighting and rotation remain available.
+Litter moisture colours and conditions are always available. The former Check
+field conditions button only toggled a note and colour overlay, not hidden
+litter geometry. It has been removed. Projection captions use the modelled
+future litter condition instead of the original survey's weather note.
 
 Fire still uses the educational Rothermel arrival model. More invasive cover
 increases its assigned fine fuel, while native recovery affects assigned
 moisture and exposure. New clearing has a separate local treatment. The source
 ignition and weather are fixed. No result is fitted to a historical NBR scar.
-Previewing With care is a counterfactual, not permission to dispatch two crews.
+Previewing With removal is a counterfactual, not permission to dispatch two crews.
 The final commitment records the actual crew assignment independently of sliders.
 
 ## Research basis and limits
@@ -100,3 +118,4 @@ the lab, tests two independent team sessions and the no-WebGL phone fallback.
 `test_portable.py` exercises the mission from the extracted offline archive.
 
 The pre-mission checkpoint is tagged `stage4-before-negligence` at `d8c0984`.
+The first follow-up version is `631f214`, tagged `stage4-before-plot-projections`.

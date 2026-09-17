@@ -6,7 +6,7 @@ implementation URL and `play` remains the internal navigation value. Before the 
 trial: `211c4db`, tagged `stage4-before-shared-round`. Before this unified flow:
 `42492bd`, tagged `stage4-before-play-briefing`.
 
-After commitment, Six months later opens [Negligence](NEGLIGENCE.md), which
+After commitment, the dropdown opens [Negligence](NEGLIGENCE.md), which
 inherits the planted patch and asks where one follow-up crew should work.
 
 ## Play
@@ -37,8 +37,9 @@ surveys and proposals can arrive together. A stale shared commitment is rejected
 Proposals are held in server memory, survive browser reloads and end when the
 server restarts. Returning to Expedition from the facilitator screen resets
 proposals, survey visits and that browser's expedition discoveries. Returning to
-Cooperation starts fresh on the same forest and retains the selected role. Team-only
-links can revisit Expedition but cannot erase the shared room. Old-round writes
+Cooperation starts fresh on the same forest and retains the selected role.
+Backward navigation from team links also resets the shared game. Open round
+screens follow the reset, including returning to Expedition. Old-round writes
 are rejected. At most 128
 rooms are retained. Recovery/fire playback is local to each screen; decisions
 and committed plans are shared, not each user's camera or playback position.

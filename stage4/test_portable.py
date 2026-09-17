@@ -72,11 +72,11 @@ class PortablePlay(unittest.TestCase):
                     page.wait_for_function('roundDiagnostics().mode==="fire"')
                     self.assertEqual(page.evaluate('roundDiagnostics().state.committed.left'),4)
                     self.assertGreater(page.evaluate('roundDiagnostics().growthPoints'),2000)
-                    page.get_by_role('button',name='Six months later',exact=True).click()
+                    page.locator('#game-mode').select_option('negligence')
                     page.get_by_role('button',name='Begin',exact=True).click()
                     page.wait_for_function('!roundDiagnostics().busy')
                     page.locator('#recovery').fill('10');page.locator('#recovery').dispatch_event('input')
-                    page.get_by_role('button',name='Without care',exact=True).click()
+                    page.get_by_role('button',name='Without removal',exact=True).click()
                     self.assertEqual(page.evaluate('roundDiagnostics().forecast.alive'),15)
                     for label in ['Patch B','Close view','Structure']:
                         page.get_by_role('button',name=label,exact=True).click()

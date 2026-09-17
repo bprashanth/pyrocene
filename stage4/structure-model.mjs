@@ -11,7 +11,7 @@ export const STRUCTURE_SOURCES=[
 export function structureProfile(plot,{reference=false}={}){
  const disturbed=!!plot.disturbance,open=disturbed||plot.exposure>.7;
  if(reference)return {id:'reference',gap:0,lianas:7,shrubs:24,grasses:0,fallen:2,moisture:.76,exposure:.18};
- if(plot.succession){const f=plot.succession;return {id:plot.id,gap:0,lianas:Math.round(3*f.nativeFraction),shrubs:Math.round(18+90*f.invasive),grasses:Math.round(30+700*f.invasive),fallen:3,moisture:.15+.79*f.nativeFraction*f.year/10,exposure:.9-.65*f.nativeFraction*f.year/10};}
+ if(plot.succession){const f=plot.succession;return {id:plot.id,gap:0,lianas:Math.round(3*f.nativeFraction),shrubs:Math.round(8+100*f.invasive),grasses:Math.round(10+720*f.invasive),fallen:3,moisture:f.moisture??(.15+.79*f.nativeFraction*f.year/10),exposure:f.exposure??(.9-.65*f.nativeFraction*f.year/10)};}
  return {id:plot.id,gap:open?(plot.disturbance==='fire'?19:plot.disturbance==='logging'?15:12):0,
   lianas:open?24:8,shrubs:open?64:28,grasses:plot.invasive?135:0,
   fallen:disturbed?7:2,moisture:plot.moisture,exposure:plot.exposure};
@@ -37,7 +37,7 @@ export function buildStructure(source,wood,centre,plot,species,{reference=false}
   if(Math.abs(x)>30||Math.abs(z)>20||y>40)continue;
   // Remove upper vegetation, not flatten trees into a low canopy.
   if(gapAt(x,z,profile)&&y>7)continue;
-  if(!reference&&plot.succession){const f=plot.succession,v=Math.sin(Math.floor(x/8)*12.9898+Math.floor(z/8)*78.233)*43758.5453;if(y>4&&(v-Math.floor(v))>f.nativeFraction)continue;y*=f.heightScale;}
+  if(!reference&&plot.succession){const f=plot.succession,v=Math.sin(Math.floor(x/8)*12.9898+Math.floor(z/8)*78.233)*43758.5453,group=v-Math.floor(v);if(y>4&&group>f.nativeFraction)continue;if(f.kind==='clearing'&&y>.5&&y<=4&&group>f.invasive)continue;y*=f.heightScale;}
   const k=wood?.[n/3]>.5?KINDS.wood:y<8?KINDS.low:KINDS.foliage;
   const tree=choose(trees,Math.floor((x+30)/10)+6*Math.floor((z+20)/10));
   add(x,y,z,k,tree);

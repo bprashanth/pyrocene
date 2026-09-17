@@ -1,5 +1,6 @@
 import {buildStructure,pointMatches,structureSummary,structureOpacity,tracksPlant,focusSectionDepth,STRUCTURE_SOURCES} from './structure-model.mjs';
 import {coordinate,fieldRecord} from './world.mjs';
+import {forecastText} from './neglect-model.mjs';
 
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const button=(text,action)=>{const b=node('button',text);b.type='button';b.onclick=action;return b;};
@@ -19,7 +20,7 @@ export class StructureLab{
   this.plot=plot;this.forecastControls=forecastControls;this.species=plot.speciesIds.map(id=>this.catalogue().find(s=>s.id===id));
   this.focus=speciesId?'species:'+this.species.findIndex(s=>s.id===speciesId):'all';
   if(this.focus==='species:-1')this.focus='all';
-  this.mode='compare';this.angle=.10;this.elevation=.10;this.zoom=1;this.slice=0;this.conditions=false;this.draws=0;
+  this.mode='compare';this.angle=.10;this.elevation=.10;this.zoom=1;this.slice=0;this.conditions=true;this.draws=0;
   this.lastSectionFocus=null;
   const centre={x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
   this.models=[true,false].map(reference=>buildStructure(this.forest.detailPositions,this.forest.detailKinds,centre,plot,this.species,{reference}));
@@ -32,9 +33,9 @@ export class StructureLab{
   title.append(node('small','MODELLED STRUCTURE STUDY'),node('h1','Inside the forest - '+coordinate(this.plot.id)));
   header.append(title,button('Back',()=>d.close()));d.append(header);
   if(this.forecastControls){
-   const controls=node('div',undefined,'structure-tools'),label=node('label','Years since planting '),range=node('input');range.type='range';range.min=.5;range.max=10;range.step=.5;range.value=this.plot.succession.year;range.id='structure-year';range.setAttribute('aria-label','Structure forecast year');
+   const controls=node('div',undefined,'structure-tools'),label=node('label','Projection '),range=node('input');range.type='range';range.min=.5;range.max=10;range.step=.5;range.value=this.plot.succession.year;range.id='structure-year';range.setAttribute('aria-label','Structure forecast year');
    this.yearLabel=node('output',this.plot.succession.year+'y');range.oninput=()=>this.forecastControls.onYear(Number(range.value));label.append(range,this.yearLabel);controls.append(label);
-   for(const [care,text]of [[true,'With care'],[false,'Without care']]){const b=button(text,()=>this.forecastControls.onCare(care));b.dataset.structureCare=String(care);controls.append(b);}d.append(controls);
+   for(const [care,text]of [[true,'With removal'],[false,'Without removal']]){const b=button(text,()=>this.forecastControls.onCare(care));b.dataset.structureCare=String(care);controls.append(b);}d.append(controls);
   }
   this.hint=node('p','Drag either forest to turn both. Scroll to move closer.','structure-instruction');d.append(this.hint);
   const controls=node('div',undefined,'structure-tools'),modes=node('div',undefined,'structure-modes');modes.setAttribute('aria-label','Structure views');
@@ -59,7 +60,7 @@ export class StructureLab{
    canvas.addEventListener('wheel',e=>{e.preventDefault();this.zoom=clamp(this.zoom*Math.exp(-e.deltaY*.001),.75,2.5);this.schedule();},{passive:false});
    canvas.onkeydown=e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','-'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft')this.angle-=.1;if(e.key==='ArrowRight')this.angle+=.1;if(e.key==='ArrowUp')this.elevation=clamp(this.elevation+.1,-.05,.65);if(e.key==='ArrowDown')this.elevation=clamp(this.elevation-.1,-.05,.65);if(e.key==='+')this.zoom=clamp(this.zoom*1.1,.75,2.5);if(e.key==='-')this.zoom=clamp(this.zoom/1.1,.75,2.5);this.schedule();}};
   }d.append(pair);
-  const footer=node('div',undefined,'structure-bottom');this.fieldButton=button('Check field conditions',()=>{this.conditions=!this.conditions;this.sync();});footer.append(this.fieldButton);
+  const footer=node('div',undefined,'structure-bottom');
   this.finding=node('p');footer.append(this.finding);d.append(footer);
   const details=node('details',undefined,'structure-sources');details.append(node('summary','About this comparison'));
   details.append(node('p','Both sections combine measured scan fragments with modelled vegetation. The reference is a closed-canopy example, not a measured twin or an average of all Amazon forests. Plant shapes and plot differences are authored. They are not species detected in the scan.'));
@@ -74,16 +75,14 @@ export class StructureLab{
   if(this.mode==='slice'&&tracksPlant(this.focus)&&this.lastSectionFocus!==this.focus){
    this.slice=focusSectionDepth(this.models[1].points,this.focus);this.slider.value=this.slice;this.lastSectionFocus=this.focus;
   }
-  this.fieldButton.textContent=this.conditions?'Hide field conditions':'Check field conditions';
-  this.fieldButton.setAttribute('aria-pressed',String(this.conditions));
   const messages={all:'Compare the upper cover and what fills the space below.',canopy:'Look for breaks above the lower vegetation.',lower:'Look for low plants joining across the opening.',wood:'Standing trunks remain visible through the foliage.',liana:'Follow the winding stems between layers. Climbers are not necessarily invasive.',shrub:'Look for several low branches spreading from one base.',grass:'Look for low clumps joining across the forest floor.',litter:'Fallen leaves can connect beneath green plants. Check whether they are dry.'};
   const selected=this.focus.startsWith('species:')?this.species[Number(this.focus.slice(8))]:null;
   this.finding.textContent=selected?selected.name+' - modelled growth form, with the surrounding forest retained.':messages[this.focus];
   if(this.mode==='slice')this.finding.textContent=tracksPlant(this.focus)?'Follow the highlighted plant through the section. Nearby stems are not confirmed connections.':'Move the bright section through the forest. The rest stays dim.';
   const record=fieldRecord(this.plot.id);
-  this.panels[0].caption.textContent=this.conditions?'Reference conditions: damp litter and sheltered air.':'60 m wide - same scale on both sides';
-  this.panels[1].caption.textContent=this.conditions?record.climate.text+' '+record.climate.wind:'Choose a layer or plant. The difference is in the points.';
-  if(this.plot.succession){const f=this.plot.succession;this.panels[1].panel.querySelector('h2').textContent=`Selected patch - ${f.year}y - ${f.maintained?'with care':'without care'}`;this.panels[1].caption.textContent=`${Math.round(f.alive)} of 100 planted trees survive. Invasive cover: ${Math.round(f.invasive*100)}%. Modelled.`;
+  this.panels[0].caption.textContent='60 m wide. Damp litter and sheltered air.';
+  this.panels[1].caption.textContent=record.climate.text+' '+record.climate.wind;
+  if(this.plot.succession){const f=this.plot.succession;this.panels[1].panel.querySelector('h2').textContent=`Selected patch - ${f.year}y - ${f.maintained?'with removal':'without removal'}`;this.panels[1].caption.textContent=forecastText(f)+' '+(this.models[1].profile.moisture>.7?'Damp litter.':this.models[1].profile.moisture<.3?'Dry litter.':'Mixed litter.')+' Modelled.';
    if(this.yearLabel){this.yearLabel.textContent=f.year+'y';this.dialog.querySelector('#structure-year').value=f.year;for(const b of this.dialog.querySelectorAll('[data-structure-care]'))b.setAttribute('aria-pressed',String(b.dataset.structureCare===String(f.maintained)));}
   }
   this.schedule();

@@ -14,7 +14,7 @@ export function planBudget(removal,ecology){
 // Authored comparison world on the existing scan. No fire probability is
 // inferred from the points. A fixed ignition, wind and horizon are shared.
 const corridor=new Set([33,27,21,15,9,8,13,22]);
-export function terrain(plan=null,{future=true,years=future?CONFIG.years:0,succession=null,extraRemoval=null}={}){
+export function terrain(plan=null,{future=true,years=future?CONFIG.years:0,succession=null,extraRemoval=null,clearing=null}={}){
  const cells=WORLD.map(c=>({...c,speciesIds:[...c.speciesIds],fuel:corridor.has(c.id)?.94:.55,moisture:corridor.has(c.id)?.13:.97,exposure:corridor.has(c.id)?.8:.2}));
  if(!plan)return cells;
  const r=patch(plan.removal),e=patch(plan.ecology);if(!r||!e)throw Error('Incomplete plan.');
@@ -26,6 +26,7 @@ export function terrain(plan=null,{future=true,years=future?CONFIG.years:0,succe
  cells[e.id].fuel=.16+.20*growth;cells[e.id].moisture=.22+.72*growth;cells[e.id].exposure=.85-.60*growth;
  if(succession){cells[e.id].fuel=.16+.76*succession.invasive;cells[e.id].moisture=.15+.79*succession.nativeFraction*growth;cells[e.id].exposure=.9-.65*succession.nativeFraction*growth;}
  if(extraRemoval){const c=cells[patch(extraRemoval).id];c.fuel=.16+.26*growth;c.moisture=.22;c.exposure=.85;}
+ if(clearing){const c=cells[patch(clearing.key).id];c.fuel=.16+.76*clearing.invasive;c.moisture=clearing.moisture;c.exposure=clearing.exposure;}
  return cells;
 }
 export function runFire(plan=null,options={}){
@@ -44,6 +45,7 @@ const clamp=n=>Math.max(0,Math.min(1,n));
 export function fineFuel(plan=null,options={}){
  const changed=terrain(plan,options),treated=plan?new Set([patch(plan.removal).id,patch(plan.ecology).id]):new Set();
  if(options.extraRemoval)treated.add(patch(options.extraRemoval).id);
+ if(options.clearing)treated.add(patch(options.clearing.key).id);
  return Array.from({length:3600},(_,i)=>{
   const x=(i%60)*15-442.5,z=Math.floor(i/60)*15-442.5,id=Math.floor(i/60/10)*6+Math.floor(i%60/10);
   const width=28+8*Math.sin(x*.019+z*.025)+4*Math.cos(z*.04);

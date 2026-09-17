@@ -43,7 +43,7 @@ class RoundStore:
             if action == 'new':
                 sid = secrets.token_urlsafe(12)
                 tokens = {r: secrets.token_urlsafe(24) for r in ('room','removal','ecology')}
-                s = {'id': sid, 'tokens': tokens, 'revision': 0, 'phase': 'survey', 'round': 1,'mission':'cooperation','previous':None,
+                s = {'id': sid, 'tokens': tokens, 'revision': 0, 'phase': 'survey', 'round': 1,'mission':'cooperation','screen':'play','previous':None,
                      'proposals': {'removal': None, 'ecology': None},
                      'visited': {'removal': [], 'ecology': []}, 'committed': None}
                 self.sessions[sid] = s
@@ -64,21 +64,26 @@ class RoundStore:
             owner = body.get('team') if role == 'room' else role
             if 'round' in body and body['round'] != s['round']:
                 raise RoundError(409, 'The room started a new game. Try again.')
-            independent = (action == 'visit' and body.get('round') == s['round']) or (action == 'propose'
+            independent = (action in ('visit','enter') and body.get('round') == s['round']) or (action == 'propose'
                 and body.get('round') == s['round'] and body.get('phase') == s['phase']
                 and isinstance(owner,str) and owner in s['proposals']
                 and body.get('prior') == s['proposals'][owner])
             if type(body.get('revision')) is not int or (body['revision'] != s['revision'] and not independent):
                 raise RoundError(409, 'The plan changed. Review it and try again.')
-            if action in ('reveal','commit','replay','advance') and role != 'room':
+            if action in ('reveal','commit') and role != 'room':
                 raise RoundError(403, 'The room makes this decision.')
             if action == 'replay':
-                s.update(phase='survey',mission='cooperation',previous=None, proposals={'removal':None,'ecology':None}, visited={'removal':[],'ecology':[]}, committed=None, round=s['round']+1)
+                destination = body.get('destination','play')
+                if destination not in ('play','expedition'):
+                    raise RoundError(400, 'Choose Expedition or Cooperation.')
+                s.update(phase='survey',mission='cooperation',screen=destination,previous=None, proposals={'removal':None,'ecology':None}, visited={'removal':[],'ecology':[]}, committed=None, round=s['round']+1)
+            elif action == 'enter':
+                s['screen'] = 'play'
             elif action == 'advance':
                 if s['mission'] != 'cooperation' or s['phase'] != 'committed':
                     raise RoundError(409, 'Commit Cooperation first.')
                 previous = copy.deepcopy(s['committed'])
-                s.update(mission='negligence',previous=previous,phase='survey',proposals={'removal':None,'ecology':None},visited={'removal':[],'ecology':[]},committed=None,round=s['round']+1)
+                s.update(mission='negligence',screen='play',previous=previous,phase='survey',proposals={'removal':None,'ecology':None},visited={'removal':[],'ecology':[]},committed=None,round=s['round']+1)
             elif s['phase'] == 'committed':
                 raise RoundError(409, 'This plan is committed.')
             elif action in ('visit','propose'):
@@ -117,7 +122,7 @@ class RoundStore:
 
     def view(self, s, role):
         shown = s['phase'] != 'survey' or role == 'room'
-        view = {k: copy.deepcopy(s[k]) for k in ('id','revision','phase','round','committed','mission','previous')}
+        view = {k: copy.deepcopy(s[k]) for k in ('id','revision','phase','round','committed','mission','screen','previous')}
         view.update(role=role, token=s['tokens'][role], ready={k:v is not None for k,v in s['proposals'].items()},
                     proposals={k:v if shown or k==role else None for k,v in s['proposals'].items()},
                     visited={k:list(v) for k,v in s['visited'].items() if role=='room' or k==role})
