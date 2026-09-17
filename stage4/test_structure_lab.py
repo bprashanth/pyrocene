@@ -25,7 +25,7 @@ class StructureStudy(unittest.TestCase):
  def click(self,name):self.page.get_by_role('button',name=name,exact=True).click()
  def start(self):
   self.page.goto(self.base);self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
-  for name in ['Give me a hint','Show me a place','Close view']:self.click(name)
+  for name in ['More','Map','Explore C2','Close view']:self.click(name)
   expect(self.page.get_by_role('button',name='Examine structure',exact=True)).to_be_visible()
  def lab(self):
   self.click('Examine structure');self.page.wait_for_function('pyroceneDiagnostics().structureLab.draws>0')

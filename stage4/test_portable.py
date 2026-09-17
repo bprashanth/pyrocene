@@ -62,7 +62,7 @@ class PortablePlay(unittest.TestCase):
                     page.goto(base)
                     page.wait_for_selector('#loading', state='hidden')
                     self.assertTrue(page.url.endswith('/expedition.html'))
-                    self.assertTrue(page.locator('.radio-portrait img').evaluate('(img)=>img.complete && img.naturalWidth>0 && img.getAttribute("src")==="lia-v1.png"'))
+                    self.assertEqual(page.locator('#radio-open,.radio-portrait,dialog[open]').count(),0)
                     page.goto(base+'/ash.html')
                     page.wait_for_selector('#loading', state='hidden')
                     self.assertIn('Island of Ash',page.title())
@@ -78,7 +78,7 @@ class PortablePlay(unittest.TestCase):
                     self.assertEqual(page.locator('#night').inner_text(),'Night 5 / 14')
                     page.goto(base+'/expedition.html')
                     page.wait_for_selector('#loading', state='hidden')
-                    for label in ['Give me a hint','Show me a place','Close view']:
+                    for label in ['More','Map','Explore C2','Close view']:
                         page.get_by_role('button',name=label,exact=True).click()
                     expect(page.locator('[data-specimen]')).to_have_count(6)
                     expect(page.locator('[data-view=forest]')).to_be_enabled()

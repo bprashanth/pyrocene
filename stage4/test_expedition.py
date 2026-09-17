@@ -26,7 +26,7 @@ class ExpeditionPlay(unittest.TestCase):
  def tearDown(self):self.ctx.close();self.assertEqual(self.errors,[]);self.assertEqual(self.external,[]);self.assertEqual(self.bad,[])
  def button(self,name):self.page.get_by_role('button',name=name,exact=True).click()
  def start(self,mode='cases',references=False):
-  self.page.goto(self.base+'/expedition.html?mode='+mode+('&references=1' if references else ''));self.page.wait_for_selector('#loading',state='hidden');self.button('Explore')
+  self.page.goto(self.base+'/expedition.html?mode='+mode+('&references=1' if references else ''));self.page.wait_for_selector('#loading',state='hidden')
  def visit(self,id):
   self.button('More');self.button('Map');self.button('Explore '+chr(65+id//6)+str(id%6+1))
   expect(self.page.locator('#place-coordinate')).to_have_text('FIELD POSITION '+chr(65+id//6)+str(id%6+1))
@@ -43,21 +43,21 @@ class ExpeditionPlay(unittest.TestCase):
    self.page.locator('#book-close').click()
   return names
  def mission(self,n):
-  self.page.locator('#assignment').click();self.page.locator('#mission-list .mission-option button').nth(n).click();self.button('Explore')
+  self.page.locator('#assignment').click();self.page.locator('#mission-list .mission-option button').nth(n).click()
  def notes(self,kind):
   self.button('Field notes');self.page.locator('#note-tabs').get_by_role('button',name=kind,exact=True).click()
  def shot(self,name):self.page.wait_for_timeout(600);self.page.screenshot(path=str(QA/f'{name}.png'))
  def test_four_missions_read_uses_recall_and_restore(self):
   self.start();self.assertEqual(self.page.locator('.plot-pin').count(),0)
   for id in [13,0,1]:self.visit(id);self.plants()
-  self.button('Radio - report ready');self.button('Report and choose next mission');self.button('Explore')
+  self.page.locator('#assignment').click();self.button('Report findings');self.button('Back');self.mission(1)
   self.visit(15);self.assertIn('cut',self.page.locator('#plot-notes').inner_text());self.plants();self.shot('11-disturbance')
-  self.button('Radio - report ready');self.button('Report and choose next mission');self.button('Explore')
+  self.page.locator('#assignment').click();self.button('Report findings');self.button('Back');self.mission(2)
   self.visit(14);self.assertIn('moist',self.page.locator('#plot-notes').inner_text());self.shot('12-damp-gap')
-  self.button('Radio - report ready');self.button('Report and choose next mission');self.button('Explore')
+  self.page.locator('#assignment').click();self.button('Report findings');self.button('Back');self.mission(3)
   self.visit(2);self.assertIn('carbon',self.page.locator('#plot-notes').inner_text());self.plants()
   self.visit(29);self.assertIn('fruit',self.page.locator('#plot-notes').inner_text());self.plants()
-  self.button('Radio - report ready');self.button('Prepare the group map');self.shot('15-gm-recall')
+  self.page.locator('#assignment').click();self.button('Report findings');self.button('Back');self.button('More');self.button('Game master');self.shot('15-gm-recall')
   self.assertIn('Which small patches joined up?',self.page.locator('#gm').inner_text());self.assertEqual(self.page.evaluate('pyroceneDiagnostics().completed'),4)
   self.page.reload();self.page.wait_for_selector('#loading',state='hidden');self.assertEqual(self.page.evaluate('pyroceneDiagnostics().completed'),4)
   self.button('More');self.button('Sources');self.assertIn('Verra',self.page.locator('#sources').inner_text())
@@ -65,19 +65,20 @@ class ExpeditionPlay(unittest.TestCase):
   results=[]
   for mode in ['wander','collection','cases']:
    self.page.goto(self.base+'/expedition.html?mode='+mode);self.page.wait_for_selector('#loading',state='hidden')
-   if self.page.locator('#radio').is_visible():self.button('Explore')
    findings=[]
    for id in [13,0,1]:self.visit(id);findings.extend(self.plants())
-   self.page.locator('#radio-open').click();self.shot('variant-'+mode)
-   results.append({'mode':mode,'findings':findings,'radio':self.page.locator('#radio').inner_text()})
+   self.page.locator('#assignment').click();self.shot('variant-'+mode)
+   results.append({'mode':mode,'findings':findings,'missions':self.page.locator('#missions').inner_text()})
    # Isolate the next rules experiment through the visible reset action.
-   self.button('Back to the forest');self.button('More');self.button('Settings');self.page.once('dialog',lambda d:d.accept());self.button('Start a new exploration');self.page.wait_for_selector('#loading',state='hidden')
+   self.button('Back');self.button('More');self.button('Settings');self.page.once('dialog',lambda d:d.accept());self.button('Start a new exploration');self.page.wait_for_selector('#loading',state='hidden')
   (QA/'pacing-observations.json').write_text(json.dumps(results,indent=2))
- def test_radio_scope_calls_and_free_help(self):
-  self.start();self.visit(14)
-  self.button('Radio');self.button('Discuss a finding');self.page.locator('#field-question').fill('Why is this damp?')
-  for i in range(3):self.button('Ask');self.assertIn('litter bends',self.page.locator('.reply').inner_text())
-  expect(self.page.get_by_role('button',name='Ask',exact=True)).to_be_disabled();self.button('Free hint');self.button('Show me a place');self.assertFalse(self.page.locator('#radio').is_visible())
+ def test_assistant_absent_on_start_mission_selection_and_reload(self):
+  self.start();self.assertEqual(self.page.locator('dialog[open],#radio-open,.radio-portrait').count(),0)
+  self.shot('assistant-removed-start');self.mission(2)
+  self.assertEqual(self.page.locator('dialog[open]').count(),0);self.visit(14)
+  self.page.reload();self.page.wait_for_selector('#loading',state='hidden')
+  self.assertEqual(self.page.locator('dialog[open],#radio-open,.radio-portrait').count(),0)
+  self.button('More');self.button('Sources');self.assertNotIn('Lia',self.page.locator('#sources').inner_text())
  def test_mobile_all_named_plants_and_photo(self):
   self.page.set_viewport_size({'width':390,'height':844});self.start();self.visit(13);self.plants();self.shot('16-mobile')
   self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),390)
@@ -89,7 +90,7 @@ class ExpeditionPlay(unittest.TestCase):
   expect(self.page.locator('[data-specimen]')).to_have_count(6);expect(self.page.locator('[data-view=forest]')).to_be_enabled();self.plants();self.shot('25-free-world-pick')
   b=self.pw.chromium.launch(headless=True,args=['--disable-webgl']);p=b.new_page(viewport={'width':1280,'height':720});p.on('pageerror',lambda e:self.errors.append(str(e)))
   p.goto(self.base+'/expedition.html');p.wait_for_selector('#loading',state='hidden')
-  for name in ['Give me a hint','Show me a place','Close view']:p.get_by_role('button',name=name,exact=True).click()
+  for name in ['More','Map','Explore C2','Close view']:p.get_by_role('button',name=name,exact=True).click()
   expect(p.locator('[data-specimen]')).to_have_count(6);expect(p.locator('[data-view=forest]')).to_be_enabled();p.locator('[data-specimen]').first.click()
   self.assertIn('Marandu grass',p.locator('#plant-guide').inner_text());self.assertTrue(p.evaluate('pyroceneDiagnostics().fallback'));p.screenshot(path=str(QA/'26-ground-fallback.png'));b.close()
  def test_sensor_grant_temporal_compare_and_team_pool(self):
@@ -101,7 +102,7 @@ class ExpeditionPlay(unittest.TestCase):
   self.button('Day 0');self.assertIn('Compare the edge',self.page.locator('#sensor-interpretation').input_value());self.button('Day 3')
   other=self.browser.new_context(viewport={'width':1440,'height':900});p=other.new_page()
   p.on('pageerror',lambda e:self.errors.append(str(e)))
-  p.goto(self.base+'/expedition.html?references=1');p.wait_for_selector('#loading',state='hidden');p.get_by_role('button',name='Explore',exact=True).click();p.get_by_role('button',name='More',exact=True).click();p.get_by_role('button',name='Sensor network',exact=True).click();p.locator('#sensor-team').fill('Sound team');p.get_by_role('button',name='Sound recorders',exact=True).click()
+  p.goto(self.base+'/expedition.html?references=1');p.wait_for_selector('#loading',state='hidden');p.get_by_role('button',name='More',exact=True).click();p.get_by_role('button',name='Sensor network',exact=True).click();p.locator('#sensor-team').fill('Sound team');p.get_by_role('button',name='Sound recorders',exact=True).click()
   for _ in range(3):p.get_by_role('button',name='Finish this field round',exact=True).click()
   with p.expect_download() as download:p.get_by_role('button',name='Save records for another team',exact=True).click()
   packet=Path(download.value.path()).read_bytes();other.close()

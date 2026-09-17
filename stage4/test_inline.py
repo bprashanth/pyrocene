@@ -26,7 +26,9 @@ class InlineDetail(unittest.TestCase):
  def button(self,name):self.page.get_by_role('button',name=name,exact=True).click()
  def start(self):
   self.page.goto(self.base);self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
-  self.button('Give me a hint');self.button('Show me a place')
+  self.assertEqual(self.page.locator('dialog[open]').count(),0)
+  self.assertEqual(self.page.locator('#radio-open,.radio-portrait').count(),0)
+  self.button('More');self.button('Map');self.button('Explore C2')
   expect(self.page.locator('[data-view=close]')).to_be_enabled()
  def enter(self):
   self.button('Close view');self.page.wait_for_function('pyroceneDiagnostics().detailBlend===1')
@@ -120,13 +122,11 @@ class InlineDetail(unittest.TestCase):
    self.page.screenshot(path=str(QA/f'inventory-{width}.png'))
   self.button('Forest');expect(self.page.locator('[data-view=close]')).to_be_enabled()
   self.assertEqual(self.page.evaluate('pyroceneDiagnostics().stemGuides'),0)
- def test_radio_can_discuss_inventory_species_without_inventing_a_use(self):
+ def test_inventory_field_note_remains_available_without_assistant(self):
   self.page.emulate_media(reduced_motion='reduce');self.start();self.enter()
   self.page.locator('[data-plant=eugenia_sinemariensis]').click()
-  self.page.locator('#book-back').click();self.page.locator('#radio-open').click()
-  self.button('Discuss a finding');self.page.locator('#field-question').fill('Eugenia sinemariensis')
-  self.button('Ask');expect(self.page.locator('.reply')).to_contain_text('GUYADIV')
-  self.assertNotIn('undefined',self.page.locator('.reply').inner_text())
+  expect(self.page.locator('.plain-note')).to_contain_text('GUYADIV')
+  self.assertNotIn('undefined',self.page.locator('.plain-note').inner_text())
   self.assertNotIn('eugenia_sinemariensis',self.page.evaluate('JSON.parse(localStorage.getItem("pyrocene-expedition-v3")).uses'))
  def test_no_webgl_still_drags_zooms_and_opens_inline_detail(self):
   browser=self.p.chromium.launch(headless=True,args=['--disable-webgl'])

@@ -1,6 +1,6 @@
 import { ExpeditionForest } from './expedition-render.mjs';
 import { WORLD, ACTIVE, MISSIONS, fieldRecord, coordinate } from './world.mjs';
-import { STORAGE_KEY, fresh, restore, change, knownPlants, progress, usefulNext } from './expedition-state.mjs';
+import { STORAGE_KEY, fresh, restore, change, knownPlants, progress } from './expedition-state.mjs';
 import { fieldNetwork } from './field-network.mjs';
 import { phosphorImage } from './field-media.mjs';
 import { observationLayers } from './observation-layers.mjs';
@@ -47,8 +47,6 @@ function update(){
   $('plant-count').textContent=known.length;
   $('mission-number').textContent=prototype==='wander'?'FIELD WORK':`MISSION ${state.mission+1} / 4`;
   $('mission-title').textContent=prototype==='collection'?`Meet the plants (${known.length}/13)`:MISSIONS[state.mission].title;
-  $('radio-open').classList.toggle('incoming',p[state.mission].done&&!state.completed.includes(state.mission));
-  $('radio-open').textContent=p[state.mission].done&&!state.completed.includes(state.mission)?'Radio - report ready':'Radio';
   $('place-context').hidden=id===null;
   $('place-coordinate').textContent=id===null?'':`FIELD POSITION ${coordinate(id)}`;
   $('place-description').textContent=busy?'Looking closer.':observations.kind()!=='plants'?(view==='close'?'Reference record - practice location.':'Choose a marked place.') :view==='close'?'Choose a plant name.':'Choose a square, then Close view.';
@@ -213,55 +211,11 @@ function notes(kind=currentTab){
 function radioFrame(title,text,kicker='FIELD CALL'){
   openDialog('radio');$('radio-title').textContent=title;$('radio-text').textContent=text;$('radio-kicker').textContent=kicker;$('radio-body').replaceChildren();$('radio-actions').replaceChildren();
 }
-function radioBrief(){
-  const mission=MISSIONS[state.mission], p=playProgress()[state.mission];
-  const wander=prototype==='wander',collect=prototype==='collection'&&state.mission===0;
-  radioFrame(wander?'Take your time':mission.title,wander?'Choose a place that interests you. Look at plants, ground traces and field records. There is no required route.':p.done?'You have enough findings to compare. You can move on or stay here and explore more.':mission.brief,wander?'OPEN EXPLORATION':`MISSION ${state.mission+1}`);
-  if(!wander)$('radio-body').append(el('p',collect?'Find ten native plants and three invasive plants.':mission.task),el('small',p.text));
-  $('radio-actions').append(btn('Explore',()=>{act('brief');$('radio').close();},'primary'),btn('Give me a hint',radioHint),btn('Discuss a finding',radioDiscussion));
-  if(p.done)$('radio-actions').append(btn(state.mission===3?'Prepare the group map':'Report and choose next mission',()=>{act('complete');$('radio').close();if(state.mission===3)openGM();else{act('mission',state.mission+1);update();radioBrief();}},'secondary'));
-  $('radio-actions').append(btn('Choose another mission',missionMenu));
-  if(referenceExperiments&&(state.visited.length>=3||state.mission===3))$('radio-actions').append(btn(network.hasGrant()?'Compare sensor records':'A field grant is available',network.offer));
-}
-function radioHint(){
-  const mission=MISSIONS[state.mission];radioFrame('A place to look',mission.hint,'FREE FIELD HINT');
-  const next=state.selected===null&&state.mission===0?13:usefulNext(state);
-  $('radio-body').append(el('p','You can try a suggested place, use Map or choose anywhere in the forest.'));
-  $('radio-actions').append(btn('Show me a place',async()=>{$('radio').close();act('brief');await camera('forest');await choose(next);},'primary'),btn('Back',radioBrief));
-}
-function answerFinding(question){
-  const q=question.toLowerCase(),id=state.selected;
-  if(id===null||!state.visited.includes(id))return {text:'Choose a place you have visited first. I can discuss its records, not observations we have not collected.',source:null};
-  const r=fieldRecord(id,currentWorld()),has=k=>state.reads[k].includes(id);
-  if(/carbon|verra|credit|vcm|vmc/.test(q)){
-    if(!has('people'))return {text:'Read the local people record first. We do not yet have an account to discuss here.'};
-    const evidence=humans.find(h=>/carbon|verra|vcm/i.test(h.id+' '+h.title));
-    return {text:evidence?.summary||'A species list is not a carbon credit. A project needs a baseline, additionality, monitoring and checks on leakage and reversal risk. This practice board cannot establish eligibility.',source:evidence?.sources?.[0]?.url};
-  }
-  if(/sound|animal|tapir|camera|bird|insect/.test(q)&&r.bonus)return {text:r.bonus.text+' This is a practice record. It is not a measurement of fuel moisture.',source:r.bonus.source};
-  if(/people|use|food|farm|burn|income|harvest|community/.test(q)&&has('people'))return {text:r.human.text+' Do not infer an ignition just because people use a place.',source:r.human.source};
-  if(/damp|dry|moist|wind|gap|heat|air|fire|connect|spread/.test(q)&&has('climate'))return {text:r.climate.text+' '+r.climate.wind+' A route still needs connected fuel and an ignition. Conditions in a nearby patch need checking separately.',source:r.climate.source};
-  if(/logging|disturb|char|stump|treefall|happen|fire|gap/.test(q)&&has('traces'))return {text:r.traces.text+' '+r.traces.question,source:r.traces.source};
-  const plant=knownPlants(state).map(id=>catalogue.find(s=>s.id===id)).find(sp=>q.includes(sp.name.toLowerCase())||q.includes(sp.scientific.split(' ')[0].toLowerCase()));
-  if(plant)return {text:(plant.fireNote||plant.description)+' '+(plant.inventory?plant.plainUse:state.uses.includes(plant.id)?(plant.plainUse||plant.use||'Read the field condition as well as the plant name.'):'Read the field condition as well as the plant name.'),source:plant.sources[0]?.url};
-  return {text:'I cannot answer that from the records we have read here. Ask about a recorded disturbance, air and litter, plant use or people. The field notes show what is available.',source:null};
-}
-function radioDiscussion(){
-  radioFrame('What did you find?','Ask about the place you are studying. I can use the field records you have read and their research sources.',`${3-state.calls[state.mission]} DISCUSSION CALLS LEFT`);
-  const body=$('radio-body'),label=el('label','Your question'),input=el('textarea');input.id='field-question';input.maxLength=300;input.placeholder='Why might fire spread through this place?';label.htmlFor=input.id;body.append(label,input);
-  const reply=el('div',undefined,'reply');reply.hidden=true;body.append(reply);
-  const ask=btn('Ask',()=>{
-    if(!input.value.trim()){input.focus();return;}
-    if(state.selected===null||!state.visited.includes(state.selected)){reply.hidden=false;reply.replaceChildren(el('p','Visit a place first. Free hints can help you start.'));return;}
-    try{act('call');const answer=answerFinding(input.value);reply.hidden=false;reply.replaceChildren(el('p',answer.text));if(answer.source)reply.append(link('Research source',answer.source));ask.disabled=state.calls[state.mission]>=3;$('radio-kicker').textContent=`${3-state.calls[state.mission]} DISCUSSION CALLS LEFT`;}
-    catch(e){toast(e.message);}
-  },'primary');ask.disabled=state.calls[state.mission]>=3;
-  $('radio-actions').append(ask,btn('Free hint',radioHint),btn('Back',radioBrief));
-}
 function missionMenu(){
   openDialog('missions');const list=$('mission-list');list.replaceChildren();
   const p=playProgress();
-  MISSIONS.forEach((m,i)=>{const item=el('section',undefined,'mission-option');item.append(btn(`${i+1}. ${m.title}`,()=>{act('mission',i);update();radioBrief();}),el('p',m.task),el('small',`${state.completed.includes(i)?'Reported - ':p[i].done?'Ready to report - ':''}${p[i].text}`));list.append(item);});
+  MISSIONS.forEach((m,i)=>{const item=el('section',undefined,'mission-option');item.append(btn(`${i+1}. ${m.title}`,()=>{act('mission',i);update();$('missions').close();}),el('p',m.task),el('small',`${state.completed.includes(i)?'Reported - ':p[i].done?'Ready to report - ':''}${p[i].text}`));list.append(item);});
+  if(p[state.mission].done&&!state.completed.includes(state.mission))list.append(btn('Report findings',()=>{act('complete');update();missionMenu();},'secondary'));
 }
 function bearings(){
   openDialog('map-dialog');const grid=$('bearing-map');grid.replaceChildren();
@@ -275,7 +229,7 @@ function openGM(){
 }
 function sources(){
   openDialog('sources');const body=$('source-content');body.replaceChildren();
-  const notes=[['Forest geometry','The airborne view is the measured EBA T_0638 crop from the film. Close view is a modelled forest made from repeated ground-scan fragments. Fragments are rotated and scaled together, with modest size variation. Their positions and density are invented for this exercise. They are not a survey of these squares or a measured tree count. Some airborne canopy remains visible and the surrounding points stay unchanged. Ground scans come from ForestScan in French Guiana.','https://essd.copernicus.org/articles/18/1243/2026/index.html'],['Field records','Species assignments, crop placement, human accounts, temperatures, humidity, litter moisture, disturbance clues and wildlife encounters are authored practice data. A clickable point is not a measured plant identification. The species map is not a live classifier.'],['Fire comparison','The group lab compares reconstructions against the same training world. It is not an operational forecast or a reproduction of the historical fire. The 2023 mapped scar is shown separately.'],['Lia','A fictional field ecologist with an illustrated portrait and green radio treatment. Calls use local authored answers and cited research, not a live language model. They are not quotations or an endorsement.'],['Images','Real reference photographs use a green terminal treatment. Credits and licenses remain linked. Photos can show a leaf, fruit or flower rather than a whole plant. Green treatments retain the source image license.']];
+  const notes=[['Forest geometry','The airborne view is the measured EBA T_0638 crop from the film. Close view is a modelled forest made from repeated ground-scan fragments. Fragments are rotated and scaled together, with modest size variation. Their positions and density are invented for this exercise. They are not a survey of these squares or a measured tree count. Some airborne canopy remains visible and the surrounding points stay unchanged. Ground scans come from ForestScan in French Guiana.','https://essd.copernicus.org/articles/18/1243/2026/index.html'],['Field records','Species assignments, crop placement, human accounts, temperatures, humidity, litter moisture, disturbance clues and wildlife encounters are authored practice data. A clickable point is not a measured plant identification. The species map is not a live classifier.'],['Fire comparison','The group lab compares reconstructions against the same training world. It is not an operational forecast or a reproduction of the historical fire. The 2023 mapped scar is shown separately.'],['Images','Real reference photographs use a green terminal treatment. Credits and licenses remain linked. Photos can show a leaf, fruit or flower rather than a whole plant. Green treatments retain the source image license.']];
   for(const [title,text,url]of notes){body.append(el('h2',title),el('p',text));if(url)body.append(link('Source',url));}
   body.append(el('h2','Species and forest density'),el('p','The catalogue contains 120 study species. Ninety-six tree names and trunk-size summaries come from GUYADIV v2 by Sabatier and colleagues, CC BY 4.0. Other entries use the sources below. The game places 14 to 18 study species in each patch. This is a selection for learning, not a complete census. The scans do not identify these species.'),link('GUYADIV inventory',INVENTORY_PROFILE.url));
   body.append(el('p','Pink shows low vegetation. Blue shows vegetation below the canopy. Green shows the upper trees. The game places invasive grasses in the lower layers alongside native plants. Colour and height alone do not establish whether a plant is invasive or dry. Faint tree guides follow the scan’s woody returns. Shrub outlines and climber paths are illustrative study guides.'));
@@ -295,7 +249,7 @@ $('book-back').onclick=()=>{if(bookContext==='plot'){closeBook();showPlotNotes()
 $('plant-sort').onchange=e=>{sort=e.target.value;renderBook();};
 $('find-plants').onclick=async()=>{sensorMap=[];mapped=[...mapPlants];closeBook();await camera('overhead');update();toast('Possible matches. The same species can grow under different moisture conditions.');};
 $('clear-map').onclick=()=>{sensorMap=[];mapped=[];mapPlants.clear();update();};
-$('radio-open').onclick=radioBrief;$('assignment').onclick=missionMenu;$('menu-open').onclick=()=>openDialog('menu');$('bearings-open').onclick=bearings;$('sources-open').onclick=sources;$('gm-open').onclick=openGM;$('settings-open').onclick=()=>openDialog('settings');
+$('assignment').onclick=missionMenu;$('menu-open').onclick=()=>openDialog('menu');$('bearings-open').onclick=bearings;$('sources-open').onclick=sources;$('gm-open').onclick=openGM;$('settings-open').onclick=()=>openDialog('settings');
 $('network-open').onclick=network.open;
 $('network-open').hidden=!referenceExperiments;
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>camera(b.dataset.view));
@@ -309,5 +263,4 @@ try{
   if(!Array.isArray(catalogue)||catalogue.length<13)throw Error('The plant catalogue is incomplete.');
   if(state.selected!==null)forest.selectPlot(state.selected);
   $('loading').hidden=true;update();
-  if(!state.briefed.includes(state.mission))radioBrief();
 }catch(e){$('loading').replaceChildren(el('p','The forest could not load. Check the local server and reload.'));toast(e.message);}

@@ -47,7 +47,7 @@ dialog button,dialog a { touch-action:manipulation; }
 #radio::backdrop { background:#020a08c9; backdrop-filter:blur(5px); }
 .comms-head { font:11px monospace; letter-spacing:2px; color:#9cbd9d; padding-bottom:15px; border-bottom:1px solid var(--line); }
 .comms-head button { font:12px Arial,sans-serif; letter-spacing:0; }
-.comms { display:grid; grid-template-columns:205px 1fr; gap:34px; min-height:320px; }
+.comms { display:block; }
 .radio-portrait { align-self:start; position:relative; border:1px solid #85ad7840; overflow:hidden; background:#0b2014; }
 .radio-portrait img { width:100%; aspect-ratio: .85; object-fit:cover; display:block; image-rendering:pixelated; filter:grayscale(1) sepia(1) hue-rotate(78deg) saturate(.7) contrast(1.06); }
 .radio-portrait::after,.phosphor::after { content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,#00120833 0,#00120833 1px,transparent 1px,transparent 4px); }
