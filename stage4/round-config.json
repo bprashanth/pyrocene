@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "grant": 2,
+  "clearingCost": 3,
+  "years": 10,
+  "duration": 20,
+  "candidates": [
+    {"key":"A","id":13,"name":"Mixed growth","income":12,"damage":18,"planting":7,"cover":65,"note":"Dense invasives grow between native stems. Removal would damage some of those stems.","mix":["cecropia_obtusa","inga_stipularis","eugenia_sinemariensis"]},
+    {"key":"B","id":22,"name":"Open ground","income":8,"damage":4,"planting":6,"cover":80,"note":"An old opening has few native stems. Dry grass covers the ground.","mix":["cecropia_obtusa","carapa_guianensis","oenocarpus_bacaba"]},
+    {"key":"C","id":27,"name":"Narrow link","income":6,"damage":2,"planting":6,"cover":50,"note":"A small invasive patch joins dry ground to the forest farther north.","mix":["cecropia_obtusa","inga_stipularis","oenocarpus_bacaba"]}
+  ]
+}

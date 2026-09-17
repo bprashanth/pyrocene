@@ -55,6 +55,7 @@ Read in filename order.
 | [2026-09-17T0230](2026-09-17T0230-stage4-readable-structure.md) | Restored map, in-place detail and proportionate tree structure |
 | [2026-09-17T0236](2026-09-17T0236-stage4-reference-layers.md) | Real building, sound and camera references in the green map interface |
 | [2026-09-17T1142](2026-09-17T1142-stage4-dense-forest.md) | Parking reference layers and modelling a continuous, dense ground-level forest |
+| [2026-09-17T2000](2026-09-17T2000-stage4-one-shared-plan.md) | Two proposals, one commitment, recovery and fire inside the point-cloud forest |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

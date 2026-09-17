@@ -28,9 +28,11 @@ from urllib.parse import unquote, urlsplit
 
 try:  # Support both `python -m stage4.serve` and `python stage4/serve.py`.
     from .ash_game import AshGame
+    from .shared_round import RoundStore, RoundError
 except ImportError:  # pragma: no cover - exercised by portable script mode.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from ash_game import AshGame
+    from shared_round import RoundStore, RoundError
 
 
 LOG = logging.getLogger("pyrocene.stage4")
@@ -44,6 +46,7 @@ APP_FILES |= {'observation-layers.mjs'}
 APP_FILES |= {'forest-neighbourhood.mjs'}
 APP_FILES |= {'forest-flora.mjs', 'inventory-trees.mjs', 'forest-structure.mjs'}
 APP_FILES |= {'structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css'}
+APP_FILES |= {'round.html', 'round.css', 'round.mjs', 'round-render.mjs', 'round-model.mjs', 'round-config.json'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(
@@ -250,6 +253,19 @@ class Stage4Handler(BaseHTTPRequestHandler):
         return bool(host) and origin == f"http://{host}"
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        if urlsplit(self.path).path.startswith('/api/round/'):
+            if not self._same_origin():
+                self._api_error(HTTPStatus.FORBIDDEN, 'origin does not match this server')
+                return
+            body = self._api_body()
+            if body is None:
+                return
+            try:
+                result = self.stage_server.rounds.request(urlsplit(self.path).path[len('/api/round/'):], body)
+                self._json(HTTPStatus.OK, result)
+            except RoundError as exc:
+                self._api_error(exc.status, str(exc))
+            return
         if urlsplit(self.path).path.startswith("/api/ash/"):
             self._dispatch_ash()
             return
@@ -394,6 +410,7 @@ class Stage4Server(ThreadingHTTPServer):
         self.assets_root = assets_root.expanduser()
         self._ash_lock = threading.RLock()
         self._ash_sessions: OrderedDict[str, AshGame] = OrderedDict()
+        self.rounds = RoundStore()
         super().__init__(address, Stage4Handler)
 
     @staticmethod

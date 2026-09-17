@@ -63,6 +63,13 @@ class PortablePlay(unittest.TestCase):
                     page.wait_for_selector('#loading', state='hidden')
                     self.assertTrue(page.url.endswith('/expedition.html'))
                     self.assertEqual(page.locator('#radio-open,.radio-portrait,dialog[open]').count(),0)
+                    page.goto(base+'/round.html')
+                    page.wait_for_selector('#loading',state='hidden')
+                    for label in ['Patch B','Close view','Propose B','Propose B','Reveal plans','Commit plan','Run fire']:
+                        page.get_by_role('button',name=label,exact=True).click()
+                    page.wait_for_function('roundDiagnostics().mode==="fire"')
+                    self.assertEqual(page.evaluate('roundDiagnostics().state.committed.left'),4)
+                    self.assertGreater(page.evaluate('roundDiagnostics().growthPoints'),2000)
                     page.goto(base+'/ash.html')
                     page.wait_for_selector('#loading', state='hidden')
                     self.assertIn('Island of Ash',page.title())

@@ -144,6 +144,7 @@ class DeliveryTest(unittest.TestCase):
         shutil.copytree(source_engine, fixture_engine, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         for name in package.APP_FILES:
             (source / name).write_text(f"fixture {name}\n", encoding="utf-8")
+        (source / 'shared_round.py').write_text('# shared-round fixture\n', encoding='utf-8')
         (source / "DESIGN_BRIEF.md").write_text("assets at /mnt/seagate/models/pyrocene/stage4/\n", encoding="utf-8")
         vendor = source / "vendor"
         vendor.mkdir()
@@ -158,6 +159,7 @@ class DeliveryTest(unittest.TestCase):
                 self.assertIn(f"stage4/{name}", names)
             self.assertIn("stage4/serve.py", names)
             self.assertIn("stage4/ash_game.py", names)
+            self.assertIn('stage4/shared_round.py', names)
             for name in package.ENGINE_FILES:
                 self.assertIn(f"engine/{name}", names)
             self.assertIn("stage4/vendor/three.min.js", names)

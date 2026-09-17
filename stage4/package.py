@@ -33,10 +33,12 @@ APP_FILES += ('observation-layers.mjs',)
 APP_FILES += ('forest-neighbourhood.mjs',)
 APP_FILES += ('forest-flora.mjs', 'inventory-trees.mjs', 'forest-structure.mjs')
 APP_FILES += ('structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css')
+APP_FILES += ('round.html', 'round.css', 'round.mjs', 'round-render.mjs', 'round-model.mjs', 'round-config.json')
 APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs")
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
 DOC_NAMES = (
+    "SHARED_ROUND.md",
     "REFERENCE_LAYERS.md",
     "INLINE_DETAIL.md",
     "FOREST_FLORA.md",
@@ -304,6 +306,7 @@ def build_package(output: Path, assets: Path = DEFAULT_ASSETS, *, source_root: P
     app_paths = {name: _file(source / name, f"app file {name}") for name in APP_FILES}
     serve = _file(source / "serve.py", "server")
     ash_game = _file(source / "ash_game.py", "Ash server game")
+    shared_round = _file(source / "shared_round.py", "shared round server")
     engine_root = source.parent / "engine"
     engine_paths = {name: _file(engine_root / name, f"Ash engine file {name}") for name in ENGINE_FILES}
     vendor = _vendor_root(source)
@@ -322,6 +325,7 @@ def build_package(output: Path, assets: Path = DEFAULT_ASSETS, *, source_root: P
         with zipfile.ZipFile(temporary_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
             _zip_file(zf, serve, "stage4/serve.py")
             _zip_file(zf, ash_game, "stage4/ash_game.py")
+            _zip_file(zf, shared_round, "stage4/shared_round.py")
             for name, path in app_paths.items():
                 _zip_file(zf, path, f"stage4/{name}")
             for name, path in engine_paths.items():

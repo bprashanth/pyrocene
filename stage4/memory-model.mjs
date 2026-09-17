@@ -73,7 +73,8 @@ function rothermelSurfaceRate(fuel,windMs=3,slopeTan=0,windReduction=.4){
 }
 export const FUEL_CLASS_NOTE="Educational Rothermel parameter classes derived from remembered fuel and moisture. They are neither a ForeFire run nor calibrated historical fuels.";
 function fuelClass(terrain){if(terrain.fuel<=.03)return {density:500,moisture:.299,sav:4500,depth:0,load:0,extinction:.30};return {density:500,moisture:Math.min(.299,.045+terrain.moisture*.285),sav:4500+terrain.fuel*300,depth:.24+terrain.fuel*.76,load:.18+terrain.fuel*1.12,extinction:.30};}
-function cachedRates(record){return SECTORS.map(sector=>{const terrain=terrainFrom(record,sector.id),windReduction=.1+.45*terrain.exposure;return {...terrain,rate:terrain.active?rothermelSurfaceRate(fuelClass(terrain),3,0,windReduction):0};});}
+function terrainRate(terrain){const windReduction=.1+.45*terrain.exposure;return {...terrain,rate:terrain.active?rothermelSurfaceRate(fuelClass(terrain),3,0,windReduction):0};}
+function cachedRates(record){return SECTORS.map(sector=>terrainRate(terrainFrom(record,sector.id)));}
 function fineTerrain(rates,index){
   const y=Math.floor(index/FINE_SIZE),x=index%FINE_SIZE,id=Math.floor(y/10)*6+Math.floor(x/10),base=rates[id];
   // Fixed public texture makes a continuous front without embedding a hidden route.
@@ -82,24 +83,25 @@ function fineTerrain(rates,index){
 }
 function push(heap,item){heap.push(item);let i=heap.length-1;while(i){const parent=(i-1)>>1;if(heap[parent][0]<=item[0])break;heap[i]=heap[parent];i=parent;}heap[i]=item;}
 function pop(heap){const first=heap[0],tail=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let child=i*2+1;if(child+1<heap.length&&heap[child+1][0]<heap[child][0])child++;if(heap[child][0]>=tail[0])break;heap[i]=heap[child];i=child;}heap[i]=tail;}return first;}
-function shortest(record,duration){
+function shortest(record,duration,fineField=null){
   const n=FINE_SIZE*FINE_SIZE,dist=Array(n).fill(Infinity),done=Uint8Array.from({length:n}),sourceSector=WORLD.find(c=>c.ignition)?.id??SCENARIO.ignition;
   const sx=(sourceSector%6)*10+5,sy=Math.floor(sourceSector/6)*10+5,source=sy*FINE_SIZE+sx;
-  const rates=cachedRates(record),sourceTerrain=fineTerrain(rates,source);if(!sourceTerrain.active||sourceTerrain.rate<=0)return dist;dist[source]=0;const heap=[[0,source]];
+  const rates=fineField?fineField.map(terrainRate):cachedRates(record),cell=index=>fineField?rates[index]:fineTerrain(rates,index),sourceTerrain=cell(source);if(!sourceTerrain.active||sourceTerrain.rate<=0)return dist;dist[source]=0;const heap=[[0,source]];
   while(heap.length){
     const [best,u]=pop(heap);if(done[u]||best>duration)continue;done[u]=1;
     const y=Math.floor(u/FINE_SIZE),x=u%FINE_SIZE;
     for(const [dy,dx] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]){
       const ny=y+dy,nx=x+dx;if(ny<0||ny>=FINE_SIZE||nx<0||nx>=FINE_SIZE)continue;
-      const v=ny*FINE_SIZE+nx;if(done[v])continue;const t=fineTerrain(rates,v);if(!t.active||t.rate<=0)continue;
-      if(dx&&dy){const horizontal=fineTerrain(rates,y*FINE_SIZE+nx),vertical=fineTerrain(rates,ny*FINE_SIZE+x);if(!horizontal.active||!vertical.active||horizontal.rate<=0||vertical.rate<=0)continue;}
+      const v=ny*FINE_SIZE+nx;if(done[v])continue;const t=cell(v);if(!t.active||t.rate<=0)continue;
+      if(dx&&dy){const horizontal=cell(y*FINE_SIZE+nx),vertical=cell(ny*FINE_SIZE+x);if(!horizontal.active||!vertical.active||horizontal.rate<=0||vertical.rate<=0)continue;}
       const directional=1+.35*((dx-dy)/Math.SQRT2),next=best+15*(dx&&dy?Math.SQRT2:1)/(t.rate*directional)/60;
       if(next<dist[v]){dist[v]=next;push(heap,[next,v]);}
     }
   }return dist;
 }
-export function simulate(record=null,{duration=DURATION_MINUTES}={}){
-  if(record!==null)validateRecord(record);const raw=shortest(record,duration),arrival=raw.map(t=>Number.isFinite(t)&&t<=duration?Math.round(t*10)/10:null),coarse=SECTORS.map(s=>{let min=Infinity;for(let y=s.r*10;y<s.r*10+10;y++)for(let x=s.c*10;x<s.c*10+10;x++)min=Math.min(min,raw[y*FINE_SIZE+x]);return min;});
+export function simulate(record=null,{duration=DURATION_MINUTES,fineField=null}={}){
+  if(fineField!==null){if(!Array.isArray(fineField)||fineField.length!==3600)throw Error('A fine fuel field needs 3600 cells.');for(const c of fineField){if(!c||typeof c.active!=='boolean')throw Error('Invalid fine fuel cell.');for(const k of ['fuel','moisture','exposure'])finiteUnit(c[k],k);}}
+  if(record!==null)validateRecord(record);const raw=shortest(record,duration,fineField),arrival=raw.map(t=>Number.isFinite(t)&&t<=duration?Math.round(t*10)/10:null),coarse=SECTORS.map(s=>{let min=Infinity;for(let y=s.r*10;y<s.r*10+10;y++)for(let x=s.c*10;x<s.c*10+10;x++)min=Math.min(min,raw[y*FINE_SIZE+x]);return min;});
   return {arrival,coarse,duration,ignition:WORLD.find(c=>c.ignition)?.id??SCENARIO.ignition,weather:SCENARIO.weather};
 }
 export function scoreRecord(record,{teamResult=null,referenceResult=null}={}){
