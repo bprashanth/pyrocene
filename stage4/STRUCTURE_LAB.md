@@ -13,7 +13,14 @@ focused canvas; plus and minus zoom. Reset view restores the camera. Back or
 Escape returns to the existing map and field note.
 
 Look through highlights an eight-metre-deep section. Moving its slider reveals
-different stems and openings. Points outside the section stay visible, faintly.
+different stems and openings. The selected species stays bright at its full
+depth, including outside that section. Other vegetation outside it is almost
+dark. Other stems inside it remain visible so nearby structure can be followed.
+Selecting a species or growth form initially centres the section on its mean
+depth in the selected patch; the slider then moves freely. Thin world-space
+edges mark the slab. They rotate with the clouds. This also applies to the
+trunks, climbers, shrubs and grasses filters. Whole-forest and height filters
+show only the section brightly. No physical host connection is inferred.
 Forest floor uses a linked overhead projection. It makes low vegetation and
 litter easier to follow. Check field conditions separately reveals the authored
 moisture observation. Nothing is inferred from point density or a plant name.
@@ -119,3 +126,13 @@ operation, and return without changing baseline geometry/progress. Pure model
 tests verify deterministic bounded output and meaningful structural differences.
 The portable package includes the modules and works without network access.
 QA captures are in the external Stage 4 `qa-expedition` directory, `lab-*-v2.png`.
+
+## Focused section checkpoint
+
+The original lab is preserved at `a8f7a17`, tagged
+`stage4-before-focused-section`. The stronger Look through treatment changes
+only visibility and its initial section position, not model geometry. Compare
+and Forest floor retain their original brightness. Selected points draw after
+all context points so moving the section cannot obscure the highlighted plant.
+Before/after and filter screenshots use `focused-section-*.png`. Tests move the
+section to both extremes and verify that highlighted species pixels persist.

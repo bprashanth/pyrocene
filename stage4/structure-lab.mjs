@@ -1,4 +1,4 @@
-import {buildStructure,pointMatches,structureSummary,STRUCTURE_SOURCES} from './structure-model.mjs';
+import {buildStructure,pointMatches,structureSummary,structureOpacity,tracksPlant,focusSectionDepth,STRUCTURE_SOURCES} from './structure-model.mjs';
 import {coordinate,fieldRecord} from './world.mjs';
 
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -20,6 +20,7 @@ export class StructureLab{
   this.focus=speciesId?'species:'+this.species.findIndex(s=>s.id===speciesId):'all';
   if(this.focus==='species:-1')this.focus='all';
   this.mode='compare';this.angle=.10;this.elevation=.10;this.zoom=1;this.slice=0;this.conditions=false;this.draws=0;
+  this.lastSectionFocus=null;
   const centre={x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
   this.models=[true,false].map(reference=>buildStructure(this.forest.detailPositions,this.forest.detailKinds,centre,plot,this.species,{reference}));
   this.summaries=this.models.map(structureSummary);
@@ -40,7 +41,7 @@ export class StructureLab{
   this.select.onchange=()=>{this.focus=this.select.value;this.sync();};label.append(this.select);
   controls.append(modes,label,button('Reset view',()=>{this.angle=.10;this.elevation=.10;this.zoom=1;this.slice=0;this.slider.value=0;this.sync();}));d.append(controls);
   this.sliceControl=node('label','Move the section ', 'structure-slice');this.slider=node('input');this.slider.type='range';this.slider.min=-16;this.slider.max=16;this.slider.step=.5;this.slider.value=0;this.slider.id='structure-slice';this.slider.setAttribute('aria-label','Move the forest section');
-  this.slider.oninput=()=>{this.slice=Number(this.slider.value);this.schedule();};this.sliceControl.append(this.slider,node('span','8 m deep. Surroundings stay visible.'));d.append(this.sliceControl);
+  this.slider.oninput=()=>{this.slice=Number(this.slider.value);this.schedule();};this.sliceHint=node('span');this.sliceControl.append(this.slider,this.sliceHint);d.append(this.sliceControl);
   const pair=node('div',undefined,'structure-pair');this.panels=[];this.canvases=[];
   for(let i=0;i<2;i++){
    const panel=node('section',undefined,'structure-panel');panel.append(node('h2',i?'Selected patch - '+coordinate(this.plot.id):'Closed-canopy reference'));
@@ -64,11 +65,16 @@ export class StructureLab{
   if(!this.models)return;
   for(const b of this.dialog.querySelectorAll('[data-structure-mode]'))b.setAttribute('aria-pressed',String(b.dataset.structureMode===this.mode));
   this.sliceControl.hidden=this.mode!=='slice';
+  this.sliceHint.textContent=tracksPlant(this.focus)?'8 m deep. The highlighted plants stay bright.':'8 m deep. Everything outside stays dim.';
+  if(this.mode==='slice'&&tracksPlant(this.focus)&&this.lastSectionFocus!==this.focus){
+   this.slice=focusSectionDepth(this.models[1].points,this.focus);this.slider.value=this.slice;this.lastSectionFocus=this.focus;
+  }
   this.fieldButton.textContent=this.conditions?'Hide field conditions':'Check field conditions';
   this.fieldButton.setAttribute('aria-pressed',String(this.conditions));
   const messages={all:'Compare the upper cover and what fills the space below.',canopy:'Look for breaks above the lower vegetation.',lower:'Look for low plants joining across the opening.',wood:'Standing trunks remain visible through the foliage.',liana:'Follow the winding stems between layers. Climbers are not necessarily invasive.',shrub:'Look for several low branches spreading from one base.',grass:'Look for low clumps joining across the forest floor.',litter:'Fallen leaves can connect beneath green plants. Check whether they are dry.'};
   const selected=this.focus.startsWith('species:')?this.species[Number(this.focus.slice(8))]:null;
   this.finding.textContent=selected?selected.name+' - modelled growth form, with the surrounding forest retained.':messages[this.focus];
+  if(this.mode==='slice')this.finding.textContent=tracksPlant(this.focus)?'Follow the highlighted plant through the section. Nearby stems are not confirmed connections.':'Move the bright section through the forest. The rest stays dim.';
   const record=fieldRecord(this.plot.id);
   this.panels[0].caption.textContent=this.conditions?'Reference conditions: damp litter and sheltered air.':'60 m wide - same scale on both sides';
   this.panels[1].caption.textContent=this.conditions?record.climate.text+' '+record.climate.wind:'Choose a layer or plant. The difference is in the points.';
@@ -94,10 +100,10 @@ export class StructureLab{
   // Rasterize into one buffer: hundreds of thousands of individual Canvas
   // draw calls made linked dragging slow on machines without WebGL.
   const raster=ctx.getImageData(0,0,canvas.width,canvas.height),pixels=raster.data,rw=canvas.width,rh=canvas.height;
-  for(const group of [24,16,8,0])for(let kind=0;kind<8;kind++){
+  for(const group of [24,8,16,0])for(let kind=0;kind<8;kind++){
    const coords=buckets[group+kind];if(!coords.length)continue;
    const match=group===0||group===16,inside=group<16;
-   const alpha=(match?.72:.27)*(inside?1:.40),rest=1-alpha;
+   const alpha=structureOpacity(this.mode,focus,match,inside,kind),rest=1-alpha;
    let colour=match&&focus!=='all'?(kind===3?'#f08db7':kind===5&&this.conditions?(model.profile.moisture>.7?'#6dc4ca':model.profile.moisture<.3?'#e5b365':'#afba91'):'#b7ead0'):PALETTE[kind];
    if(this.conditions&&floor&&kind===5)colour=model.profile.moisture>.7?'#6dc4ca':model.profile.moisture<.3?'#e5b365':'#afba91';
    const rgb=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16)*alpha),size=Math.max(1,Math.round((match&&[1,3,6].includes(kind)?1.45:1)*dpr));
@@ -110,7 +116,12 @@ export class StructureLab{
   ctx.putImageData(raster,0,0);
   ctx.globalAlpha=1;
   if(floor){ctx.fillStyle='#8da998';ctx.fillText('60 m section - overhead',14,h-12);if(this.conditions)ctx.fillText(model.profile.moisture>.7?'Damp litter':model.profile.moisture<.3?'Dry litter':'Mixed litter',14,20);}
-  if(this.mode==='slice'){ctx.fillStyle='#93b9a5';ctx.fillText('Section '+this.slice.toFixed(1)+' m / 8 m deep',14,h-12);}
+  if(this.mode==='slice'){
+   // These are world-space section edges, not a flat image or new geometry.
+   ctx.strokeStyle='#6b9c80';ctx.globalAlpha=.32;
+   for(const z of [this.slice-4,this.slice+4]){ctx.beginPath();[[-30,0,z],[-30,40,z],[30,40,z],[30,0,z],[-30,0,z]].forEach((v,i)=>{const p=project(...v);i?ctx.lineTo(...p):ctx.moveTo(...p);});ctx.stroke();}
+   ctx.globalAlpha=1;ctx.fillStyle='#93b9a5';ctx.fillText('Section '+this.slice.toFixed(1)+' m / 8 m deep',14,h-12);
+  }
   this.lastDrawMs=performance.now()-start;
  }
  diagnostics(){return {open:this.dialog.open,mode:this.mode,focus:this.focus,conditions:this.conditions,angle:this.angle,zoom:this.zoom,slice:this.slice,draws:this.draws,lastDrawMs:this.lastDrawMs,models:this.models?this.summaries:[]};}

@@ -113,6 +113,22 @@ export function pointMatches(points,n,focus){
  if(focus==='wood')return kind===KINDS.wood;
  return kind===KINDS[focus];
 }
+export const tracksPlant=focus=>focus.startsWith('species:')||['wood','liana','shrub','grass'].includes(focus);
+
+// Only Look through changes. Keep the complete selected growth form, plus
+// the section around it. Proximity is not a verified physical connection.
+export function structureOpacity(mode,focus,match,inside,kind){
+ if(mode!=='slice')return match?.72:.27;
+ if(match&&tracksPlant(focus))return .96;
+ if(!inside)return .012;
+ if(match)return .72;
+ return kind===KINDS.wood?.82:.48;
+}
+export function focusSectionDepth(points,focus){
+ let depth=0,count=0;
+ for(let n=0;n<points.length;n+=5)if(pointMatches(points,n,focus)){depth+=points[n+2];count++;}
+ return count?Math.max(-16,Math.min(16,Math.round(depth/count*2)/2)):0;
+}
 export function structureSummary(model){
  const bins=Array(8).fill(0),occupied=new Set();let upper=0;
  for(let n=0;n<model.points.length;n+=5){const x=model.points[n],y=model.points[n+1],z=model.points[n+2];bins[Math.min(7,Math.floor(y/5))]++;if(y>10){upper++;occupied.add(Math.floor((x+30)/3)+20*Math.floor((z+20)/4));}}

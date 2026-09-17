@@ -62,6 +62,27 @@ class StructureStudy(unittest.TestCase):
   self.start();self.click('More');self.click('Map');self.click('Explore C3');self.click('Close view');self.lab()
   self.click('Forest floor');self.click('Check field conditions');self.shot('lab-damp-gap-v2')
   expect(self.page.locator('.structure-caption').last).to_contain_text('bends without breaking');self.assertGreater(self.stats()['models'][1]['gap'],0)
+ def test_focused_section_moves_without_clipping_species_or_changing_compare(self):
+  self.start();self.page.locator('[data-plant=doliocarpus_dentatus]').click();self.click('See its structure')
+  self.page.wait_for_function('pyroceneDiagnostics().structureLab.draws>0')
+  canvas=self.page.locator('#structure-lab canvas').last;compare=canvas.screenshot();focus=self.stats()['focus']
+  self.click('Look through');self.shot('focused-section-after')
+  images=[]
+  for offset in ['-16','16']:
+   self.page.locator('#structure-slice').fill(offset);self.page.locator('#structure-slice').dispatch_event('input');self.page.wait_for_timeout(100)
+   self.assertEqual(self.stats()['focus'],focus);images.append(Image.open(BytesIO(canvas.screenshot())))
+   self.shot('focused-section-depth-'+offset)
+  self.assertGreater(sum(ImageStat.Stat(ImageChops.difference(*images)).mean),.5)
+  # Pink selected-species pixels remain at the same locations at both extremes.
+  def pink(im):return {i for i,(r,g,b) in enumerate(im.convert('RGB').getdata()) if r>140 and r>g*1.25 and b>g*1.1}
+  a,b=map(pink,images);self.assertGreater(len(a),500);self.assertGreater(len(a&b)/len(a|b),.95)
+  self.click('Compare');self.page.wait_for_timeout(100)
+  difference=ImageChops.difference(Image.open(BytesIO(canvas.screenshot())),Image.open(BytesIO(compare)))
+  self.assertLess(sum(ImageStat.Stat(difference).mean),.5)
+  self.click('Look through');self.assertEqual(self.stats()['slice'],16)
+  for form in ['wood','shrub','all']:
+   self.page.locator('#structure-focus').select_option(form);self.shot('focused-section-'+form)
+  expect(self.page.locator('.structure-slice')).to_contain_text('Everything outside stays dim')
  def test_phone_controls_and_keyboard_rotation(self):
   self.page.set_viewport_size({'width':390,'height':844});self.start();self.lab()
   self.page.locator('#structure-focus').select_option('shrub');self.page.locator('#structure-lab canvas').last.focus();self.page.keyboard.press('ArrowRight')
