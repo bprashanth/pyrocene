@@ -11,6 +11,7 @@ export const STRUCTURE_SOURCES=[
 export function structureProfile(plot,{reference=false}={}){
  const disturbed=!!plot.disturbance,open=disturbed||plot.exposure>.7;
  if(reference)return {id:'reference',gap:0,lianas:7,shrubs:24,grasses:0,fallen:2,moisture:.76,exposure:.18};
+ if(plot.succession){const f=plot.succession;return {id:plot.id,gap:0,lianas:Math.round(3*f.nativeFraction),shrubs:Math.round(18+90*f.invasive),grasses:Math.round(30+700*f.invasive),fallen:3,moisture:.15+.79*f.nativeFraction*f.year/10,exposure:.9-.65*f.nativeFraction*f.year/10};}
  return {id:plot.id,gap:open?(plot.disturbance==='fire'?19:plot.disturbance==='logging'?15:12):0,
   lianas:open?24:8,shrubs:open?64:28,grasses:plot.invasive?135:0,
   fallen:disturbed?7:2,moisture:plot.moisture,exposure:plot.exposure};
@@ -32,10 +33,11 @@ export function buildStructure(source,wood,centre,plot,species,{reference=false}
  const choose=(group,n)=>group.length?group[n%group.length]:-1;
  const add=(x,y,z,kind,sp=-1)=>{if(Math.abs(x)<=30&&Math.abs(z)<=20&&y>=0&&y<=40)points.push(x,y,z,kind,sp);};
  for(let n=0;n<source.length;n+=3){
-  const x=source[n]-centre.x,y=source[n+1],z=source[n+2]-centre.z;
+  const x=source[n]-centre.x,z=source[n+2]-centre.z;let y=source[n+1];
   if(Math.abs(x)>30||Math.abs(z)>20||y>40)continue;
   // Remove upper vegetation, not flatten trees into a low canopy.
   if(gapAt(x,z,profile)&&y>7)continue;
+  if(!reference&&plot.succession){const f=plot.succession,v=Math.sin(Math.floor(x/8)*12.9898+Math.floor(z/8)*78.233)*43758.5453;if(y>4&&(v-Math.floor(v))>f.nativeFraction)continue;y*=f.heightScale;}
   const k=wood?.[n/3]>.5?KINDS.wood:y<8?KINDS.low:KINDS.foliage;
   const tree=choose(trees,Math.floor((x+30)/10)+6*Math.floor((z+20)/10));
   add(x,y,z,k,tree);
@@ -65,7 +67,7 @@ export function buildStructure(source,wood,centre,plot,species,{reference=false}
  }
  for(let n=0;n<profile.lianas;n++){
   // Irregular hanging and climbing stems with lateral bridges, not helices.
-  const x=random()*48-24,z=random()*28-14,h=12+random()*17,span=4+random()*7;
+  const x=random()*48-24,z=random()*28-14,h=(12+random()*17)*(!reference&&plot.succession?plot.succession.heightScale:1),span=4+random()*7;
   const sp=choose(groups.liana,n),direction=n%2?1:-1;
   const controls=[[x,0,z],[x+(random()-.5)*3,h*.13,z+2],
    [x+direction*3,h*.34,z-2],[x-direction*2,h*.26,z-3],

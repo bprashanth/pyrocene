@@ -1,10 +1,13 @@
 # One shared plan
 
-Start in `/expedition.html`. Choose a role and use the top-left Expedition / Removal
-selector. Removal is the mission name for both teams; `/round.html` remains its
+Start in `/expedition.html`. Choose a role and use the top-left Expedition / Cooperation
+selector. Cooperation is the first mission for both teams; `/round.html` remains its
 implementation URL and `play` remains the internal navigation value. Before the original
 trial: `211c4db`, tagged `stage4-before-shared-round`. Before this unified flow:
 `42492bd`, tagged `stage4-before-play-briefing`.
+
+After commitment, Six months later opens [Negligence](NEGLIGENCE.md), which
+inherits the planted patch and asks where one follow-up crew should work.
 
 ## Play
 
@@ -22,7 +25,7 @@ Begin can dismiss typing immediately; reduced-motion mode shows all text at once
 
 For two teams, the facilitator opens Teams and shares the separate Removal and
 Ecologist links. Each team opens its link in Expedition on its own laptop, then
-chooses Removal when ready. Both laptops must
+chooses Cooperation when ready. Both laptops must
 reach the same running server. Internet access is not required. The Room view
 reveals and commits. Until reveal, a team sees only its own proposal and whether
 the other team is ready. These are capability links, not named accounts. Anyone
@@ -34,7 +37,7 @@ surveys and proposals can arrive together. A stale shared commitment is rejected
 Proposals are held in server memory, survive browser reloads and end when the
 server restarts. Returning to Expedition from the facilitator screen resets
 proposals, survey visits and that browser's expedition discoveries. Returning to
-Removal starts fresh on the same forest and retains the selected role. Team-only
+Cooperation starts fresh on the same forest and retains the selected role. Team-only
 links can revisit Expedition but cannot erase the shared room. Old-round writes
 are rejected. At most 128
 rooms are retained. Recovery/fire playback is local to each screen; decisions

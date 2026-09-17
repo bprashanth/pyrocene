@@ -8,6 +8,18 @@ from pathlib import Path
 
 CONFIG = json.loads(Path(__file__).with_name('round-config.json').read_text())
 CANDIDATES = {c['key']: c for c in CONFIG['candidates']}
+FOLLOWUP = CONFIG['followup']
+NEW_PATCHES = {c['key']:c for c in FOLLOWUP['newPatches']}
+
+def followup_budget(previous, choice):
+    care = choice == previous['ecology']
+    p = NEW_PATCHES.get(choice)
+    if not care and p is None:
+        raise RoundError(400, 'Choose a follow-up patch.')
+    cost = FOLLOWUP['careCost'] if care else p['removalCost']
+    returns = FOLLOWUP['careReturn'] if care else p['removalCost'] + p['income']
+    starting = previous['left'] + FOLLOWUP['grant']
+    return dict(care=care,cost=cost,returns=returns,starting=starting,left=starting+returns-cost)
 
 def budget(removal, ecology):
     r, e = CANDIDATES[removal], CANDIDATES[ecology]
@@ -31,7 +43,7 @@ class RoundStore:
             if action == 'new':
                 sid = secrets.token_urlsafe(12)
                 tokens = {r: secrets.token_urlsafe(24) for r in ('room','removal','ecology')}
-                s = {'id': sid, 'tokens': tokens, 'revision': 0, 'phase': 'survey', 'round': 1,
+                s = {'id': sid, 'tokens': tokens, 'revision': 0, 'phase': 'survey', 'round': 1,'mission':'cooperation','previous':None,
                      'proposals': {'removal': None, 'ecology': None},
                      'visited': {'removal': [], 'ecology': []}, 'committed': None}
                 self.sessions[sid] = s
@@ -58,10 +70,15 @@ class RoundStore:
                 and body.get('prior') == s['proposals'][owner])
             if type(body.get('revision')) is not int or (body['revision'] != s['revision'] and not independent):
                 raise RoundError(409, 'The plan changed. Review it and try again.')
-            if action in ('reveal','commit','replay') and role != 'room':
+            if action in ('reveal','commit','replay','advance') and role != 'room':
                 raise RoundError(403, 'The room makes this decision.')
             if action == 'replay':
-                s.update(phase='survey', proposals={'removal':None,'ecology':None}, visited={'removal':[],'ecology':[]}, committed=None, round=s['round']+1)
+                s.update(phase='survey',mission='cooperation',previous=None, proposals={'removal':None,'ecology':None}, visited={'removal':[],'ecology':[]}, committed=None, round=s['round']+1)
+            elif action == 'advance':
+                if s['mission'] != 'cooperation' or s['phase'] != 'committed':
+                    raise RoundError(409, 'Commit Cooperation first.')
+                previous = copy.deepcopy(s['committed'])
+                s.update(mission='negligence',previous=previous,phase='survey',proposals={'removal':None,'ecology':None},visited={'removal':[],'ecology':[]},committed=None,round=s['round']+1)
             elif s['phase'] == 'committed':
                 raise RoundError(409, 'This plan is committed.')
             elif action in ('visit','propose'):
@@ -69,8 +86,9 @@ class RoundStore:
                 if team not in ('removal','ecology') or (role != 'room' and body.get('team',role) != role):
                     raise RoundError(403, 'Use your own team view.')
                 patch = body.get('patch')
-                if not isinstance(patch,str) or patch not in CANDIDATES:
-                    raise RoundError(400, 'Choose A, B or C.')
+                allowed = CANDIDATES if s['mission']=='cooperation' else {s['previous']['ecology'],*NEW_PATCHES}
+                if not isinstance(patch,str) or patch not in allowed:
+                    raise RoundError(400, 'Choose one of the three patches.')
                 if action == 'visit':
                     if patch not in s['visited'][team]:
                         s['visited'][team].append(patch)
@@ -85,7 +103,9 @@ class RoundStore:
             elif action == 'commit':
                 if s['phase'] != 'review' or not all(s['proposals'].values()):
                     raise RoundError(400, 'Reveal both proposals first.')
-                result = budget(**s['proposals'])
+                if s['mission']=='negligence' and s['proposals']['removal']!=s['proposals']['ecology']:
+                    raise RoundError(400, 'Agree on one follow-up patch.')
+                result = budget(**s['proposals']) if s['mission']=='cooperation' else followup_budget(s['previous'],s['proposals']['removal'])
                 if result['left'] < 0:
                     raise RoundError(400, 'This plan costs more than the available funds.')
                 s['committed'] = {**s['proposals'], **result}
@@ -97,12 +117,12 @@ class RoundStore:
 
     def view(self, s, role):
         shown = s['phase'] != 'survey' or role == 'room'
-        view = {k: copy.deepcopy(s[k]) for k in ('id','revision','phase','round','committed')}
+        view = {k: copy.deepcopy(s[k]) for k in ('id','revision','phase','round','committed','mission','previous')}
         view.update(role=role, token=s['tokens'][role], ready={k:v is not None for k,v in s['proposals'].items()},
                     proposals={k:v if shown or k==role else None for k,v in s['proposals'].items()},
                     visited={k:list(v) for k,v in s['visited'].items() if role=='room' or k==role})
         if role == 'room':
             view['teams'] = {k:v for k,v in s['tokens'].items() if k!='room'}
         if s['phase'] != 'survey' and all(s['proposals'].values()):
-            view['budget'] = budget(**s['proposals'])
+            view['budget'] = budget(**s['proposals']) if s['mission']=='cooperation' else followup_budget(s['previous'],s['proposals']['removal'])
         return view

@@ -3,18 +3,18 @@ import {WORLD} from './world.mjs';
 import {setWorld,referenceWorld,snapshot,simulate} from './memory-model.mjs';
 export {CONFIG};
 export const PATCHES=CONFIG.candidates;
-export const patch=key=>PATCHES.find(p=>p.key===key);
+export const patch=key=>[...PATCHES,...CONFIG.followup.newPatches].find(p=>p.key===key);
 export const atSector=id=>PATCHES.find(p=>p.id===id);
 export function studyPlot(key){const p=patch(key);return {...WORLD[p.id],disturbance:key==='A'?null:key==='B'?'fire':'logging',exposure:key==='A'?.4:.85};}
 export function planBudget(removal,ecology){
- const r=patch(removal),e=patch(ecology);if(!r||!e)throw Error('Choose two patches.');
+ const r=PATCHES.find(p=>p.key===removal),e=PATCHES.find(p=>p.key===ecology);if(!r||!e)throw Error('Choose two patches.');
  const cost=e.planting+(removal===ecology?0:CONFIG.clearingCost);
  return {income:r.income,cost,removalCost:r.removalCost,returns:r.income+r.removalCost,totalCost:cost+r.removalCost,left:CONFIG.grant+r.income-cost,healthLoss:r.healthLoss,healthGain:e.healthGain,damage:r.damage,cover:e.cover,shared:removal===ecology};
 }
 // Authored comparison world on the existing scan. No fire probability is
 // inferred from the points. A fixed ignition, wind and horizon are shared.
 const corridor=new Set([33,27,21,15,9,8,13,22]);
-export function terrain(plan=null,{future=true,years=future?CONFIG.years:0}={}){
+export function terrain(plan=null,{future=true,years=future?CONFIG.years:0,succession=null,extraRemoval=null}={}){
  const cells=WORLD.map(c=>({...c,speciesIds:[...c.speciesIds],fuel:corridor.has(c.id)?.94:.55,moisture:corridor.has(c.id)?.13:.97,exposure:corridor.has(c.id)?.8:.2}));
  if(!plan)return cells;
  const r=patch(plan.removal),e=patch(plan.ecology);if(!r||!e)throw Error('Incomplete plan.');
@@ -24,6 +24,8 @@ export function terrain(plan=null,{future=true,years=future?CONFIG.years:0}={}){
  const growth=Math.max(0,Math.min(1,years/CONFIG.years));
  for(const id of removed){cells[id].fuel=.16+.26*growth;cells[id].moisture=.22;cells[id].exposure=.85;}
  cells[e.id].fuel=.16+.20*growth;cells[e.id].moisture=.22+.72*growth;cells[e.id].exposure=.85-.60*growth;
+ if(succession){cells[e.id].fuel=.16+.76*succession.invasive;cells[e.id].moisture=.15+.79*succession.nativeFraction*growth;cells[e.id].exposure=.9-.65*succession.nativeFraction*growth;}
+ if(extraRemoval){const c=cells[patch(extraRemoval).id];c.fuel=.16+.26*growth;c.moisture=.22;c.exposure=.85;}
  return cells;
 }
 export function runFire(plan=null,options={}){
@@ -41,6 +43,7 @@ const routes=[[33,27],[27,21],[21,15],[15,9],[9,8],[8,13],[21,22]].map(pair=>pai
 const clamp=n=>Math.max(0,Math.min(1,n));
 export function fineFuel(plan=null,options={}){
  const changed=terrain(plan,options),treated=plan?new Set([patch(plan.removal).id,patch(plan.ecology).id]):new Set();
+ if(options.extraRemoval)treated.add(patch(options.extraRemoval).id);
  return Array.from({length:3600},(_,i)=>{
   const x=(i%60)*15-442.5,z=Math.floor(i/60)*15-442.5,id=Math.floor(i/60/10)*6+Math.floor(i%60/10);
   const width=28+8*Math.sin(x*.019+z*.025)+4*Math.cos(z*.04);

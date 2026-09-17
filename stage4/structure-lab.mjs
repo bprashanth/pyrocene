@@ -14,9 +14,9 @@ export class StructureLab{
   this.dialog.addEventListener('close',()=>{this.forest.examinationPaused=false;this.models=null;this.onClose?.();});
   this.resize=new ResizeObserver(()=>this.schedule());this.resize.observe(this.dialog);
  }
- open(plot,speciesId=null){
+ open(plot,speciesId=null,forecastControls=null){
   if(!this.forest.detailPositions||!plot?.active)return;
-  this.plot=plot;this.species=plot.speciesIds.map(id=>this.catalogue().find(s=>s.id===id));
+  this.plot=plot;this.forecastControls=forecastControls;this.species=plot.speciesIds.map(id=>this.catalogue().find(s=>s.id===id));
   this.focus=speciesId?'species:'+this.species.findIndex(s=>s.id===speciesId):'all';
   if(this.focus==='species:-1')this.focus='all';
   this.mode='compare';this.angle=.10;this.elevation=.10;this.zoom=1;this.slice=0;this.conditions=false;this.draws=0;
@@ -31,6 +31,11 @@ export class StructureLab{
   const header=node('div',undefined,'structure-heading'),title=node('div');
   title.append(node('small','MODELLED STRUCTURE STUDY'),node('h1','Inside the forest - '+coordinate(this.plot.id)));
   header.append(title,button('Back',()=>d.close()));d.append(header);
+  if(this.forecastControls){
+   const controls=node('div',undefined,'structure-tools'),label=node('label','Years since planting '),range=node('input');range.type='range';range.min=.5;range.max=10;range.step=.5;range.value=this.plot.succession.year;range.id='structure-year';range.setAttribute('aria-label','Structure forecast year');
+   this.yearLabel=node('output',this.plot.succession.year+'y');range.oninput=()=>this.forecastControls.onYear(Number(range.value));label.append(range,this.yearLabel);controls.append(label);
+   for(const [care,text]of [[true,'With care'],[false,'Without care']]){const b=button(text,()=>this.forecastControls.onCare(care));b.dataset.structureCare=String(care);controls.append(b);}d.append(controls);
+  }
   this.hint=node('p','Drag either forest to turn both. Scroll to move closer.','structure-instruction');d.append(this.hint);
   const controls=node('div',undefined,'structure-tools'),modes=node('div',undefined,'structure-modes');modes.setAttribute('aria-label','Structure views');
   for(const [id,label]of [['compare','Compare'],['slice','Look through'],['ground','Forest floor']]){const b=button(label,()=>{this.mode=id;if(id==='ground'&&this.focus==='all'){this.focus='litter';this.select.value=this.focus;}this.sync();});b.dataset.structureMode=id;modes.append(b);}
@@ -78,7 +83,14 @@ export class StructureLab{
   const record=fieldRecord(this.plot.id);
   this.panels[0].caption.textContent=this.conditions?'Reference conditions: damp litter and sheltered air.':'60 m wide - same scale on both sides';
   this.panels[1].caption.textContent=this.conditions?record.climate.text+' '+record.climate.wind:'Choose a layer or plant. The difference is in the points.';
+  if(this.plot.succession){const f=this.plot.succession;this.panels[1].panel.querySelector('h2').textContent=`Selected patch - ${f.year}y - ${f.maintained?'with care':'without care'}`;this.panels[1].caption.textContent=`${Math.round(f.alive)} of 100 planted trees survive. Invasive cover: ${Math.round(f.invasive*100)}%. Modelled.`;
+   if(this.yearLabel){this.yearLabel.textContent=f.year+'y';this.dialog.querySelector('#structure-year').value=f.year;for(const b of this.dialog.querySelectorAll('[data-structure-care]'))b.setAttribute('aria-pressed',String(b.dataset.structureCare===String(f.maintained)));}
+  }
   this.schedule();
+ }
+ updateForecast(plot){
+  if(!this.models||!this.dialog.open)return;this.plot=plot;const centre={x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
+  this.models[1]=buildStructure(this.forest.detailPositions,this.forest.detailKinds,centre,plot,this.species);this.summaries=this.models.map(structureSummary);this.sync();
  }
  schedule(){if(this.frame||!this.models)return;this.frame=requestAnimationFrame(()=>{this.frame=null;if(this.dialog.open&&this.models){this.draws++;this.canvases.forEach((c,i)=>this.draw(c,this.models[i]));}});}
  draw(canvas,model){

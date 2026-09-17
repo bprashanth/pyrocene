@@ -1,5 +1,10 @@
 // Facilitator copy. Edit these short paragraphs without changing the game.
 export const BRIEFINGS={
+ negligence:{
+  removal:{title:'Return after six months.',paragraphs:['Weeds are growing among your planted trees. Clearing a new patch pays more. Careful weeding among saplings costs more and returns less.','Move the year slider before choosing. Compare the planted patch with care and without care. Use Structure to look beneath the canopy.','Both teams propose where to send one crew. The room must agree on one patch.']},
+  ecology:{title:'Protect what you planted.',paragraphs:['Six months have passed. Weeds are returning among your young trees. New clearing brings income but leaves those trees without care.','Move the year slider. Compare surviving trees and invasive cover, then examine the projected structure. These are practice forecasts.','Propose one patch for follow-up. Both teams must agree where the crew goes.']},
+  room:{title:'One crew. One choice.',paragraphs:['The first plan is already planted. Six months later, the crew can weed among those trees or clear a new patch.','Compare the return with the planted trees that could be lost. Use the year slider and structure view before committing.','Both teams must agree on one follow-up patch.']}
+ },
  ecology:{title:'Choose where to restore.',paragraphs:[
   'Examine the three patches. Choose one to restore. Compare its cost and the forest health it could recover.',
   'Use the close view and structure lab to make your choice. Be ready to explain it to the room. Propose ends your turn.',
