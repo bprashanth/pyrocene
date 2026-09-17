@@ -88,6 +88,10 @@ class PortablePlay(unittest.TestCase):
                     self.assertTrue(page.evaluate('pyroceneDiagnostics().tls'))
                     page.screenshot(path='/mnt/seagate/models/pyrocene/stage4/qa-explore/10-portable-plant.png')
                     page.locator('#book-close').click()
+                    self.assertEqual(page.locator('#observation-kind').count(),0)
+                    expect(page.locator('#network-open')).to_be_hidden()
+                    page.goto(base+'/expedition.html?references=1')
+                    page.wait_for_selector('#loading', state='hidden')
                     for kind,sector in [('built',32),('camera',7),('audio',16)]:
                         page.locator('#observation-kind').select_option(kind)
                         expect(page.locator('#observation-kind')).to_be_enabled()

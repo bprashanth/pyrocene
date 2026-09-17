@@ -10,6 +10,8 @@ let state=fresh(), view='forest', busy=false, catalogue=[], humans=[], photos={}
 let reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sensorMap=[],sensorCaption='';
 const prototype=new URLSearchParams(location.search).get('mode')||'cases';
+// Parked experiments remain available for development, not in the main game.
+const referenceExperiments=new URLSearchParams(location.search).get('references')==='1';
 function playProgress(){
   const p=progress(state);
   if(prototype==='collection'){
@@ -22,8 +24,8 @@ try{state=restore(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch{
 const forest=new ExpeditionForest($('landscape'),{select:choose,specimen:meet,qualityChanged:low=>{$('low-detail').checked=low;}});
 forest.reducedMotion=reduced;
 const network=fieldNetwork({radioFrame,radioBody:$('radio-body'),radioActions:$('radio-actions'),openDialog,toast,visit:async id=>{await camera('overhead');await choose(id);},overlay:async(ids,caption)=>{sensorMap=ids;sensorCaption=caption;mapped=[];await camera('overhead');update();},onChange:update});
-const currentWorld=()=>network.world()||WORLD;
-const observations=observationLayers({forest,host:$('landscape'),select:choose,closeView:(v='close')=>camera(v),notes:showObservationNotes,toast});
+const currentWorld=()=>referenceExperiments&&network.world()||WORLD;
+const observations=referenceExperiments?observationLayers({forest,host:$('landscape'),select:choose,closeView:(v='close')=>camera(v),notes:showObservationNotes,toast}):{kind:()=> 'plants',has:()=>true,pause(){},setBusy(){},before(){},after(){}};
 globalThis.pyroceneDiagnostics=()=>({...forest.performance(),view,observation:observations.kind(),tls:forest.tlsActive,tlsCrop:forest.currentTLS?.id,visited:state.visited.length,plants:knownPlants(state).length,mission:state.mission,completed:state.completed.length,prototype,network:network.stats()});
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function btn(text,action,cls){const b=el('button',text,cls);b.onclick=action;return b;}
@@ -198,7 +200,7 @@ function radioBrief(){
   $('radio-actions').append(btn('Explore',()=>{act('brief');$('radio').close();},'primary'),btn('Give me a hint',radioHint),btn('Discuss a finding',radioDiscussion));
   if(p.done)$('radio-actions').append(btn(state.mission===3?'Prepare the group map':'Report and choose next mission',()=>{act('complete');$('radio').close();if(state.mission===3)openGM();else{act('mission',state.mission+1);update();radioBrief();}},'secondary'));
   $('radio-actions').append(btn('Choose another mission',missionMenu));
-  if(state.visited.length>=3||state.mission===3)$('radio-actions').append(btn(network.hasGrant()?'Compare sensor records':'A field grant is available',network.offer));
+  if(referenceExperiments&&(state.visited.length>=3||state.mission===3))$('radio-actions').append(btn(network.hasGrant()?'Compare sensor records':'A field grant is available',network.offer));
 }
 function radioHint(){
   const mission=MISSIONS[state.mission];radioFrame('A place to look',mission.hint,'FREE FIELD HINT');
@@ -247,14 +249,14 @@ function bearings(){
 function openGM(){
   openDialog('gm');$('gm-progress').textContent=`${state.visited.length} places visited. ${knownPlants(state).length} plants met. ${state.completed.length} missions reported. These counts do not decide when a group is ready.`;
   $('gm-prompts').replaceChildren(...MISSIONS.map(m=>{const d=el('section');d.append(el('h2',m.title),el('p',m.recall));return d;}));
-  $('gm-prompts').append(el('h2','Bring the field days together'),el('p','Before recall, let teams finish the three field rounds in Sensor network. Pool exports from different equipment. Ask which observations changed and which stayed similar. Everyone will reconstruct the closing Day 3 landscape. An earlier report should stay dated, not be treated as a current observation.'),btn('Open the field grant or network',network.open,'secondary'));
-  $('gm-prompts').append(el('h2','Two or three teams'),el('p','Each team keeps one map and gives one explanation before running its simulation. For ten people, use two groups of four or five within the team. Rotate the person at the controls. One group proposes an explanation while the other checks it. Swap after a field round. Do not create extra competing maps for these smaller groups.'),el('p','With two teams, offer camera traps and sound recorders. Air and litter field notes remain available to both. With three teams, the third can compare environmental sensors. No mission requires a third team.'));
+  if(referenceExperiments)$('gm-prompts').append(el('h2','Bring the field days together'),el('p','Before recall, let teams finish the three field rounds in Sensor network. Pool exports from different equipment. Ask which observations changed and which stayed similar. Everyone will reconstruct the closing Day 3 landscape. An earlier report should stay dated, not be treated as a current observation.'),btn('Open the field grant or network',network.open,'secondary'));
+  $('gm-prompts').append(el('h2','Two or three teams'),el('p','Each team keeps one map and gives one explanation before running its simulation. For ten people, use two groups of four or five within the team. Rotate the person at the controls. One group proposes an explanation while the other checks it. Do not create extra competing maps for these smaller groups.'));
 }
 function sources(){
   openDialog('sources');const body=$('source-content');body.replaceChildren();
-  const notes=[['Forest geometry','The airborne view is the measured EBA T_0638 crop from the film. Eleven ground crops vary the understorey. Three separate ForestScan tree references show woody structure and foliage. All now use uniform display scales. The tree references have no confirmed species names. Outside points stay unchanged. These are separate surveys placed together for the exercise, not registered scans of these squares. ForestScan tree data: CC BY 4.0, DOI 10.5285/931973DB09AF41568853702EFE135F29.','https://essd.copernicus.org/articles/18/1243/2026/index.html'],['Field records','Species assignments, crop placement, human accounts, temperatures, humidity, litter moisture, disturbance clues and wildlife encounters are authored practice data. A clickable point is not a measured plant identification. The species map is not a live classifier.'],['Fire comparison','The group lab compares reconstructions against the same training world. It is not an operational forecast or a reproduction of the historical fire. The 2023 mapped scar is shown separately.'],['Lia','A fictional field ecologist with an illustrated portrait and green radio treatment. Calls use local authored answers and cited research, not a live language model. They are not quotations or an endorsement.'],['Images','Real reference photographs use a green terminal treatment. Credits and licenses remain linked. Photos can show a leaf, fruit or flower rather than a whole plant. Green treatments retain the source image license.']];
+  const notes=[['Forest geometry','The airborne view is the measured EBA T_0638 crop from the film. Close view is a modelled forest made from repeated ground-scan fragments. Fragments are rotated and scaled together, with modest size variation. Their positions and density are invented for this exercise. They are not a survey of these squares or a measured tree count. Some airborne canopy remains visible and the surrounding points stay unchanged. Ground scans come from ForestScan in French Guiana.','https://essd.copernicus.org/articles/18/1243/2026/index.html'],['Field records','Species assignments, crop placement, human accounts, temperatures, humidity, litter moisture, disturbance clues and wildlife encounters are authored practice data. A clickable point is not a measured plant identification. The species map is not a live classifier.'],['Fire comparison','The group lab compares reconstructions against the same training world. It is not an operational forecast or a reproduction of the historical fire. The 2023 mapped scar is shown separately.'],['Lia','A fictional field ecologist with an illustrated portrait and green radio treatment. Calls use local authored answers and cited research, not a live language model. They are not quotations or an endorsement.'],['Images','Real reference photographs use a green terminal treatment. Credits and licenses remain linked. Photos can show a leaf, fruit or flower rather than a whole plant. Green treatments retain the source image license.']];
   for(const [title,text,url]of notes){body.append(el('h2',title),el('p',text));if(url)body.append(link('Source',url));}
-  for(const [title,text,url] of [
+  if(referenceExperiments)for(const [title,text,url] of [
     ['Communities','Microsoft building footprints from Alter do Chao, Para. CDLA Permissive 2.0. Walls, game location and community story are illustrative.','https://github.com/microsoft/GlobalMLBuildingFootprints'],
     ['Audio','Richard Ranft / The British Library Board. Screaming piha recorded in Tambopata, Peru, in 1985. CC BY 4.0. The waveform comes from the actual recording.','https://commons.wikimedia.org/wiki/File:Screaming_Piha_(Lipaugus_vociferans)_(W1CDR0000523_BD5).ogg'],
     ['Bird reference','Hector Bottai. Screaming piha photographed near Manaus. CC BY-SA 4.0. The green treatment retains this license.','https://commons.wikimedia.org/wiki/File:Lipaugus_vociferans_-_Screaming_Piha;_Manaus,_Amazonas,_Brazil.jpg'],
@@ -270,6 +272,7 @@ $('find-plants').onclick=async()=>{sensorMap=[];mapped=[...mapPlants];closeBook(
 $('clear-map').onclick=()=>{sensorMap=[];mapped=[];mapPlants.clear();update();};
 $('radio-open').onclick=radioBrief;$('assignment').onclick=missionMenu;$('menu-open').onclick=()=>openDialog('menu');$('bearings-open').onclick=bearings;$('sources-open').onclick=sources;$('gm-open').onclick=openGM;$('settings-open').onclick=()=>openDialog('settings');
 $('network-open').onclick=network.open;
+$('network-open').hidden=!referenceExperiments;
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>camera(b.dataset.view));
 $('low-detail').onchange=e=>forest.setQuality(e.target.checked);$('reduced-motion').checked=reduced;$('reduced-motion').onchange=e=>{reduced=e.target.checked;forest.reducedMotion=reduced;};
 $('restart').onclick=()=>{if(confirm('Start again? This clears this browser’s expedition discoveries and sensor notebook.')){state=fresh();network.clear();save();location.reload();}};

@@ -20,7 +20,7 @@ class Observations(unittest.TestCase):
   self.page.on('pageerror',lambda e:self.errors.append(str(e)))
  def tearDown(self):self.context.close();self.assertEqual(self.errors,[])
  def start(self):
-  self.page.goto(self.base);self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+  self.page.goto(self.base+'/expedition.html?references=1');self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
   self.page.get_by_role('button',name='Give me a hint',exact=True).click();self.page.get_by_role('button',name='Show me a place',exact=True).click()
   expect(self.page.locator('[data-view=close]')).to_be_enabled()
  def layer(self,kind):

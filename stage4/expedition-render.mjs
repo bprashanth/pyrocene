@@ -1,5 +1,6 @@
 import { ExplorationForest } from './explore-render.mjs';
 import { Forest } from './render.mjs';
+import { forestNeighbourhood } from './forest-neighbourhood.mjs';
 const T=globalThis.THREE;
 const centre=id=>({x:(id%6)*150-375,z:Math.floor(id/6)*150-375});
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -26,7 +27,7 @@ export class ExpeditionForest extends ExplorationForest {
       material.uniforms.detailBlend=this.detailUniform;material.uniforms.detailSector=this.sectorUniform;
       material.vertexShader='uniform float detailBlend,detailSector;\n'+material.vertexShader
         .replace('if(selected>=0. && sector!=selected){opacity*=.76;}','')
-        .replace('vec4 mv=modelViewMatrix*vec4(position,1.);','vec3 p=position; if(sector==detailSector){p.y*=1.-detailBlend;opacity*=1.-detailBlend;} vec4 mv=modelViewMatrix*vec4(p,1.);');
+        .replace('vec4 mv=modelViewMatrix*vec4(position,1.);','vec3 p=position; if(sector==detailSector){opacity*=1.-detailBlend*.62;} vec4 mv=modelViewMatrix*vec4(p,1.);');
       material.needsUpdate=true;
     }
     return meta;
@@ -40,8 +41,8 @@ export class ExpeditionForest extends ExplorationForest {
   _manifestPlot(manifest,id){const p=manifest.plots[id%manifest.plots.length];this.currentTLS=p;return p;}
   _makeTLSCache(bytes,plot,manifest){const cached=super._makeTLSCache(bytes,plot,manifest);cached.plot=plot;return cached;}
   async _cachedPlot(id){
-    if(!this.structurePromise)this.structurePromise=fetch('assets/tree-structure.json').then(r=>{if(!r.ok)throw Error('Tree references unavailable');return r.json();}).then(async m=>{this.structures=await Promise.all(m.trees.map(async t=>{const r=await fetch('assets/'+t.file);if(!r.ok)throw Error('Tree reference unavailable');return {...t,points:new Float32Array(await r.arrayBuffer())};}));}).catch(()=>{this.structurePromise=null;});
-    await this.structurePromise;
+    if(!this.neighbourhoodPromise)this.neighbourhoodPromise=Promise.all(['tls-manifest.json','forest-fragments.json'].map(async file=>{const r=await fetch('assets/'+file);if(!r.ok)throw Error('The forest detail could not load.');return r.json();})).then(([m,wood])=>Promise.all([m.plots[1],wood].map(async p=>{const r=await fetch(this._assetURL(p.file));if(!r.ok)throw Error('The forest detail could not load. Try Close view again.');return {...p,points:new Float32Array(await r.arrayBuffer())};}))).then(s=>this.neighbourhoodSources=s).catch(e=>{this.neighbourhoodPromise=null;throw e;});
+    await this.neighbourhoodPromise;
     const manifest=await this._loadTLSManifest(),plot=this._manifestPlot(manifest,id),key=plot.id;
     if(this.tlsCache.has(key))return this.tlsCache.get(key);
     const r=await fetch(this._assetURL(plot.file));if(!r.ok)throw Error('This ground scan could not load. Try Close view again.');
@@ -56,6 +57,7 @@ export class ExpeditionForest extends ExplorationForest {
     if(this.cameraMotion){this.cameraMotion.resolve(false);this.cameraMotion=null;}
     const from={target:this.target.clone(),distance:this.distance,angle:this.angle,elevation:this.elevation};
     Forest.prototype.preset.call(this,kind);
+    if(kind==='ground'){this.goal.distance=170;this.goal.elevation=.10;}
     if(kind==='ground'&&this.camera.aspect<1)this.goal.distance/=this.camera.aspect;
     if(this.reducedMotion){this.distance=this.goal.distance;return Promise.resolve(true);}
     return new Promise(resolve=>{this.cameraMotion={from,to:{...this.goal,target:this.goal.target.clone()},start:performance.now(),duration:900,resolve};});
@@ -84,26 +86,18 @@ export class ExpeditionForest extends ExplorationForest {
   _enterTLS(cached){
     this.tlsActive=true;this.detailSector=this.plotId;this.sectorUniform.value=this.plotId;
     this.tlsFallback=cached;this.currentTLS=cached.plot;
-    const box=cached.plot.bounds,c=centre(this.plotId),scale=3;
-    const mx=(box.x[0]+box.x[1])/2,mz=(box.z[0]+box.z[1])/2;
-    const transform=p=>[c.x+(p[0]-mx)*scale,Math.max(0,p[1])*scale,c.z+35+(p[2]-mz)*scale];
-    const source=cached.group.children[0].geometry.attributes.position.array,values=[],kinds=[];
-    // Keep the measured understorey proportionate. Separate whole-tree scans
-    // supply crowns that were cut off by the old five-metre tiles.
-    for(let i=0;i<source.length;i+=3)if(source[i+1]<8){values.push(...transform(source.subarray(i,i+3)));kinds.push(0);}
-    const understoreyCount=values.length/3;
-    if(!this.observationPoints)this.structures?.forEach((tree,i)=>{
-      const p=tree.points,b=tree.bounds,s=Math.min(62/(b[1][1]||1),36/Math.max(b[1][0]-b[0][0],b[1][2]-b[0][2])),x=[-38,0,38][i],z=[-12,-28,-8][i];
-      for(let n=0;n<p.length;n+=4){values.push(c.x+x+p[n]*s,p[n+1]*s,c.z+z+p[n+2]*s);kinds.push(p[n+3]);}
-    });
-    const positions=new Float32Array(values),count=positions.length/3;
-    this.detailKinds=new Float32Array(kinds);
+    const c=centre(this.plotId),source=cached.group.children[0].geometry.attributes.position.array;
+    const model=this.observationPoints?{positions:new Float32Array()}:forestNeighbourhood([...this.neighbourhoodSources,{points:source,bounds:cached.plot.bounds}],this.plotId);
+    const positions=model.positions,count=positions.length/3;
+    for(let n=0;n<positions.length;n+=3){positions[n]+=c.x;positions[n+2]+=c.z;}
+    this.detailKinds=model.wood||new Float32Array(count);
     this.detailPositions=positions;
-    this.tlsAnchors=cached.anchors.map(transform);
-    // Labels anchor to actual returns; botanical identities are authored.
+    this.tlsAnchors=[];
+    // Labels are authored learning examples within the modelled vegetation,
+    // not species classifications of the source scan.
     this.tlsAnchors=[[-42,30],[0,42],[42,24]].map(([x,z],i)=>{
       let best=Infinity,anchor=this.tlsAnchors[i]||[c.x,2,c.z];
-      for(let n=0;n<understoreyCount;n+=5){const h=positions[n*3+1];if(h<.3||h>10)continue;const d=(positions[n*3]-c.x-x)**2+(positions[n*3+2]-c.z-z)**2;
+      for(let n=0;n<count;n+=5){const h=positions[n*3+1];if(h<.3||h>10)continue;const d=(positions[n*3]-c.x-x)**2+(positions[n*3+2]-c.z-z)**2;
         if(d<best){best=d;anchor=Array.from(positions.subarray(n*3,n*3+3));}}
       return anchor;
     });
@@ -111,8 +105,11 @@ export class ExpeditionForest extends ExplorationForest {
     const material=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{blend:this.detailUniform},
       vertexShader:`uniform float blend; attribute float wood; varying vec3 colour; varying float alpha;
         void main(){vec3 p=position;p.y*=blend;float h=position.y;
-        colour=wood>.5?vec3(.86,.94,.68):vec3(.24,.66,.45);
-        alpha=blend*(wood>.5?.98:.55);vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp((wood>.5?340.:280.)/(-mv.z),1.,2.6);}`,
+        colour=wood>.5?vec3(.72,.91,.79):mix(vec3(.22,.48,.35),vec3(.51,.78,.64),smoothstep(1.,25.,h));
+        if(h<1.2)colour=mix(vec3(.58,.30,.43),colour,h/1.2);
+        vec4 mv=modelViewMatrix*vec4(p,1.);
+        float depth=exp(-max(0.,-mv.z-60.)*.004);
+        alpha=blend*(wood>.5?.95:.62)*depth;gl_Position=projectionMatrix*mv;gl_PointSize=clamp((wood>.5?300.:240.)/(-mv.z),1.,2.5);}`,
       fragmentShader:`varying vec3 colour; varying float alpha;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;gl_FragColor=vec4(colour,alpha*(1.-smoothstep(.18,.5,d)));}`});
     this.detailCloud=new T.Points(geometry,material);this.detailCloud.frustumCulled=false;
     if(this.observationPoints){
@@ -120,6 +117,7 @@ export class ExpeditionForest extends ExplorationForest {
       geometry.setAttribute('position',new T.BufferAttribute(this.detailPositions,3));geometry.setAttribute('wood',new T.BufferAttribute(this.detailKinds,1));
     }
     this.tlsGroup.clear();this.tlsGroup.add(this.detailCloud);this.tlsGroup.visible=true;
+    if(this.quality==='low'){const n=geometry.attributes.position.count;geometry.setIndex(Array.from({length:Math.ceil(n/2)},(_,i)=>i*2));}
     if(this.cloud)this.cloud.visible=true;if(this.selectionMesh)this.selectionMesh.visible=true;
     this.pointer.hidden=true;this._updateExploreVisibility();
     this.detailEntered?.();
@@ -171,9 +169,9 @@ export class ExpeditionForest extends ExplorationForest {
     const draw=(x,y,z,alpha,size)=>{v.set(x,y,z).project(this.camera);if(Math.abs(v.x)>1||Math.abs(v.y)>1||v.z>1||v.z< -1)return;ctx.globalAlpha=alpha;ctx.fillRect((v.x*.5+.5)*w,(-v.y*.5+.5)*h,size,size);};
     const src=this.airborneSource,step=Math.max(1,Math.ceil(src.length/4/22000));
     ctx.fillStyle='#8fc8b0';
-    for(let n=0;n<src.length;n+=4*step){const x=src[n],z=-src[n+1],y=src[n+2],sector=Math.floor((z+450)/150)*6+Math.floor((x+450)/150),blend=sector===this.detailSector?this.detailBlend:0;draw(x,y*(1-blend),z,.66*(1-blend),1.5);}
-    if(this.detailPositions){const ps=this.detailPositions,skip=Math.max(1,Math.ceil(ps.length/3/16000));ctx.fillStyle='#a4d8b7';
-      for(let n=0;n<ps.length;n+=3*skip){const wood=this.detailKinds?.[n/3]>.5;ctx.fillStyle=wood?'#dbeeb0':'#469b70';draw(ps[n],ps[n+1]*this.detailBlend,ps[n+2],(wood?.95:.36)*this.detailBlend,wood?1.7:1.2);}}
+    for(let n=0;n<src.length;n+=4*step){const x=src[n],z=-src[n+1],y=src[n+2],sector=Math.floor((z+450)/150)*6+Math.floor((x+450)/150),blend=sector===this.detailSector?this.detailBlend:0;draw(x,y,z,.66*(1-blend*.62),1.5);}
+    if(this.detailPositions){const ps=this.detailPositions,skip=Math.max(1,Math.ceil(ps.length/3/60000));
+      for(let n=0;n<ps.length;n+=3*skip){const wood=this.detailKinds?.[n/3]>.5,h=ps[n+1];ctx.fillStyle=wood?'#dbeeb0':h<1.2?'#955770':h<10?'#71b48b':'#b8edcc';draw(ps[n],h*this.detailBlend,ps[n+2],(wood?.95:.65)*this.detailBlend,1.5);}}
     ctx.globalAlpha=1;
     if(this.selected>=0){const c=centre(this.selected);ctx.strokeStyle='#ddbf78';ctx.lineWidth=1;ctx.beginPath();[[-75,-75],[75,-75],[75,75],[-75,75],[-75,-75]].forEach(([x,z],i)=>{v.set(c.x+x,3,c.z+z).project(this.camera);const px=(v.x*.5+.5)*w,py=(-v.y*.5+.5)*h;i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
   }
@@ -183,5 +181,10 @@ export class ExpeditionForest extends ExplorationForest {
     if(this.fallback){requestAnimationFrame(this.animate);if(document.hidden)return;this._cpuCamera();this.drawFallback();this._positionExploreLabels();return;}
     super.animate(now);
   }
-  performance(){return {...super.performance(),inlineTLS:true,detailBlend:this.detailBlend,detailSector:this.detailSector,airborneVisible:this.fallback||!!this.cloud?.visible,detailPoints:(this.detailPositions?.length||0)/3,cameraTarget:this.target?.toArray(),distance:this.distance,transition:!!this.transition};}
+  performance(){
+    const detail=(this.detailPositions?.length||0)/3,air=this.airborneSource?.length/4||0;
+    const airDrawn=this.fallback?(air?Math.ceil(air/Math.ceil(air/22000)):0):(this.geometry?.index?.count||this.geometry?.attributes.position.count||0);
+    const detailDrawn=this.fallback?(detail?Math.ceil(detail/Math.ceil(detail/60000)):0):(this.detailCloud?.geometry.index?.count||detail);
+    return {...super.performance(),points:airDrawn+detailDrawn,airborneDrawn:airDrawn,detailDrawn,modelledDetail:!!(this.tlsActive&&!this.observationPoints),inlineTLS:true,detailBlend:this.detailBlend,detailSector:this.detailSector,airborneVisible:this.fallback||!!this.cloud?.visible,detailPoints:detail,cameraTarget:this.target?.toArray(),distance:this.distance,transition:!!this.transition};
+  }
 }

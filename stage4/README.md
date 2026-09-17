@@ -5,6 +5,10 @@ the central measured map, click-drag camera, Forest / Overhead / Close views
 and Lia's green radio calls. Close view now opens ground detail inside the
 selected square, with direct species labels and short side notes. Forest
 reverses the transition. See [INLINE_DETAIL.md](INLINE_DETAIL.md).
+The current close view is a dense, fictional neighbourhood assembled from
+measured scan fragments. It replaces the rejected three-tree arrangement.
+Communities, audio, camera traps and sensor grants are parked, with their
+experiments retained behind `?references=1`. See [REFERENCE_LAYERS.md](REFERENCE_LAYERS.md).
 Hardware is confirmed as one laptop per team. Teams explore together, then
 reconstruct their findings on a physical map and use `/memory.html` for the
 fire comparison. See [EXPEDITION.md](EXPEDITION.md). No new turn rules are added.

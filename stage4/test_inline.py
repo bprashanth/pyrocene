@@ -35,7 +35,11 @@ class InlineDetail(unittest.TestCase):
  def test_close_labels_notes_and_reverse_in_same_scene(self):
   self.start();self.enter()
   d=self.page.evaluate('pyroceneDiagnostics()');self.assertTrue(d['airborneVisible']);self.assertEqual(d['detailSector'],13)
-  self.assertAlmostEqual(d['distance'],210,delta=1)
+  self.assertTrue(d['modelledDetail']);self.assertGreater(d['detailPoints'],300000)
+  self.assertEqual(d['points'],d['detailDrawn']+d['airborneDrawn'])
+  self.assertEqual(self.page.locator('#observation-kind').count(),0)
+  expect(self.page.locator('#network-open')).to_be_hidden()
+  self.assertAlmostEqual(d['distance'],170,delta=1)
   self.assertAlmostEqual(d['cameraTarget'][0],-225,delta=1)
   self.assertTrue(self.page.locator('#plot-notes').is_visible())
   self.assertEqual(self.page.locator('#inspect,#notes-open,#field-action').count(),0)
@@ -49,7 +53,7 @@ class InlineDetail(unittest.TestCase):
   self.page.wait_for_timeout(350);self.page.screenshot(path=str(QA/'inline-plant-note.png'))
   self.button('Forest');self.page.wait_for_timeout(220)
   d=self.page.evaluate('pyroceneDiagnostics()');self.assertTrue(d['tls']);self.assertGreater(d['detailBlend'],0);self.assertLess(d['detailBlend'],1)
-  self.assertAlmostEqual(d['distance'],210,delta=1)
+  self.assertAlmostEqual(d['distance'],170,delta=1)
   expect(self.page.locator('[data-view=close]')).to_be_enabled(timeout=10000)
   d=self.page.evaluate('pyroceneDiagnostics()');self.assertFalse(d['tls']);self.assertEqual(d['detailBlend'],0);self.assertGreater(d['distance'],1600)
   self.assertFalse(self.page.locator('#plot-notes').is_visible())
@@ -83,10 +87,14 @@ class InlineDetail(unittest.TestCase):
     const p=f.detailPositions;let inside=true;
     for(let n=0;n<p.length;n+=3)if(Math.abs(p[n]+225)>75||Math.abs(p[n+2]+75)>75||p[n+1]<0)inside=false;
     const visible=f.cloud.visible,blend=f.detailUniform.value,sector=f.sectorUniform.value;
+    const originalDetail=new Float32Array(p),highCount=f.performance().detailDrawn;
+    f.setQuality(true);const reduced=f.performance().detailDrawn<highCount;f.setQuality(false);
     await f.setView('forest',13);
-    return {unchanged,inside,visible,blend,sector,cleared:f.detailPositions===null,restored:original.every((v,i)=>v===f.geometry.attributes.position.array[i])};
+    const cleared=f.detailPositions===null,restored=original.every((v,i)=>v===f.geometry.attributes.position.array[i]);
+    await f.setView('close',13);const repeat=originalDetail.every((v,i)=>v===f.detailPositions[i]);
+    return {unchanged,inside,visible,blend,sector,cleared,restored,reduced,repeat};
   }''')
-  self.assertEqual(result,{'unchanged':True,'inside':True,'visible':True,'blend':1,'sector':13,'cleared':True,'restored':True})
+  self.assertEqual(result,{'unchanged':True,'inside':True,'visible':True,'blend':1,'sector':13,'cleared':True,'restored':True,'reduced':True,'repeat':True})
  def test_phone_labels_are_clickable_above_notes(self):
   self.page.set_viewport_size({'width':390,'height':844});self.page.emulate_media(reduced_motion='reduce');self.start();self.enter()
   for name in self.page.locator('[data-specimen]').all_text_contents():

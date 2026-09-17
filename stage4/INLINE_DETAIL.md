@@ -1,8 +1,9 @@
 # Ground detail inside the map
 
 The main expedition remains one map. Select a square and choose Close view.
-The camera moves to the existing low close-view position. The airborne returns
-inside that square sink and fade as measured ground-scan returns rise there.
+The camera moves closer and lower (distance 170, elevation 0.10). Modelled
+ground detail rises inside the square. Its airborne returns stay in place at
+38 percent opacity, retaining canopy context rather than emptying the square.
 All airborne geometry remains intact. The shader changes only the selected
 sector. The surrounding cloud stays visible and retains its original colours.
 Forest reverses the rise first, then moves back to the forest camera.
@@ -19,17 +20,29 @@ The plot's scan, visit and displayed records are recorded together after the
 detail loads. Reading a species note also records its displayed use. The
 existing missions and paper recall remain reachable without the removed buttons.
 
-## Display, not geographic registration
+## A modelled neighbourhood, not geographic registration
 
-Airborne and TLS data are measured but come from different surveys. The former
-horizontal-only stretch made plants unreadable and has been removed. The lower
-eight metres of each crop now use a uniform 3x display scale. Three individual
-ForestScan tree references supplement these narrow tiles, using uniform scales
-to fit the square. Bright wood and softer leaves reveal branching. The original
-files are unchanged. These are structural references, not species-identified
-trees or a registered survey of the selected square. Their authored placement
-must not be interpreted as an inventory. Eleven crops still vary the understorey.
-`prepare_tree_structure.py` records source URLs, hashes and CC BY 4.0 attribution.
+The three enlarged specimen trees were rejected as sparse and artificial. They
+are no longer loaded. Instead, `forest-neighbourhood.mjs` repeats ground-scan
+fragments throughout the square, using deterministic positions and rotations.
+Uniform scale varies from 0.95 to 1.30. No axis is stretched independently.
+The two full Paracou tiles and one of eleven selected crops supply structure.
+All height layers are retained, not just the lowest eight metres. A 360,000-point
+budget covers 225 fragment placements; this is a rendering budget, not a count
+of trees. Copies near the boundary are clipped to the selected square.
+
+`prepare_forest_fragments.py` retains the FG6c2 source's wood classification so
+stems can be brighter than foliage. Unclassified sources are not assigned wood
+labels. Depth attenuation separates near and far returns. There are no generated
+cones or tree meshes. The source fragments are measurements, but repetition,
+size variation, arrangement and density are authored. This is a fictional
+forest neighbourhood, not a fitted ecological model or a measured inventory.
+It does not estimate girth, tree abundance, moisture or fuel from return density.
+The Sources panel states this distinction. Frozen film assets are unchanged.
+
+Rebuild the classified source with the rendering virtual environment:
+`python stage4/prepare_forest_fragments.py`. It records source hashes, attribution,
+the sampling method and the binary hash in `assets/forest-fragments.json`.
 Species notes show independently identified reference photos through an in-app
 green terminal treatment. Some photos depict a leaf, fruit or flower rather
 than the whole plant. Species assignments and field observations remain authored.
@@ -42,9 +55,9 @@ the airborne map intact and allows a retry. Cached crops are reused. Temporary
 display geometry is disposed on return. Automatic point reduction is ignored
 while inspecting a square so it cannot remove surrounding dots mid-transition.
 
-The non-WebGL expedition now projects measured points through the same camera
-using Canvas2D. It samples approximately 22,000 airborne and up to 16,000 TLS
-returns. Drag, zoom, selection, labels and the reversible detail still work.
+The non-WebGL expedition projects airborne and modelled detail through the same camera
+using Canvas2D. It samples approximately 22,000 airborne and up to 60,000 modelled
+detail returns. Drag, zoom, selection, labels and the reversible detail still work.
 It redraws only when the camera, selection or transition changes. It is less
 dense than WebGL and still needs testing on the actual team laptops. The older
 non-expedition routes keep their earlier fallback implementations.

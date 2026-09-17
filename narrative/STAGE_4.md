@@ -1,15 +1,17 @@
 # Before the next fire
 
-Current visual expansion: the same map now offers Communities, Audio and Camera
-traps through one Explore selector. Real reference material has authored game
-locations. The existing four missions and physical-map rules are unchanged.
-See `stage4/REFERENCE_LAYERS.md` for exact source and interpretation boundaries.
+Current forest iteration, 17 September: `/expedition.html` is the default.
+Communities, Audio, Camera and the sensor grant are parked. Close view now grows
+a dense modelled neighbourhood inside the selected square and retains some
+airborne canopy. Repeated, rotated TLS fragments replace the three enlarged
+trees. The user explicitly permits extrapolation and fictional forest geometry.
+This is not a surveyed inventory of these squares. Species photos, green styling,
+the assistant and draggable map remain. See `stage4/INLINE_DETAIL.md`.
 
-Current checkpoint, 17 September: `/expedition.html` is the default. Close view
-morphs the selected square in place. Whole-tree structural references and a
-proportionate understorey replace the horizontally stretched slab. Species
-photos use a green terminal treatment. The notes below preserve the rejected
-branches and restoration history, not the current default.
+The parked reference layers remain at `?references=1` for development, with
+sources and recovery instructions in `stage4/REFERENCE_LAYERS.md`. The existing
+four missions and physical-map rules have not been redesigned in this visual
+iteration. The notes below preserve rejected branches and restoration history.
 
 Restoration correction: `/explore.html` was the wrong checkpoint. The default
 is now `/expedition.html`, the Amazon-learning and team physical-map version.

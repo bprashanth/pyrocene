@@ -1,5 +1,11 @@
 # Communities, sound and camera records
 
+Parked on 17 September at the user's request. The main game is forest-only.
+These experiments remain available to developers at
+`/expedition.html?references=1`, including the older sensor grant. Their assets
+are optional for server readiness. The pre-descope checkpoint is `c7641fc`.
+Do not reintroduce the selector, grants or sensor tasks without discussing scope.
+
 Use **Explore**, at the lower left, to switch between Plants, Communities,
 Audio and Camera traps. The chosen layer opens overhead. Select a marked place
 to move closer. Forest or Overhead reverses the selected-square reveal. Plants

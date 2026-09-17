@@ -25,8 +25,8 @@ class ExpeditionPlay(unittest.TestCase):
   self.page.route('**/*',route)
  def tearDown(self):self.ctx.close();self.assertEqual(self.errors,[]);self.assertEqual(self.external,[]);self.assertEqual(self.bad,[])
  def button(self,name):self.page.get_by_role('button',name=name,exact=True).click()
- def start(self,mode='cases'):
-  self.page.goto(self.base+'/expedition.html?mode='+mode);self.page.wait_for_selector('#loading',state='hidden');self.button('Explore')
+ def start(self,mode='cases',references=False):
+  self.page.goto(self.base+'/expedition.html?mode='+mode+('&references=1' if references else ''));self.page.wait_for_selector('#loading',state='hidden');self.button('Explore')
  def visit(self,id):
   self.button('More');self.button('Map');self.button('Explore '+chr(65+id//6)+str(id%6+1))
   expect(self.page.locator('#place-coordinate')).to_have_text('FIELD POSITION '+chr(65+id//6)+str(id%6+1))
@@ -93,7 +93,7 @@ class ExpeditionPlay(unittest.TestCase):
   expect(p.locator('[data-specimen]')).to_have_count(3);expect(p.locator('[data-view=forest]')).to_be_enabled();p.locator('[data-specimen]').first.click()
   self.assertIn('Marandu grass',p.locator('#plant-guide').inner_text());self.assertTrue(p.evaluate('pyroceneDiagnostics().fallback'));p.screenshot(path=str(QA/'26-ground-fallback.png'));b.close()
  def test_sensor_grant_temporal_compare_and_team_pool(self):
-  self.start();self.button('More');self.button('Sensor network');self.page.locator('#sensor-team').fill('Camera team');self.button('Camera traps')
+  self.start(references=True);self.button('More');self.button('Sensor network');self.page.locator('#sensor-team').fill('Camera team');self.button('Camera traps')
   self.page.locator('.sensor-stations button').first.click();self.shot('21-camera-day0')
   first=self.page.locator('#station-detail').inner_text();self.page.locator('#sensor-interpretation').fill('Compare the edge with the damp station before assigning a cause.');self.button('Keep this thought')
   for _ in range(3):self.button('Finish this field round')
@@ -101,7 +101,7 @@ class ExpeditionPlay(unittest.TestCase):
   self.button('Day 0');self.assertIn('Compare the edge',self.page.locator('#sensor-interpretation').input_value());self.button('Day 3')
   other=self.browser.new_context(viewport={'width':1440,'height':900});p=other.new_page()
   p.on('pageerror',lambda e:self.errors.append(str(e)))
-  p.goto(self.base+'/expedition.html');p.wait_for_selector('#loading',state='hidden');p.get_by_role('button',name='Explore',exact=True).click();p.get_by_role('button',name='More',exact=True).click();p.get_by_role('button',name='Sensor network',exact=True).click();p.locator('#sensor-team').fill('Sound team');p.get_by_role('button',name='Sound recorders',exact=True).click()
+  p.goto(self.base+'/expedition.html?references=1');p.wait_for_selector('#loading',state='hidden');p.get_by_role('button',name='Explore',exact=True).click();p.get_by_role('button',name='More',exact=True).click();p.get_by_role('button',name='Sensor network',exact=True).click();p.locator('#sensor-team').fill('Sound team');p.get_by_role('button',name='Sound recorders',exact=True).click()
   for _ in range(3):p.get_by_role('button',name='Finish this field round',exact=True).click()
   with p.expect_download() as download:p.get_by_role('button',name='Save records for another team',exact=True).click()
   packet=Path(download.value.path()).read_bytes();other.close()
