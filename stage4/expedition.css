@@ -7,6 +7,20 @@
 #plot-notes .guide-heading{padding:0 0 12px;min-height:36px}
 #plot-notes .guide-heading button{font:12px Arial,sans-serif}
 #plot-notes p,.plain-note p{font:14px/1.7 Arial,sans-serif;color:#cfdbce;margin:0 0 16px}
+#plot-notes .plot-intro{font-size:12px;color:#9eb6a7;margin-bottom:12px}
+.stratum-heading{font:11px Arial,sans-serif;font-weight:normal;margin:15px 0 8px;letter-spacing:.7px}
+[data-layer=ground]{--stratum:#dc719d}
+[data-layer=understory]{--stratum:#69bccc}
+[data-layer=canopy]{--stratum:#99d8ab}
+.stratum-heading{color:var(--stratum)}
+.plot-species-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-bottom:14px}
+.plot-plant{text-align:left;font:12px/1.35 Arial,sans-serif;padding:7px 5px 7px 10px;border-left:2px solid var(--stratum);background:#14271e;border-radius:2px;overflow-wrap:anywhere}
+.plot-plant:hover,.plot-plant:focus-visible{background:#24402f;color:#edffe9;outline:1px solid var(--stratum)}
+.specimen-pin[data-layer]{border-color:var(--stratum);color:var(--stratum)}
+.specimen-pin[data-layer]::before{background:var(--stratum)}
+.specimen-pin.focused{background:#16372ceb;box-shadow:0 0 12px #99e6ce33}
+.scientific-name,.plant-layer-note{display:block;font:11px/1.5 Arial,sans-serif;color:#a5c0ac;margin:0 0 12px}
+.plain-note a{font-size:11px}
 #plant-guide .plain-note{padding:20px 24px}
 #plant-guide .plain-note h2{font:23px Georgia,serif;margin:0 0 15px}
 #plant-guide:has(.plain-note){width:330px;max-height:calc(100dvh - 200px);bottom:auto;top:100px}

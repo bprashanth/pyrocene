@@ -4,11 +4,13 @@ import { STORAGE_KEY, fresh, restore, change, knownPlants, progress, usefulNext 
 import { fieldNetwork } from './field-network.mjs';
 import { phosphorImage } from './field-media.mjs';
 import { observationLayers } from './observation-layers.mjs';
+import { ADDITIONAL_SPECIES, INVENTORY_PROFILE, plantLayer, LAYERS } from './forest-flora.mjs';
 
 const $=id=>document.getElementById(id);
 let state=fresh(), view='forest', busy=false, catalogue=[], humans=[], photos={}, book=null, sort='found', mapPlants=new Set(), mapped=[], currentTab='traces';
 let reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sensorMap=[],sensorCaption='';
+let bookContext='collection';
 const prototype=new URLSearchParams(location.search).get('mode')||'cases';
 // Parked experiments remain available for development, not in the main game.
 const referenceExperiments=new URLSearchParams(location.search).get('references')==='1';
@@ -53,7 +55,7 @@ function update(){
   forest.setSpecimens(observations.kind()==='plants'&&state.visited.includes(id)?WORLD[id].speciesIds.map(sp=>({id:sp,speciesId:sp,label:catalogue.find(s=>s.id===sp)?.name||sp})):[]);
   forest.setFieldVisited(state.visited.includes(id));
   forest.setSettlement(false);
-  const matches=ACTIVE.map(c=>({id:c.id,strength:c.speciesIds.filter(sp=>mapped.includes(sp)).length/3})).filter(c=>c.strength);
+  const matches=ACTIVE.map(c=>({id:c.id,strength:c.speciesIds.filter(sp=>mapped.includes(sp)).length/Math.max(1,mapped.length)})).filter(c=>c.strength);
   forest.showMatches(sensorMap.length?sensorMap.map(id=>({id,strength:.8})):matches);
   $('map-summary').hidden=(!mapped.length&&!sensorMap.length)||view==='close';
   $('match-count').textContent=sensorMap.length?sensorCaption:`${mapped.length} plants - ${matches.length} possible places`;
@@ -82,9 +84,21 @@ async function camera(next){
   finally{busy=false;update();}
 }
 function showPlotNotes(){
-  $('plot-notes').querySelector('.guide-heading span').textContent='Field notes';
+  const species=WORLD[state.selected].speciesIds.map(id=>catalogue.find(s=>s.id===id));
+  $('plot-notes').querySelector('.guide-heading span').textContent=`Plants here - ${species.length}`;
   const body=$('plot-notes-body'),record=fieldRecord(state.selected,currentWorld());
-  body.replaceChildren(el('p',record.climate.text+' '+record.climate.wind),el('p',record.traces.text),el('p',record.human.text));
+  body.replaceChildren(el('p','A selection from this patch. Choose a name.','plot-intro'));
+  const list=el('div');list.id='plot-species';
+  for(const layer of ['canopy','understory','ground']){
+    const group=species.filter(s=>plantLayer(s)===layer);if(!group.length)continue;
+    const heading=el('h3',LAYERS[layer].name,'stratum-heading');heading.dataset.layer=layer;list.append(heading);
+    const rows=el('div',undefined,'plot-species-grid');
+    for(const sp of group){
+      const b=btn(sp.name,()=>meet(sp.id),'plot-plant');b.dataset.plant=sp.id;b.dataset.layer=layer;
+      b.onpointerenter=()=>forest.focusSpecimen(sp.id);b.onfocus=()=>forest.focusSpecimen(sp.id);rows.append(b);
+    }list.append(rows);
+  }
+  body.append(list,el('p',record.climate.text+' '+record.climate.wind),el('p',record.traces.text),el('p',record.human.text));
   $('plot-notes').hidden=false;
 }
 function showObservationNotes(title,paragraphs,source){
@@ -95,7 +109,7 @@ function showObservationNotes(title,paragraphs,source){
 }
 function meet(id){
   if(busy)return;
-  try{const first=!knownPlants(state).includes(id);act('find',id);act('use',id);book=id;update();openBook(id);if(first)act('log',`${catalogue.find(s=>s.id===id)?.name} at ${coordinate(state.selected)}.`);}catch(e){toast(e.message);}
+  try{const sp=catalogue.find(s=>s.id===id),first=!knownPlants(state).includes(id);act('find',id);if(!sp.inventory)act('use',id);book=id;update();openBook(id,'plot');if(first)act('log',`${sp.name} at ${coordinate(state.selected)}.`);}catch(e){toast(e.message);}
 }
 function openLocalPlants(){
   openDialog('field-notes');$('notes-title').textContent='Plants in this place';$('note-tabs').replaceChildren();const body=$('note-body');body.replaceChildren(el('p','The field team has identified these plants. Choose a name to read its record.'));
@@ -110,7 +124,7 @@ function observedDryness(id){
   const places=state.found.filter(k=>k.endsWith(':'+id)).map(k=>Number(k.split(':')[0]));
   return places.length?Math.max(...places.map(p=>1-WORLD[p].moisture)):0;
 }
-function openBook(id=null){book=id;$('plot-notes').hidden=true;renderBook();$('plant-guide').hidden=false;}
+function openBook(id=null,context='collection'){book=id;bookContext=context;$('plot-notes').hidden=true;renderBook();$('plant-guide').hidden=false;if(id)forest.focusSpecimen(id);}
 function closeBook(){$('plant-guide').hidden=true;}
 function renderBook(){
   const content=$('guide-content');content.replaceChildren();
@@ -127,9 +141,13 @@ function renderBook(){
     const details=el('div',undefined,'plant-details plain-note');
     const photo=photos[sp.id];
     if(photo){const f=phosphorImage('assets/'+photo.file,sp.name+' reference');f.append(el('figcaption','Species reference - '+photo.author+' / '+photo.license));details.append(f);}
-    details.append(el('h2',sp.name),el('p',sp.status==='Invasive'
-      ?'This plant is invasive. It can spread into disturbed forest. '+condition+' '+(sp.plainUse||sp.use)+' '+abundance
-      :'This plant is native to this region. '+condition+' '+(sp.plainUse||sp.use)+' '+abundance));
+    details.append(el('h2',sp.name));
+    if(sp.name!==sp.scientific)details.append(el('small',sp.scientific,'scientific-name'));
+    details.append(el('p',(sp.status==='Invasive'?'This plant is invasive. ':'This plant is native to this region. ')+(sp.description||'')+' '+condition));
+    details.append(el('p',(sp.plainUse||sp.use||'')+' '+abundance));
+    details.append(el('small',`${LAYERS[plantLayer(sp)].name} - ${sp.growthForm}`,'plant-layer-note'));
+    if(!photo)details.append(el('small','The map shows a structure study, not a botanical portrait.','plant-layer-note'));
+    if(sp.sources?.[0])details.append(link('Source',sp.sources[0].url));
     content.append(details);
 
   }else{
@@ -222,7 +240,7 @@ function answerFinding(question){
   if(/damp|dry|moist|wind|gap|heat|air|fire|connect|spread/.test(q)&&has('climate'))return {text:r.climate.text+' '+r.climate.wind+' A route still needs connected fuel and an ignition. Conditions in a nearby patch need checking separately.',source:r.climate.source};
   if(/logging|disturb|char|stump|treefall|happen|fire|gap/.test(q)&&has('traces'))return {text:r.traces.text+' '+r.traces.question,source:r.traces.source};
   const plant=knownPlants(state).map(id=>catalogue.find(s=>s.id===id)).find(sp=>q.includes(sp.name.toLowerCase())||q.includes(sp.scientific.split(' ')[0].toLowerCase()));
-  if(plant)return {text:plant.fireNote+' '+(state.uses.includes(plant.id)?plant.use:'Read the field condition as well as the plant name.'),source:plant.sources[0]?.url};
+  if(plant)return {text:(plant.fireNote||plant.description)+' '+(plant.inventory?plant.plainUse:state.uses.includes(plant.id)?(plant.plainUse||plant.use||'Read the field condition as well as the plant name.'):'Read the field condition as well as the plant name.'),source:plant.sources[0]?.url};
   return {text:'I cannot answer that from the records we have read here. Ask about a recorded disturbance, air and litter, plant use or people. The field notes show what is available.',source:null};
 }
 function radioDiscussion(){
@@ -256,6 +274,8 @@ function sources(){
   openDialog('sources');const body=$('source-content');body.replaceChildren();
   const notes=[['Forest geometry','The airborne view is the measured EBA T_0638 crop from the film. Close view is a modelled forest made from repeated ground-scan fragments. Fragments are rotated and scaled together, with modest size variation. Their positions and density are invented for this exercise. They are not a survey of these squares or a measured tree count. Some airborne canopy remains visible and the surrounding points stay unchanged. Ground scans come from ForestScan in French Guiana.','https://essd.copernicus.org/articles/18/1243/2026/index.html'],['Field records','Species assignments, crop placement, human accounts, temperatures, humidity, litter moisture, disturbance clues and wildlife encounters are authored practice data. A clickable point is not a measured plant identification. The species map is not a live classifier.'],['Fire comparison','The group lab compares reconstructions against the same training world. It is not an operational forecast or a reproduction of the historical fire. The 2023 mapped scar is shown separately.'],['Lia','A fictional field ecologist with an illustrated portrait and green radio treatment. Calls use local authored answers and cited research, not a live language model. They are not quotations or an endorsement.'],['Images','Real reference photographs use a green terminal treatment. Credits and licenses remain linked. Photos can show a leaf, fruit or flower rather than a whole plant. Green treatments retain the source image license.']];
   for(const [title,text,url]of notes){body.append(el('h2',title),el('p',text));if(url)body.append(link('Source',url));}
+  body.append(el('h2','Species and forest density'),el('p','The catalogue contains 120 study species. Ninety-six tree names and trunk-size summaries come from GUYADIV v2 by Sabatier and colleagues, CC BY 4.0. Other entries use the sources below. The game places 14 to 18 study species in each patch. This is a selection for learning, not a complete census. The scans do not identify these species.'),link('GUYADIV inventory',INVENTORY_PROFILE.url));
+  body.append(el('p','Pink shows low vegetation. Blue shows vegetation below the canopy. Green shows the upper trees. The game places invasive grasses in the lower layers alongside native plants. Colour and height alone do not establish whether a plant is invasive or dry. Faint tree guides follow the scan’s woody returns. Shrub outlines and climber paths are illustrative study guides.'));
   if(referenceExperiments)for(const [title,text,url] of [
     ['Communities','Microsoft building footprints from Alter do Chao, Para. CDLA Permissive 2.0. Walls, game location and community story are illustrative.','https://github.com/microsoft/GlobalMLBuildingFootprints'],
     ['Audio','Richard Ranft / The British Library Board. Screaming piha recorded in Tambopata, Peru, in 1985. CC BY 4.0. The waveform comes from the actual recording.','https://commons.wikimedia.org/wiki/File:Screaming_Piha_(Lipaugus_vociferans)_(W1CDR0000523_BD5).ogg'],
@@ -266,7 +286,9 @@ function sources(){
   for(const sp of catalogue){body.append(el('h2',sp.name));for(const s of sp.sources){const p=el('p');p.append(link(s.title,s.url));body.append(p);}const photo=photos[sp.photoAssetId||sp.id];if(photo){const p=el('p');p.append(link(photo.author,photo.sourcePage),' - ',link(photo.license,photo.licenseUrl));body.append(p);}}
 }
 
-$('plot-notes-close').onclick=()=>{$('plot-notes').hidden=true;};$('book-open').onclick=()=>openBook();$('book-close').onclick=closeBook;$('book-back').onclick=()=>openBook();
+$('plot-notes-close').onclick=()=>{$('plot-notes').hidden=true;};$('book-open').onclick=()=>openBook();
+$('book-close').onclick=()=>{closeBook();if(view==='close'&&observations.kind()==='plants')showPlotNotes();};
+$('book-back').onclick=()=>{if(bookContext==='plot'){closeBook();showPlotNotes();}else openBook();};
 $('plant-sort').onchange=e=>{sort=e.target.value;renderBook();};
 $('find-plants').onclick=async()=>{sensorMap=[];mapped=[...mapPlants];closeBook();await camera('overhead');update();toast('Possible matches. The same species can grow under different moisture conditions.');};
 $('clear-map').onclick=()=>{sensorMap=[];mapped=[];mapPlants.clear();update();};
@@ -279,7 +301,8 @@ $('restart').onclick=()=>{if(confirm('Start again? This clears this browser’s 
 async function readJSON(path){const r=await fetch(path);if(!r.ok)throw Error(`Missing field file: ${path}`);return r.json();}
 try{
   const [meta,data,oldPhotos,newPhotos]=await Promise.all([forest.load(),readJSON('field-catalogue.json'),readJSON('plant-images.json'),readJSON('field-photos.json')]);
-  catalogue=data.species;humans=data.humanEvidence;photos={...oldPhotos.images,...newPhotos.photos};
+  catalogue=[...data.species,...ADDITIONAL_SPECIES];humans=data.humanEvidence;photos={...oldPhotos.images,...newPhotos.photos};
+  forest.setInventory(catalogue,WORLD);
   if(!Array.isArray(catalogue)||catalogue.length<13)throw Error('The plant catalogue is incomplete.');
   if(state.selected!==null)forest.selectPlot(state.selected);
   $('loading').hidden=true;update();

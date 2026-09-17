@@ -1,11 +1,12 @@
 # Ground detail inside the map
 
 The main expedition remains one map. Select a square and choose Close view.
-The camera moves closer and lower (distance 170, elevation 0.10). Modelled
+The camera moves closer at 45 degrees (distance 240). Modelled
 ground detail rises inside the square. Its airborne returns stay in place at
 38 percent opacity, retaining canopy context rather than emptying the square.
 All airborne geometry remains intact. The shader changes only the selected
-sector. The surrounding cloud stays visible and retains its original colours.
+sector. The surrounding cloud stays visible. Both views use pink for low
+returns, blue below 10 metres and green for the upper forest.
 Forest reverses the rise first, then moves back to the forest camera.
 
 There is no separate TLS scene or scan/field-team confirmation. Species names
@@ -14,10 +15,14 @@ paragraph alongside the map. It covers native/invasive status, fallen-leaf
 moisture, uses and frequency within this authored practice map. Frequency is
 not a conservation-status claim. Uses are editable in `field-catalogue.json`
 under `plainUse`, with the original longer records and sources retained.
+The catalogue now has 120 species, with 14 to 18 selected names per plot.
+Inventory-derived records live in `forest-flora.mjs` and `inventory-trees.mjs`.
+See [FOREST_FLORA.md](FOREST_FLORA.md) for density evidence and modelling limits.
 
 Plot observations appear automatically as short paragraphs in the side panel.
 The plot's scan, visit and displayed records are recorded together after the
-detail loads. Reading a species note also records its displayed use. The
+detail loads. Reading a species note records its displayed use when present;
+new inventory diameter summaries do not count as human uses. The
 existing missions and paper recall remain reachable without the removed buttons.
 
 ## A modelled neighbourhood, not geographic registration

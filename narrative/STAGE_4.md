@@ -1,5 +1,12 @@
 # Before the next fire
 
+Forest richness update, 17 September: 120 study species (115 native, five
+invasive), with 14 to 18 names per plot. Close view is now 45 degrees with
+faint stem guides and lower-layer blue/pink clues. GUYADIV supplies 96 tree
+names and measured diameter summaries. Dense geometry is still a fictional
+arrangement of measured TLS fragments, not a reconstruction of that inventory.
+See `stage4/FOREST_FLORA.md`. The four missions and fire rules are unchanged.
+
 Current forest iteration, 17 September: `/expedition.html` is the default.
 Communities, Audio, Camera and the sensor grant are parked. Close view now grows
 a dense modelled neighbourhood inside the selected square and retains some

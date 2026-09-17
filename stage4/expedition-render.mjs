@@ -1,6 +1,8 @@
 import { ExplorationForest } from './explore-render.mjs';
 import { Forest } from './render.mjs';
 import { forestNeighbourhood } from './forest-neighbourhood.mjs';
+import { specimenAnchors, segmentsForPaths, specimenGuide } from './forest-structure.mjs';
+import { plantLayer, LAYERS } from './forest-flora.mjs';
 const T=globalThis.THREE;
 const centre=id=>({x:(id%6)*150-375,z:Math.floor(id/6)*150-375});
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -13,6 +15,8 @@ export class ExpeditionForest extends ExplorationForest {
     this.freeNavigation=true;this.detailBlend=0;this.detailSector=-1;
     this.transition=null;this.viewToken=0;this.host.classList.add('inline-detail');
     this.detailUniform={value:0};this.sectorUniform={value:-1};
+    this.flora=new Map();this.plotInventory=[];this.anchorMap=new Map();this.focusedSpecimen=null;
+    this.structureStyle=new URLSearchParams(location.search).get('structure')||'soft';
     document.addEventListener('keydown',e=>{
       if(!['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]')||this.tlsActive)return;
       e.preventDefault();
@@ -27,12 +31,55 @@ export class ExpeditionForest extends ExplorationForest {
       material.uniforms.detailBlend=this.detailUniform;material.uniforms.detailSector=this.sectorUniform;
       material.vertexShader='uniform float detailBlend,detailSector;\n'+material.vertexShader
         .replace('if(selected>=0. && sector!=selected){opacity*=.76;}','')
+        .replace('vec3(.18,.44,.35)','vec3(.16,.47,.66)')
         .replace('vec4 mv=modelViewMatrix*vec4(position,1.);','vec3 p=position; if(sector==detailSector){opacity*=1.-detailBlend*.62;} vec4 mv=modelViewMatrix*vec4(p,1.);');
       material.needsUpdate=true;
     }
     return meta;
   }
   setPlots(){super.setPlots([]);}
+  setInventory(catalogue,plots){this.flora=new Map(catalogue.map(s=>[s.id,s]));this.plotInventory=plots;}
+  setSpecimens(entries=[]){
+    this.allSpecimens=entries;
+    const max=this.width<=700?3:6,chosen=[];
+    for(const layer of ['ground','understory','canopy']){
+      const entry=entries.find(e=>plantLayer(this.flora?.get(e.id)||e)===layer);if(entry)chosen.push(entry);
+    }
+    for(const entry of entries)if(chosen.length<max&&!chosen.includes(entry))chosen.push(entry);
+    const focus=entries.find(e=>e.id===this.focusedSpecimen);
+    if(focus&&!chosen.includes(focus)){if(chosen.length>=max)chosen.pop();chosen.push(focus);}
+    super.setSpecimens(chosen);
+  }
+  _specimenPosition(entry,index){return this.anchorMap?.get(entry.id)?.position||super._specimenPosition(entry,index);}
+  _renderLabels(){
+    super._renderLabels();
+    for(const b of this.exploreLabels.children){
+      const id=b.dataset.specimen;if(!id)continue;
+      b.dataset.layer=this.anchorMap?.get(id)?.layer||'canopy';
+      b.classList.toggle('focused',id===this.focusedSpecimen);
+      b.onpointerenter=()=>this.focusSpecimen(id);b.onfocus=()=>this.focusSpecimen(id);
+    }
+  }
+  _lineCloud(values,opacity,colour){
+    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(values,3));
+    const material=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{blend:this.detailUniform,opacity:{value:opacity},tint:{value:new T.Color(colour)}},
+      vertexShader:'uniform float blend; void main(){vec3 p=position;p.y*=blend;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}',
+      fragmentShader:'uniform float blend,opacity; uniform vec3 tint; void main(){gl_FragColor=vec4(tint,opacity*blend);}'});
+    const lines=new T.LineSegments(geometry,material);lines.frustumCulled=false;return lines;
+  }
+  focusSpecimen(id){
+    if(!this.tlsActive||id===this.focusedSpecimen)return;
+    this.focusedSpecimen=id;
+    if(this.focusCloud){this.tlsGroup.remove(this.focusCloud);this.focusCloud.geometry.dispose();this.focusCloud.material.dispose();this.focusCloud=null;}
+    const record=this.anchorMap.get(id);
+    this.focusSegments=specimenGuide(record,this.detailPositions,this.detailPaths||[]);
+    if(record&&this.structureStyle!=='points'){
+      this.focusCloud=this._lineCloud(this.focusSegments,.62,LAYERS[record.layer].colour);this.tlsGroup.add(this.focusCloud);
+    }
+    this.cpuKey=null;
+    if(![...this.exploreLabels.children].some(b=>b.dataset.specimen===id))this.setSpecimens(this.allSpecimens||[]);
+    for(const b of this.exploreLabels.children)b.classList.toggle('focused',b.dataset.specimen===id);
+  }
   async _loadTLSManifest(){
     if(this.tlsManifest)return this.tlsManifest;
     if(!this.tlsManifestPromise)this.tlsManifestPromise=fetch('assets/tls-expanded.json').then(r=>{if(!r.ok)throw Error('The ground scan could not load.');return r.json();}).then(m=>{if(!m.plots?.length)throw Error('No ground scans were found.');return this.tlsManifest=m;}).catch(e=>{this.tlsManifestPromise=null;throw e;});
@@ -57,7 +104,7 @@ export class ExpeditionForest extends ExplorationForest {
     if(this.cameraMotion){this.cameraMotion.resolve(false);this.cameraMotion=null;}
     const from={target:this.target.clone(),distance:this.distance,angle:this.angle,elevation:this.elevation};
     Forest.prototype.preset.call(this,kind);
-    if(kind==='ground'){this.goal.distance=170;this.goal.elevation=.10;}
+    if(kind==='ground'){this.goal.distance=240;this.goal.elevation=Math.PI/4;}
     if(kind==='ground'&&this.camera.aspect<1)this.goal.distance/=this.camera.aspect;
     if(this.reducedMotion){this.distance=this.goal.distance;return Promise.resolve(true);}
     return new Promise(resolve=>{this.cameraMotion={from,to:{...this.goal,target:this.goal.target.clone()},start:performance.now(),duration:900,resolve};});
@@ -92,24 +139,20 @@ export class ExpeditionForest extends ExplorationForest {
     for(let n=0;n<positions.length;n+=3){positions[n]+=c.x;positions[n+2]+=c.z;}
     this.detailKinds=model.wood||new Float32Array(count);
     this.detailPositions=positions;
-    this.tlsAnchors=[];
-    // Labels are authored learning examples within the modelled vegetation,
-    // not species classifications of the source scan.
-    this.tlsAnchors=[[-42,30],[0,42],[42,24]].map(([x,z],i)=>{
-      let best=Infinity,anchor=this.tlsAnchors[i]||[c.x,2,c.z];
-      for(let n=0;n<count;n+=5){const h=positions[n*3+1];if(h<.3||h>10)continue;const d=(positions[n*3]-c.x-x)**2+(positions[n*3+2]-c.z-z)**2;
-        if(d<best){best=d;anchor=Array.from(positions.subarray(n*3,n*3+3));}}
-      return anchor;
-    });
+    this.detailPaths=(model.paths||[]).map(path=>path.map(p=>[p[0]+c.x,p[1],p[2]+c.z]));
+    this.stemSegments=segmentsForPaths(this.detailPaths);this.focusedSpecimen=null;this.focusSegments=null;
+    const species=(this.plotInventory[this.plotId]?.speciesIds||[]).map(id=>this.flora.get(id)).filter(Boolean);
+    this.anchorMap=specimenAnchors(positions,species,c);
+    this.tlsAnchors=[...this.anchorMap.values()].map(a=>a.position);
     const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(positions,3));geometry.setAttribute('wood',new T.BufferAttribute(this.detailKinds,1));
     const material=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{blend:this.detailUniform},
       vertexShader:`uniform float blend; attribute float wood; varying vec3 colour; varying float alpha;
         void main(){vec3 p=position;p.y*=blend;float h=position.y;
-        colour=wood>.5?vec3(.72,.91,.79):mix(vec3(.22,.48,.35),vec3(.51,.78,.64),smoothstep(1.,25.,h));
-        if(h<1.2)colour=mix(vec3(.58,.30,.43),colour,h/1.2);
+        colour=h<2.?vec3(.78,.31,.52):h<10.?vec3(.25,.60,.72):mix(vec3(.28,.54,.39),vec3(.60,.84,.66),smoothstep(10.,32.,h));
+        if(wood>.5)colour=mix(colour,vec3(.75,.92,.83),.55);
         vec4 mv=modelViewMatrix*vec4(p,1.);
-        float depth=exp(-max(0.,-mv.z-60.)*.004);
-        alpha=blend*(wood>.5?.95:.62)*depth;gl_Position=projectionMatrix*mv;gl_PointSize=clamp((wood>.5?300.:240.)/(-mv.z),1.,2.5);}`,
+        float depth=exp(-max(0.,-mv.z-60.)*.002);
+        alpha=blend*.90*depth;gl_Position=projectionMatrix*mv;gl_PointSize=clamp((wood>.5?350.:410.)/(-mv.z),1.3,3.);}`,
       fragmentShader:`varying vec3 colour; varying float alpha;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;gl_FragColor=vec4(colour,alpha*(1.-smoothstep(.18,.5,d)));}`});
     this.detailCloud=new T.Points(geometry,material);this.detailCloud.frustumCulled=false;
     if(this.observationPoints){
@@ -117,6 +160,9 @@ export class ExpeditionForest extends ExplorationForest {
       geometry.setAttribute('position',new T.BufferAttribute(this.detailPositions,3));geometry.setAttribute('wood',new T.BufferAttribute(this.detailKinds,1));
     }
     this.tlsGroup.clear();this.tlsGroup.add(this.detailCloud);this.tlsGroup.visible=true;
+    if(this.stemSegments.length&&this.structureStyle!=='points'){
+      this.stemCloud=this._lineCloud(this.stemSegments,this.structureStyle==='strong'?.5:.12,'#a6d5bb');this.tlsGroup.add(this.stemCloud);
+    }
     if(this.quality==='low'){const n=geometry.attributes.position.count;geometry.setIndex(Array.from({length:Math.ceil(n/2)},(_,i)=>i*2));}
     if(this.cloud)this.cloud.visible=true;if(this.selectionMesh)this.selectionMesh.visible=true;
     this.pointer.hidden=true;this._updateExploreVisibility();
@@ -127,6 +173,8 @@ export class ExpeditionForest extends ExplorationForest {
     this.detailBlend=0;if(this.detailUniform)this.detailUniform.value=0;
     if(this.sectorUniform)this.sectorUniform.value=-1;this.detailSector=-1;
     if(this.detailCloud){this.detailCloud.geometry.dispose();this.detailCloud.material.dispose();this.detailCloud=null;}
+    for(const key of ['stemCloud','focusCloud'])if(this[key]){this[key].geometry.dispose();this[key].material.dispose();this[key]=null;}
+    this.stemSegments=null;this.focusSegments=null;this.detailPaths=[];this.anchorMap.clear();this.focusedSpecimen=null;
     this.detailPositions=null;this.detailKinds=null;super._leaveTLS();
   }
   pick(event){
@@ -168,10 +216,13 @@ export class ExpeditionForest extends ExplorationForest {
     const ctx=this.fallbackCanvas.getContext('2d'),w=this.width,h=this.height,v=new T.Vector3();ctx.clearRect(0,0,w,h);
     const draw=(x,y,z,alpha,size)=>{v.set(x,y,z).project(this.camera);if(Math.abs(v.x)>1||Math.abs(v.y)>1||v.z>1||v.z< -1)return;ctx.globalAlpha=alpha;ctx.fillRect((v.x*.5+.5)*w,(-v.y*.5+.5)*h,size,size);};
     const src=this.airborneSource,step=Math.max(1,Math.ceil(src.length/4/22000));
-    ctx.fillStyle='#8fc8b0';
-    for(let n=0;n<src.length;n+=4*step){const x=src[n],z=-src[n+1],y=src[n+2],sector=Math.floor((z+450)/150)*6+Math.floor((x+450)/150),blend=sector===this.detailSector?this.detailBlend:0;draw(x,y,z,.66*(1-blend*.62),1.5);}
+    for(let n=0;n<src.length;n+=4*step){const x=src[n],z=-src[n+1],y=src[n+2],sector=Math.floor((z+450)/150)*6+Math.floor((x+450)/150),blend=sector===this.detailSector?this.detailBlend:0;ctx.fillStyle=y<2?'#c75085':y<10?'#2978a8':'#8fc8b0';draw(x,y,z,.66*(1-blend*.62),1.5);}
     if(this.detailPositions){const ps=this.detailPositions,skip=Math.max(1,Math.ceil(ps.length/3/60000));
-      for(let n=0;n<ps.length;n+=3*skip){const wood=this.detailKinds?.[n/3]>.5,h=ps[n+1];ctx.fillStyle=wood?'#dbeeb0':h<1.2?'#955770':h<10?'#71b48b':'#b8edcc';draw(ps[n],h*this.detailBlend,ps[n+2],(wood?.95:.65)*this.detailBlend,1.5);}}
+      for(let n=0;n<ps.length;n+=3*skip){const wood=this.detailKinds?.[n/3]>.5,h=ps[n+1];ctx.fillStyle=wood?'#b4dcca':h<2?'#c75085':h<10?'#519ebc':'#99d6aa';draw(ps[n],h*this.detailBlend,ps[n+2],(wood?.95:.65)*this.detailBlend,1.5);}}
+    if(this.structureStyle!=='points')for(const [segments,opacity,colour] of [[this.stemSegments,.12,'#a6d5bb'],[this.focusSegments,.62,LAYERS[this.anchorMap.get(this.focusedSpecimen)?.layer||'canopy'].colour]]){
+      if(!segments)continue;ctx.strokeStyle=colour;ctx.globalAlpha=opacity*this.detailBlend;ctx.lineWidth=1;ctx.beginPath();
+      for(let n=0;n<segments.length;n+=6){const a=new T.Vector3(segments[n],segments[n+1]*this.detailBlend,segments[n+2]).project(this.camera),b=new T.Vector3(segments[n+3],segments[n+4]*this.detailBlend,segments[n+5]).project(this.camera);if(a.z>1||b.z>1||a.z< -1||b.z< -1)continue;ctx.moveTo((a.x*.5+.5)*w,(-a.y*.5+.5)*h);ctx.lineTo((b.x*.5+.5)*w,(-b.y*.5+.5)*h);}ctx.stroke();
+    }
     ctx.globalAlpha=1;
     if(this.selected>=0){const c=centre(this.selected);ctx.strokeStyle='#ddbf78';ctx.lineWidth=1;ctx.beginPath();[[-75,-75],[75,-75],[75,75],[-75,75],[-75,-75]].forEach(([x,z],i)=>{v.set(c.x+x,3,c.z+z).project(this.camera);const px=(v.x*.5+.5)*w,py=(-v.y*.5+.5)*h;i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
   }
@@ -185,6 +236,6 @@ export class ExpeditionForest extends ExplorationForest {
     const detail=(this.detailPositions?.length||0)/3,air=this.airborneSource?.length/4||0;
     const airDrawn=this.fallback?(air?Math.ceil(air/Math.ceil(air/22000)):0):(this.geometry?.index?.count||this.geometry?.attributes.position.count||0);
     const detailDrawn=this.fallback?(detail?Math.ceil(detail/Math.ceil(detail/60000)):0):(this.detailCloud?.geometry.index?.count||detail);
-    return {...super.performance(),points:airDrawn+detailDrawn,airborneDrawn:airDrawn,detailDrawn,modelledDetail:!!(this.tlsActive&&!this.observationPoints),inlineTLS:true,detailBlend:this.detailBlend,detailSector:this.detailSector,airborneVisible:this.fallback||!!this.cloud?.visible,detailPoints:detail,cameraTarget:this.target?.toArray(),distance:this.distance,transition:!!this.transition};
+    return {...super.performance(),points:airDrawn+detailDrawn,airborneDrawn:airDrawn,detailDrawn,modelledDetail:!!(this.tlsActive&&!this.observationPoints),inlineTLS:true,detailBlend:this.detailBlend,detailSector:this.detailSector,airborneVisible:this.fallback||!!this.cloud?.visible,detailPoints:detail,cameraTarget:this.target?.toArray(),distance:this.distance,elevation:this.elevation,stemGuides:this.detailPaths?.length||0,focusGuide:this.focusedSpecimen,plantAnchors:[...this.anchorMap.values()].map(a=>({id:a.id,layer:a.layer,height:a.position[1]})),transition:!!this.transition};
   }
 }

@@ -34,11 +34,11 @@ class ExpeditionPlay(unittest.TestCase):
   if self.page.evaluate('pyroceneDiagnostics().view')!='close':self.button('Close view')
   self.page.wait_for_function('(id)=>pyroceneDiagnostics().detailSector===id && pyroceneDiagnostics().detailBlend===1',arg=id)
   expect(self.page.locator('[data-view=forest]')).to_be_enabled()
-  expect(self.page.locator('[data-specimen]')).to_have_count(3)
+  expect(self.page.locator('[data-specimen]')).to_have_count(3 if self.page.viewport_size['width']<=700 else 6)
  def plants(self):
   names=self.page.locator('[data-specimen]').all_text_contents()
   for name in names:
-   self.page.get_by_role('button',name=name,exact=True).click()
+   self.page.locator('[data-specimen]').filter(has_text=name).click()
    expect(self.page.locator('.plain-note')).to_be_visible()
    self.page.locator('#book-close').click()
   return names
@@ -68,7 +68,7 @@ class ExpeditionPlay(unittest.TestCase):
    if self.page.locator('#radio').is_visible():self.button('Explore')
    findings=[]
    for id in [13,0,1]:self.visit(id);findings.extend(self.plants())
-   self.button('Radio - report ready' if mode!='collection' else 'Radio');self.shot('variant-'+mode)
+   self.page.locator('#radio-open').click();self.shot('variant-'+mode)
    results.append({'mode':mode,'findings':findings,'radio':self.page.locator('#radio').inner_text()})
    # Isolate the next rules experiment through the visible reset action.
    self.button('Back to the forest');self.button('More');self.button('Settings');self.page.once('dialog',lambda d:d.accept());self.button('Start a new exploration');self.page.wait_for_selector('#loading',state='hidden')
@@ -86,11 +86,11 @@ class ExpeditionPlay(unittest.TestCase):
   self.start();self.button('Overhead');expect(self.page.locator('[data-view="overhead"]')).to_be_enabled()
   self.page.locator('#landscape canvas').click(position={'x':700,'y':420})
   expect(self.page.locator('#place-context')).to_be_visible();self.button('Close view')
-  expect(self.page.locator('[data-specimen]')).to_have_count(3);expect(self.page.locator('[data-view=forest]')).to_be_enabled();self.plants();self.shot('25-free-world-pick')
+  expect(self.page.locator('[data-specimen]')).to_have_count(6);expect(self.page.locator('[data-view=forest]')).to_be_enabled();self.plants();self.shot('25-free-world-pick')
   b=self.pw.chromium.launch(headless=True,args=['--disable-webgl']);p=b.new_page(viewport={'width':1280,'height':720});p.on('pageerror',lambda e:self.errors.append(str(e)))
   p.goto(self.base+'/expedition.html');p.wait_for_selector('#loading',state='hidden')
   for name in ['Give me a hint','Show me a place','Close view']:p.get_by_role('button',name=name,exact=True).click()
-  expect(p.locator('[data-specimen]')).to_have_count(3);expect(p.locator('[data-view=forest]')).to_be_enabled();p.locator('[data-specimen]').first.click()
+  expect(p.locator('[data-specimen]')).to_have_count(6);expect(p.locator('[data-view=forest]')).to_be_enabled();p.locator('[data-specimen]').first.click()
   self.assertIn('Marandu grass',p.locator('#plant-guide').inner_text());self.assertTrue(p.evaluate('pyroceneDiagnostics().fallback'));p.screenshot(path=str(QA/'26-ground-fallback.png'));b.close()
  def test_sensor_grant_temporal_compare_and_team_pool(self):
   self.start(references=True);self.button('More');self.button('Sensor network');self.page.locator('#sensor-team').fill('Camera team');self.button('Camera traps')

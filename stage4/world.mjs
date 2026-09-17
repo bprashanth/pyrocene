@@ -1,9 +1,10 @@
 import { SECTORS } from './model.mjs';
+import { ADDITIONAL_SPECIES, INVASIVE_IDS, expandPlotSpecies } from './forest-flora.mjs';
 
 // A declared training world on the film's measured footprint. These values
 // are NOT inferred from LiDAR or attributed to real landholders.
-export const WORLD_VERSION = 'amazon-field-course-1';
-export const TAXA = ['urochloa_brizantha','megathyrsus_maximus','urochloa_decumbens','cecropia_obtusa','phenakospermum_guyannense','oenocarpus_bacaba','nephrolepis_biserrata','bertholletia_excelsa','euterpe_oleracea','mauritia_flexuosa','hevea_brasiliensis','theobroma_grandiflorum','manihot_esculenta','carapa_guianensis','copaifera_reticulata','paullinia_cupana','bactris_gasipaes','astrocaryum_vulgare'];
+export const WORLD_VERSION = 'amazon-field-course-2';
+export const TAXA = ['urochloa_brizantha','megathyrsus_maximus','urochloa_decumbens','cecropia_obtusa','phenakospermum_guyannense','oenocarpus_bacaba','nephrolepis_biserrata','bertholletia_excelsa','euterpe_oleracea','mauritia_flexuosa','hevea_brasiliensis','theobroma_grandiflorum','manihot_esculenta','carapa_guianensis','copaifera_reticulata','paullinia_cupana','bactris_gasipaes','astrocaryum_vulgare',...ADDITIONAL_SPECIES.map(s=>s.id)];
 const species = {
   0:[7,13,14],1:[5,6,9],2:[7,10,14],3:[3,4,6],
   6:[5,8,9],7:[7,13,10],8:[3,4,6],9:[10,11,14],10:[3,4,17],
@@ -20,6 +21,7 @@ const logging = new Set([3,15,22]);
 const treefall = new Set([10,14,20]);
 const people = new Set([2,7,16,23,29,32,33,34,35]);
 const refuges = new Set([0,1,2,6,7,16,21,23,29]);
+const inventories=Object.fromEntries(Object.entries(species).map(([id,ids],n)=>[id,expandPlotSpecies(Number(id),ids.map(i=>TAXA[i]),n)]));
 export const WORLD = SECTORS.map(s => ({
   id:s.id, active:s.active,
   fuel:s.active ? dry.has(s.id) ? .92 : damp.has(s.id) ? .55 : .65 : 0,
@@ -27,8 +29,8 @@ export const WORLD = SECTORS.map(s => ({
   exposure:exposed.has(s.id) ? .85 : .22,
   ignition:s.id === 33,
   disturbance:burns.has(s.id) ? 'fire' : logging.has(s.id) ? 'logging' : treefall.has(s.id) ? 'treefall' : null,
-  invasive:(species[s.id] || []).some(n=>n<3), people:people.has(s.id), habitat:refuges.has(s.id),
-  speciesIds:(species[s.id] || []).map(n=>TAXA[n]),
+  invasive:(inventories[s.id] || []).some(id=>INVASIVE_IDS.has(id)), people:people.has(s.id), habitat:refuges.has(s.id),
+  speciesIds:inventories[s.id] || [],
 }));
 export const ACTIVE = WORLD.filter(c=>c.active);
 export const coordinate = id => `${String.fromCharCode(65+Math.floor(id/6))}${id%6+1}`;

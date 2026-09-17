@@ -7,6 +7,9 @@ selected square, with direct species labels and short side notes. Forest
 reverses the transition. See [INLINE_DETAIL.md](INLINE_DETAIL.md).
 The current close view is a dense, fictional neighbourhood assembled from
 measured scan fragments. It replaces the rejected three-tree arrangement.
+The catalogue has 120 species, with 14 to 18 selected study names per square.
+Close view uses a 45-degree camera, height colours and faint structural guides.
+See [FOREST_FLORA.md](FOREST_FLORA.md) for inventory evidence and model limits.
 Communities, audio, camera traps and sensor grants are parked, with their
 experiments retained behind `?references=1`. See [REFERENCE_LAYERS.md](REFERENCE_LAYERS.md).
 Hardware is confirmed as one laptop per team. Teams explore together, then

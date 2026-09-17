@@ -30,7 +30,7 @@ class InlineDetail(unittest.TestCase):
   expect(self.page.locator('[data-view=close]')).to_be_enabled()
  def enter(self):
   self.button('Close view');self.page.wait_for_function('pyroceneDiagnostics().detailBlend===1')
-  expect(self.page.locator('[data-specimen]')).to_have_count(3)
+  expect(self.page.locator('[data-specimen]')).to_have_count(3 if self.page.viewport_size['width']<=700 else 6)
   expect(self.page.locator('[data-view=forest]')).to_be_enabled()
  def test_close_labels_notes_and_reverse_in_same_scene(self):
   self.start();self.enter()
@@ -39,7 +39,11 @@ class InlineDetail(unittest.TestCase):
   self.assertEqual(d['points'],d['detailDrawn']+d['airborneDrawn'])
   self.assertEqual(self.page.locator('#observation-kind').count(),0)
   expect(self.page.locator('#network-open')).to_be_hidden()
-  self.assertAlmostEqual(d['distance'],170,delta=1)
+  self.assertAlmostEqual(d['distance'],240,delta=1)
+  self.assertAlmostEqual(d['elevation'],.785398,delta=.001)
+  self.assertGreater(d['stemGuides'],100)
+  self.assertEqual(self.page.locator('[data-plant]').count(),17)
+  self.assertTrue(all(p['height']<8 for p in d['plantAnchors'] if p['id'] in ['urochloa_brizantha','megathyrsus_maximus','melinis_minutiflora']))
   self.assertAlmostEqual(d['cameraTarget'][0],-225,delta=1)
   self.assertTrue(self.page.locator('#plot-notes').is_visible())
   self.assertEqual(self.page.locator('#inspect,#notes-open,#field-action').count(),0)
@@ -53,7 +57,7 @@ class InlineDetail(unittest.TestCase):
   self.page.wait_for_timeout(350);self.page.screenshot(path=str(QA/'inline-plant-note.png'))
   self.button('Forest');self.page.wait_for_timeout(220)
   d=self.page.evaluate('pyroceneDiagnostics()');self.assertTrue(d['tls']);self.assertGreater(d['detailBlend'],0);self.assertLess(d['detailBlend'],1)
-  self.assertAlmostEqual(d['distance'],170,delta=1)
+  self.assertAlmostEqual(d['distance'],240,delta=1)
   expect(self.page.locator('[data-view=close]')).to_be_enabled(timeout=10000)
   d=self.page.evaluate('pyroceneDiagnostics()');self.assertFalse(d['tls']);self.assertEqual(d['detailBlend'],0);self.assertGreater(d['distance'],1600)
   self.assertFalse(self.page.locator('#plot-notes').is_visible())
@@ -98,9 +102,32 @@ class InlineDetail(unittest.TestCase):
  def test_phone_labels_are_clickable_above_notes(self):
   self.page.set_viewport_size({'width':390,'height':844});self.page.emulate_media(reduced_motion='reduce');self.start();self.enter()
   for name in self.page.locator('[data-specimen]').all_text_contents():
-   self.page.get_by_role('button',name=name,exact=True).click();expect(self.page.locator('#plant-guide')).to_be_visible();self.page.locator('#book-close').click()
+   self.page.locator('[data-specimen]').filter(has_text=name).click();expect(self.page.locator('#plant-guide')).to_be_visible();self.page.locator('#book-close').click()
   self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),390)
   self.page.screenshot(path=str(QA/'inline-phone.png'))
+ def test_full_inventory_and_back_on_laptop_and_phone(self):
+  self.page.emulate_media(reduced_motion='reduce');self.start();self.enter()
+  ids=self.page.locator('[data-plant]').evaluate_all('(buttons)=>buttons.map(b=>b.dataset.plant)')
+  for width in [1440,390]:
+   self.page.set_viewport_size({'width':width,'height':900 if width==1440 else 844})
+   for id in ids:
+    self.page.locator('[data-plant="'+id+'"]').click()
+    expect(self.page.locator('#plant-guide')).to_be_visible()
+    self.assertEqual(self.page.evaluate('pyroceneDiagnostics().focusGuide'),id)
+    expect(self.page.locator('[data-specimen="'+id+'"]')).to_have_count(1)
+    self.page.locator('#book-back').click()
+    expect(self.page.locator('[data-plant]')).to_have_count(17)
+   self.page.screenshot(path=str(QA/f'inventory-{width}.png'))
+  self.button('Forest');expect(self.page.locator('[data-view=close]')).to_be_enabled()
+  self.assertEqual(self.page.evaluate('pyroceneDiagnostics().stemGuides'),0)
+ def test_radio_can_discuss_inventory_species_without_inventing_a_use(self):
+  self.page.emulate_media(reduced_motion='reduce');self.start();self.enter()
+  self.page.locator('[data-plant=eugenia_sinemariensis]').click()
+  self.page.locator('#book-back').click();self.page.locator('#radio-open').click()
+  self.button('Discuss a finding');self.page.locator('#field-question').fill('Eugenia sinemariensis')
+  self.button('Ask');expect(self.page.locator('.reply')).to_contain_text('GUYADIV')
+  self.assertNotIn('undefined',self.page.locator('.reply').inner_text())
+  self.assertNotIn('eugenia_sinemariensis',self.page.evaluate('JSON.parse(localStorage.getItem("pyrocene-expedition-v3")).uses'))
  def test_no_webgl_still_drags_zooms_and_opens_inline_detail(self):
   browser=self.p.chromium.launch(headless=True,args=['--disable-webgl'])
   try:

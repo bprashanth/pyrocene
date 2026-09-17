@@ -42,7 +42,7 @@ class Observations(unittest.TestCase):
   self.page.get_by_role('button',name='Forest',exact=True).click();self.page.wait_for_function('pyroceneDiagnostics().detailBlend===0&&!pyroceneDiagnostics().tls')
   self.page.locator('#observation-kind').select_option('plants');expect(self.page.locator('[data-view=close]')).to_be_enabled()
   self.page.get_by_role('button',name='Close view',exact=True).click();self.page.wait_for_function('pyroceneDiagnostics().detailBlend===1')
-  expect(self.page.locator('[data-specimen]')).to_have_count(3)
+  expect(self.page.locator('[data-specimen]')).to_have_count(6)
  def test_camera_each_animal_and_no_false_plant_progress(self):
   self.start();self.layer('camera')
   for id,name in [(7,'Lowland tapir'),(21,'Jaguar'),(0,'White-lipped peccary')]:

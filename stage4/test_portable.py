@@ -80,7 +80,7 @@ class PortablePlay(unittest.TestCase):
                     page.wait_for_selector('#loading', state='hidden')
                     for label in ['Give me a hint','Show me a place','Close view']:
                         page.get_by_role('button',name=label,exact=True).click()
-                    expect(page.locator('[data-specimen]')).to_have_count(3)
+                    expect(page.locator('[data-specimen]')).to_have_count(6)
                     expect(page.locator('[data-view=forest]')).to_be_enabled()
                     page.locator('[data-specimen]').first.click()
                     expect(page.locator('.plain-note')).to_be_visible()

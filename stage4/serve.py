@@ -42,6 +42,7 @@ APP_FILES = APP_FILES | {"field-network.mjs", "living-landscape.mjs"}
 APP_FILES |= {'field-media.mjs'}
 APP_FILES |= {'observation-layers.mjs'}
 APP_FILES |= {'forest-neighbourhood.mjs'}
+APP_FILES |= {'forest-flora.mjs', 'inventory-trees.mjs', 'forest-structure.mjs'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(
