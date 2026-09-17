@@ -55,6 +55,13 @@ class Room:
         self.replay: list = []        # the map, round by round, for the walk-through
         self.replay_at = 0
         self.replaying = False        # a night of the replay is on screen now
+        # The two boards either side of the change just shown, and which one is
+        # up. The pulsing overlay that used to hint at where lantana was about
+        # to go did not always match where it went, which is worse than no hint
+        # at all. This replaces it: the game master flips between before and
+        # after and says what changed.
+        self.pair = None
+        self.pair_at = "after"
         # Bumped whenever the room starts over. Animation threads carry the
         # value they began with and stop as soon as it changes, so a reset in
         # the middle of a replay does not leave the old one painting frames over
@@ -94,7 +101,8 @@ class Room:
         d["step"] = self.game.step
         d["steps_left"] = max(0, len(self.steps) - self.cursor)
         cur = self.steps[self.cursor] if self.cursor < len(self.steps) else None
-        d["current"] = {"title": cur["title"], "text": cur["text"]} if cur else None
+        d["current"] = ({"title": cur["title"], "text": cur["text"],
+                         "note": cur.get("note") or ""} if cur else None)
         d["actions"] = list(ACTIONS)
         d["fast"] = FAST
         d["style"] = STYLE
@@ -105,6 +113,8 @@ class Room:
         d["replay_at"] = self.replay_at
         d["replay_total"] = len(self.replay)
         d["replaying"] = self.replaying
+        d["can_flip"] = self.pair is not None
+        d["showing"] = self.pair_at
         d["finale"] = self.game.finale
         d["reprieve"] = self.game.reprieve
         return d
@@ -196,7 +206,23 @@ class Room:
         self.epoch += 1
         self.begin(g.intro_steps())
 
+    @staticmethod
+    def _differ(a: dict, b: dict) -> bool:
+        ca = {c["index"]: (c["cover"], c.get("stage", 0), c.get("fireline")) for c in a["cells"]}
+        cb = {c["index"]: (c["cover"], c.get("stage", 0), c.get("fireline")) for c in b["cells"]}
+        return ca != cb
+
+    def flip(self):
+        """Put the other side of the last change on the projector."""
+        if not self.pair:
+            return
+        self.pair_at = "before" if self.pair_at == "after" else "after"
+        view = self.pair[0 if self.pair_at == "before" else 1]
+        self.paint(self.draw_frame(self.game._frame("settle", "", view)), kind="map")
+        self.broadcast_state()
+
     def begin(self, steps: list):
+        self.pair = None
         self.steps = steps
         self.cursor = 0
         if not steps:
@@ -267,6 +293,13 @@ class Room:
             with self.lock:
                 if self.epoch != epoch:
                     return
+                b, a = step.get("before"), step.get("after")
+                # Only worth offering when the two boards actually differ. A
+                # night where nothing grew would give the game master a button
+                # that changes nothing on screen.
+                if b is not None and a is not None and self._differ(b, a):
+                    self.pair = (b, a)
+                    self.pair_at = "after"
                 self.cursor += 1
                 if self.cursor < len(self.steps):
                     self.show_card()
@@ -415,6 +448,14 @@ class Handler(BaseHTTPRequestHandler):
         qs = urllib.parse.parse_qs(u.query)
         p = u.path
         if p in ("/", "/index.html"):
+            # The player link off the index carries the stage too, so handing
+            # out one address puts the room in the right game.
+            want = (qs.get("stage") or [None])[0]
+            if want in ("1", "2") and int(want) != ROOM.stage and ROOM.game.phase == "lobby":
+                ROOM.stage = int(want)
+                ROOM.game = Game(seed=None, config={"stage": ROOM.stage})
+                ROOM.epoch += 1
+                ROOM.show_map()
             return self._file("phone.html", "text/html; charset=utf-8")
         if p == "/start":
             # The films run on their own port because the masters are hundreds
@@ -423,6 +464,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._file("start.html", "text/html; charset=utf-8",
                               {"__FILMS_PORT__": FILMS_PORT, "__STAGE4_PORT__": STAGE4_PORT})
         if p == "/gm":
+            # /gm?stage=2 puts the room straight into stage 2, so an evening can
+            # skip stage 1 entirely. Only before a game starts: switching under
+            # a game in progress would throw the board away.
+            want = (qs.get("stage") or [None])[0]
+            if want in ("1", "2") and int(want) != ROOM.stage and ROOM.game.phase == "lobby":
+                ROOM.stage = int(want)
+                ROOM.game = Game(seed=None, config={"stage": ROOM.stage})
+                ROOM.epoch += 1
+                ROOM.show_map()
             return self._file("gm.html", "text/html; charset=utf-8")
         if p == "/projector":
             return self._file("projector.html", "text/html; charset=utf-8")
@@ -450,6 +500,7 @@ class Handler(BaseHTTPRequestHandler):
             out = []
             for st in steps:
                 out.append({"key": st["key"], "title": st["title"], "text": st["text"],
+                            "note": st.get("note") or "",
                             "cells": st["cells"],
                             "kinds": [b["kind"] for b in st["beats"]],
                             "card": ROOM.draw_card(st),
@@ -541,6 +592,11 @@ class Handler(BaseHTTPRequestHandler):
                     n = int(body.get("n") or (g.cfg["max_rounds"] + delta))
                     g.set_max_rounds(n)
                     ROOM.broadcast_state()
+                    return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/flip":
+                    if ROOM.mode == "playing":
+                        return self._json(409, {"error": "finish what is on screen first"})
+                    ROOM.flip()
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/skip":
                     if ROOM.mode == "playing":

@@ -274,7 +274,7 @@ class J03_Eliminations(unittest.TestCase):
         api("/api/gm/eliminate", {"id": r["lantana"][0]})
         st = play_vote("hunt")
         v = step(st, "vote")
-        self.assertIn("bare ground", v["text"])
+        self.assertIn("bare ground", v["note"])
         self.assertGreater(cover_counts()["bare"], before["bare"],
                            "an eliminated lantana patch should leave bare ground")
 
@@ -283,7 +283,7 @@ class J03_Eliminations(unittest.TestCase):
         api("/api/gm/eliminate", {"id": nat})
         st = play_night()
         n = step(st, "night")
-        self.assertIn("took ground", n["text"])
+        self.assertIn("took ground", n["note"])
         drain()
 
     def test_losing_a_specialist_reads_like_a_quiet_night(self):
@@ -345,10 +345,10 @@ class J04_NightRunsAndEmberMatches(unittest.TestCase):
                     break
                 st = play_round("hunt")
                 f = step(st, "fire")
-                if not f or "squares" not in f["text"]:
+                if not f or "squares" not in f["note"]:
                     continue
                 burned = max((len(x) for x in f["fire"]), default=0)
-                said = re.search(r"(\d+) squares", f["text"])
+                said = re.search(r"(\d+) squares", f["note"])
                 self.assertIsNotNone(said)
                 self.assertEqual(int(said.group(1)), burned,
                                  "Ember's number must match the cells that burned")
@@ -417,9 +417,9 @@ class J05_FireLineHolds(unittest.TestCase):
         ks = keys(st)
         self.assertLess(ks.index("line"), ks.index("fire"),
                         "the trench is explained and dug before the fire, so the room sees why")
-        self.assertIn("fire line", step(st, "line")["text"])
+        self.assertIn("fire line", step(st, "line")["note"])
         f = step(st, "fire")
-        self.assertIn("fire line", f["text"], f"Ember must say the line stopped it: {f['text']}")
+        self.assertIn("fire line", f["note"], f"Ember must say the line stopped it: {f['text']}")
         i = f["kinds"].index("blocked")
         self.assertIn("++", plain(f["frames"][i]), "the trench must still be drawn after the fire")
         self.assertTrue(f["held"][i], "the cells that held should be marked for the eye")
@@ -458,7 +458,7 @@ class J06_Water(unittest.TestCase):
                 burned = max(len(x) for x in f["fire"])
                 self.assertLessEqual(burned, 8,
                                      "water must hold the fire to a handful of squares")
-                self.assertIn("response team", f["text"])
+                self.assertIn("response team", f["note"])
                 return
         self.skipTest("no fire on a water night in the seeds tried")
 
@@ -468,15 +468,16 @@ class J07_EarlyWarning(unittest.TestCase):
         fresh(seed=61)
         play_round("hunt")
         st = play_round("resilience", "ews")
-        fc = step(st, "forecast")
+        fc = step(st, "ews")
         self.assertIsNotNone(fc, "early warning must put a forecast on screen")
-        self.assertNotIn("ews", keys(st),
-                         "one card with the forecast on it, not a preamble as well")
-        self.assertEqual(fc["title"], "Early warning")
+        # One card, carrying the forecast. It used to be a paragraph about a
+        # lookout going up and then the actual warning three screens later.
+        self.assertEqual(sum(1 for k in keys(st) if k in ("ews", "forecast")), 1)
         self.assertTrue(fc["text"].startswith("Forecast for next night:"), fc["text"])
         after = api("/api/state")
         self.assertIsNotNone(after["forecast"])
         self.assertIn(after["forecast"]["wind"], fc["text"])
+        self.assertTrue(fc["text"].startswith("Forecast for next night:"), fc["text"])
 
 
 class J08_SystemPicks(unittest.TestCase):
@@ -485,9 +486,9 @@ class J08_SystemPicks(unittest.TestCase):
         for _ in range(2):
             play_round("hunt")
         st = play_round("resilience", None)
-        picked = [k for k in keys(st) if k in ("line", "water", "forecast")]
+        picked = [k for k in keys(st) if k in ("line", "water", "ews")]
         self.assertEqual(len(picked), 1, "exactly one resilience action should happen")
-        said = step(st, picked[0])["text"]
+        said = step(st, picked[0])["note"]
         self.assertTrue(any(w in said for w in ("so the crew digs", "so a response team",
                                                 "Forecast for next night")),
                         f"Ember must give the reason: {said}")
@@ -565,6 +566,13 @@ class J10_SeedTestPlayers(unittest.TestCase):
         # Stage 2 shows nothing at the end of the night. The room wakes, hears
         # no verdict, and goes straight to the vote; the map moves once, later.
         gm.click("#finishnight")
+        # Two cards a night now: the removal, then the spread.
+        for _ in range(4):
+            if gm.locator("#day").is_visible():
+                break
+            gm.wait_for_selector("#advance:not([hidden])", timeout=15000)
+            gm.click("#advance")
+            gm.wait_for_timeout(600)
         gm.wait_for_selector("#day:not([hidden])", timeout=15000)
         shot(gm, "j10-gm-day.png")
         gm.check('input[name=choice][value=hunt]')
@@ -599,6 +607,12 @@ class J12_NoScriptErrors(unittest.TestCase):
 
         # a whole round through the buttons a game master actually presses
         gm.click("#finishnight")
+        for _ in range(4):
+            if gm.locator("#day").is_visible():
+                break
+            gm.wait_for_selector("#advance:not([hidden])", timeout=15000)
+            gm.click("#advance")
+            gm.wait_for_timeout(600)
         gm.wait_for_selector("#day:not([hidden])", timeout=15000)
         gm.check('input[name=choice][value=resilience]')
         gm.wait_for_function("!document.querySelector('#finishvote').disabled", timeout=8000)

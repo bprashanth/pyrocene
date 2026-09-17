@@ -221,21 +221,30 @@ round it, one trench is not a strategy. Either way they see the run.
 > the optimal action, and the optimal action was invisible. An automated choice
 > should be a good one that is also worth watching.
 
-### One press a round
+### Two halves a night
 
-Stage 2 does not stop the room. Finish night shows nothing. The room wakes, hears
-no verdict, goes straight to the vote. Then the game master presses **Show what
-happened** once and the whole night runs in order. The removal, the spread, the
-crew's work, the fire. Twelve to seventeen seconds, ending on the board they are
-about to argue over.
+Press Finish night and the room sees, with one line before each: a player was
+eliminated, then the ground that player held changing hands; lantana spread,
+then the spread. Then they vote. Press Finish vote and they see what their
+decision did, then the fire.
 
-Stage 1 stops at every change because there the map is the lesson. Stage 2 is a
-game being played. Stopping it four times a night to read a card about ground
-nobody can act on gets in the way of the thing they are doing.
+Lantana grows before the vote, not after. That is the whole reason the map is in
+the room. They see the ground they have lost, and then they decide. It also
+means the fire that follows is read off the board they were shown.
 
-> **The move.** Interrupt the room in proportion to how much they can act on what
-> you are showing. Same content, different pacing, depending on whether they are
-> deciding or watching.
+Each card is one phrase. The console carries the same event in full, for the
+person doing the talking.
+
+**Show before** flips the projector between the boards either side of the last
+change. There was a pulsing overlay hinting where lantana was about to go, and
+it did not always match where it went. Two real boards cannot be wrong.
+
+> **The move.** Show consequence before choice. A room that decides and then
+> learns what the world did has been given a quiz. A room that sees what the
+> world did and then decides has been given a problem.
+>
+> And prefer two true states to one clever animation. A hint that is sometimes
+> wrong costs more trust than it buys attention.
 
 ### The one dial
 

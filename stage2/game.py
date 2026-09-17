@@ -114,7 +114,6 @@ class Game:
         self.lantana_override: int | None = None
         self.network_called = False   # the joined-up card is shown once
         self.reprieve_round = 0       # a round the game master bought more time for
-        self.held_beats: list = []    # stage 2: the night's frames, held for the one run
 
     # ---- lobby -----------------------------------------------------------
     def add_player(self, name: str) -> Player:
@@ -393,25 +392,61 @@ class Game:
             # The card never names anyone. A night with no map change reads the
             # same whether the ranger saved someone or a specialist was taken,
             # so the room stays guessing and lantana can lie about it.
-            key = "night.ground" if cells else "night.nothing"
             steps.append(self._step(
-                "night", T("cards", "night.title"),
-                T("cards", key, dir=self._dir_of(cells)) if cells else T("cards", key),
-                self._transition(before, after, cells, "elimination"), cells=cells))
+                "night", T("cards", "round.title", r=r),
+                T("cards", "night.about" if cells else "night.nothing"),
+                self._transition(before, after, cells, "elimination"), cells=cells,
+                before=before, after=after,
+                note=T("cards", "night.ground", dir=self._dir_of(cells)) if cells
+                else T("cards", "night.nothing")))
         else:
             steps.append(self._step(
-                "night", T("cards", "night.title"), T("cards", "night.nothing"),
+                "night", T("cards", "round.title", r=r), T("cards", "night.nothing"),
                 [self._frame("quiet", "")]))
+
+        # Lantana takes ground before the room votes, not after.
+        #
+        # It used to grow on the far side of the vote, which meant the room
+        # argued about who to remove while looking at last night's board. Moving
+        # it here is the whole point of having a map in the room: they see the
+        # ground they have lost, and then they decide. It also means the fire
+        # that follows is read off the board they were shown.
+        rng = self._rng(r)
+        before = self.view()
+        grown, _halo = self._grow(rng)
+        leaked = self._leak(rng)
+        advance(self.state, self.cfg, [])
+        after = self.view()
+        moved = sorted(set(grown) | set(leaked))
+        steps.append(self._step(
+            "growth", T("cards", "round.title", r=r),
+            T("cards", "growth.about" if moved else "growth.none"),
+            self._transition(before, after, moved, "creep"), cells=moved,
+            before=before, after=after,
+            note=T("ember", "growth.one") if len(moved) == 1 else
+            T("ember", "growth", n=len(moved)) if moved else T("ember", "growth.none")))
+
+        # The turn the evening is built around, called once, the night it
+        # happens. It belongs here rather than after the vote: the room should
+        # learn the patches have joined up before they decide what to do about
+        # it, not once it is too late to matter.
+        if self.cfg["stage"] != 1 and not self.network_called and self.connected():
+            self.network_called = True
+            band = self.bands()[0]
+            steps.append(self._step(
+                "network", T("cards", "round.title", r=r),
+                T("ember", "network", n=self.band_patches(band)),
+                self._spotlight(after, band), cells=band,
+                before=after, after=after))
+
         self.step = "day"
         self.pending["night_kill"] = None
+        # Kept so /api/steps and the tests can see the night's parts after the
+        # vote has also resolved. Without this the joined-up beat vanished from
+        # the record as soon as the room voted.
+        self._night_phases = list(steps)
+        self.last_phases = list(steps)
         end = self._check_end(r, night=True)
-        if self.cfg["stage"] != 1:
-            # Hold the night's frames for the single run at the end of the round.
-            # The room wakes, hears nothing, and goes straight to the vote.
-            self.held_beats = [f for st in steps for f in st["beats"]]
-            self.last_phases = list(steps)
-            self._night_phases = list(steps)
-            steps = []
         if end:
             steps.append(self._ending_step(end))
         return steps
@@ -426,6 +461,7 @@ class Game:
         r = self.round
         rng = self._rng(r)
         steps: list = []
+        # Read off the board the room was just shown, after the night's growth.
         self.locked_sev, self.locked_cluster = self.severity()
         rec = self.log_current()
         rec["choice"] = self.pending["choice"]
@@ -445,12 +481,15 @@ class Game:
                 key = ("vote.cleared" if p.role == LANTANA else
                        "vote.lost" if p.role == NATIVE_P else "vote.nothing")
                 steps.append(self._step(
-                    "vote", T("cards", "vote.title"),
-                    T("cards", key, dir=self._dir_of(cells)) if cells else T("cards", key),
-                    self._transition(before, after, cells, "elimination"), cells=cells))
+                    "vote", T("cards", "round.title", r=r),
+                    T("cards", "vote.about" if cells else "vote.nothing"),
+                    self._transition(before, after, cells, "elimination"), cells=cells,
+                    before=before, after=after,
+                    note=T("cards", key, dir=self._dir_of(cells)) if cells
+                    else T("cards", key)))
             else:
                 steps.append(self._step(
-                    "vote", T("cards", "vote.title"), T("cards", "vote.nothing"),
+                    "vote", T("cards", "round.title", r=r), T("cards", "vote.nothing"),
                     [self._frame("quiet", "")]))
         else:
             action = self.pending["action"]
@@ -467,49 +506,39 @@ class Game:
                 cells = list(self.last_line["cells"]) if self.last_line else []
                 rec["resilience"]["cells"] = [self.cell_name(i) for i in cells]
                 steps.append(self._step(
-                    "line", T("cards", "line.title"),
-                    (reason + " " if reason else "") + text,
-                    self._transition(before, after, cells, "line"), cells=cells))
+                    "line", T("cards", "round.title", r=r), T("cards", "line.about"),
+                    self._transition(before, after, cells, "line"), cells=cells,
+                    before=before, after=after,
+                    note=(reason + " " if reason else "") + text))
             elif action == WATER_ACT:
                 self.water_round = r
+                here = self.view()
                 steps.append(self._step(
-                    "water", T("cards", "water.title"),
-                    (reason + " " if reason else "") + T("ember", "water.ready"),
-                    [self._frame("water", T("ember", "water.ready"))]))
+                    "water", T("cards", "round.title", r=r), T("cards", "water.about"),
+                    [self._frame("water", T("ember", "water.ready")),
+                     self._frame("settle", "", here)],
+                    before=here, after=here,
+                    note=(reason + " " if reason else "") + T("ember", "water.ready")))
+            else:
+                # The growth for this round already happened, in the night, so
+                # the forecast for the next one can go straight on this card
+                # rather than trailing three screens behind it.
+                here = self.view()
+                self.forecast = self._forecast(r + 1)
+                line = T("ember", "forecast",
+                         level=T("ember", f"forecast.{self.forecast['level']}"),
+                         wind=self.forecast["wind"])
+                steps.append(self._step(
+                    "ews", T("cards", "round.title", r=r), line,
+                    [self._frame("forecast", line), self._frame("settle", "", here)],
+                    before=here, after=here,
+                    note=(reason + " " if reason else "") + line))
             # Early warning says nothing here on purpose. The forecast needs the
             # board as it will stand after tonight, so the one card it is worth
             # goes up at the end of the round with the forecast on it. Saying "a
             # lookout goes up" first and the actual warning three screens later
             # made the room read a paragraph and then wait for the point.
 
-
-        # lantana takes ground
-        before = self.view()
-        grown, halo = self._grow(rng)
-        leaked = self._leak(rng)
-        advance(self.state, self.cfg, [])
-        after = self.view()
-        moved = sorted(set(grown) | set(leaked))
-        steps.append(self._step(
-            "growth", T("cards", "growth.title"),
-            T("ember", "growth.one") if len(moved) == 1 else
-            T("ember", "growth", n=len(moved)) if moved else T("ember", "growth.none"),
-            self._transition(before, after, moved, "creep", halo=halo), cells=moved))
-
-        # The turn the evening is built around, called once, the night it
-        # happens. Until now the patches have been separate and taking a player
-        # out has removed a whole one. From here the fuel runs between them, so
-        # removing a player no longer breaks the chain and fire stops being
-        # somebody else's problem. Showing the band is the point: the room has
-        # to see the shape that has formed, not be told a number.
-        if not stage_one and not self.network_called and self.connected():
-            self.network_called = True
-            band = self.bands()[0]
-            steps.append(self._step(
-                "network", T("cards", "network.title"),
-                T("ember", "network", n=self.band_patches(band)),
-                self._spotlight(after, band),
-                cells=band))
 
         # fire, unless this is stage 1, where the room is only playing Mafia and
         # the map is a record of it rather than a thing that fights back
@@ -524,19 +553,16 @@ class Game:
             # The record carries square names for the log; the step wants indices,
             # and the frames already hold them.
             burned = next((f["fire"] for f in reversed(fire_beats) if f["kind"] == "burn"), [])
+            burnt_view = next((f["view"] for f in reversed(fire_beats)
+                               if f["kind"] == "settle"), None)
             steps.append(self._step(
-                "fire", T("cards", "fire.title") if fire_rec["severity"]
-                else T("cards", "fire.none_title"), fire_text, fire_beats,
-                cells=burned))
+                "fire", T("cards", "round.title", r=r),
+                T("cards", "fire.about" if fire_rec["severity"] else "fire.quiet"),
+                fire_beats, cells=burned,
+                before=self.prefire[r], after=burnt_view or self.view(),
+                note=fire_text))
 
-        if not stage_one and (rec.get("resilience") or {}).get("type") == "early_warning":
-            self.forecast = self._forecast(r + 1)
-            steps.append(self._step(
-                "forecast", T("cards", "ews.title"),
-                T("ember", "forecast", level=T("ember", f"forecast.{self.forecast['level']}"),
-                  wind=self.forecast["wind"]),
-                [self._frame("forecast", "")]))
-        else:
+        if stage_one or (rec.get("resilience") or {}).get("type") != "early_warning":
             self.forecast = None
 
         # Stage 1 has no fire, so the history says so rather than carrying an
@@ -557,87 +583,33 @@ class Game:
             if rng.random() < 0.3:
                 self.state.wind = rng.choice(("N", "S", "E", "W"))
         self.pending = {"night_kill": None, "vote": None, "choice": None, "action": None}
-        if not stage_one:
-            steps = self._one_run(steps, r)
+        self.last_phases = self._night_phases + [st for st in steps
+                                                  if st["key"] != "ending"]
+        self._night_phases = []
         self.last_steps = steps
         return steps
 
     # ---- step and frame helpers -------------------------------------------
 
 
-    def _tighten(self, beats: list) -> list:
-        """Trim the joins when four transitions are played as one.
+    def _step(self, key: str, title: str, text: str, beats: list, cells=None,
+              before=None, after=None, note: str = "") -> dict:
+        """One card, then the animation it describes.
 
-        Each phase on its own opens by holding on the squares about to change
-        and closes by handing the whole map back, which is right when the room
-        has just read a card about it. Run end to end those holds are most of
-        the running time and they read as four separate things rather than one
-        night. So the settles between phases go, and the opening holds are cut
-        to about half a second. The last settle stays: the room needs a moment
-        on the board they are about to argue over.
+        `text` is the card: one phrase, on the projector, for a room that is
+        about to watch something. `note` is the same event in full, for the
+        game master's console only. Somebody has to explain what just happened
+        and the map does not say which night the trench was dug or how many
+        squares went, so the short version goes on the wall and the long one
+        goes to the person doing the talking.
+
+        `before` and `after` are the boards either side of the change, so the
+        game master can flip between them rather than ask a room to remember.
         """
-        if not beats:
-            return beats
-        out = []
-        for k, f in enumerate(beats):
-            last = k == len(beats) - 1
-            if f["kind"] == "quiet" and len(beats) > 1:
-                continue                       # nothing happened in that phase
-            if f["kind"] == "settle" and not last:
-                continue
-            g = dict(f)
-            if f["kind"] in ("focus", "halo") and not last:
-                g["hold_ms"] = min(f["hold_ms"], self.cfg["run_hold_ms"])
-            out.append(g)
-        # Some phases end on a written frame rather than on the board: a
-        # forecast, or the night a water crew stands by. Dropping the settles
-        # between phases left those as the last thing on the projector, so the
-        # room was looking at a sentence when they went back to arguing.
-        if out and out[-1]["kind"] in ("forecast", "water", "quiet"):
-            out.append(self._frame("settle", ""))
-        return out
-
-    def _one_run(self, steps: list, r: int) -> list:
-        """Stage 2: the whole night as a single animation, with no cards.
-
-        Stage 1 stops at every change, because the map is the lesson there and
-        the room has nothing else to attend to. Stage 2 is a game being played:
-        the room has just argued, voted and been told nothing, and stopping them
-        four times to read a card about ground they cannot act on breaks the
-        thing they are actually doing. So the removal, the spread, whatever the
-        crew did and the fire all run in order, once, and the game master sees
-        the numbers on the console. The explaining happens in the replay, where
-        there is time for it.
-        """
-        beats, ending = list(self.held_beats), None
-        self.held_beats = []
-        for st in steps:
-            if st["key"] == "ending":
-                ending = st
-                continue
-            beats.extend(st["beats"])
-        # Keep the phases as they were built. Nothing in the room uses them any
-        # more, but they are what a test or a screenshot run wants to look at,
-        # and folding them away would have meant asserting on the shape of one
-        # long animation instead of on what each part of the night did.
-        self.last_phases = self._night_phases + [st for st in steps if st["key"] != "ending"]
-        self._night_phases = []
-        beats = self._tighten(beats)
-        out = []
-        if beats:
-            # No text, so the projector holds the map rather than a card and the
-            # console offers one press.
-            # Named for the night it belongs to. The round counter has already
-            # moved on by the time this is built, so a bare title had the
-            # console offering night two while night one was still waiting.
-            out.append(self._step("round", T("cards", "round.title", r=r), "", beats))
-        if ending:
-            out.append(ending)
-        return out
-
-    def _step(self, key: str, title: str, text: str, beats: list, cells=None) -> dict:
-        return {"key": key, "title": title, "text": text, "beats": beats,
-                "cells": [self.cell_name(i) for i in (cells or [])]}
+        return {"key": key, "title": title, "text": text, "note": note,
+                "beats": beats,
+                "cells": [self.cell_name(i) for i in (cells or [])],
+                "before": before, "after": after}
 
     def _frame(self, kind: str, text: str, view: dict | None = None, **extra) -> dict:
         f = {"kind": kind, "text": text, "fire": [], "focus": [], "halo": [],

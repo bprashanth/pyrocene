@@ -148,8 +148,13 @@ class StageOne(unittest.TestCase):
         gm.goto(BASE + "/gm")
         gm.wait_for_selector("#night:not([hidden])", timeout=8000)
         gm.click("#finishnight")
-        gm.wait_for_selector("#advance:not([hidden])", timeout=8000)
-        gm.click("#advance")
+        # Two cards now: what the night took, then where lantana went.
+        for _ in range(4):
+            if gm.locator("#day").is_visible():
+                break
+            gm.wait_for_selector("#advance:not([hidden])", timeout=15000)
+            gm.click("#advance")
+            gm.wait_for_timeout(600)
         gm.wait_for_selector("#day:not([hidden])", timeout=15000)
         self.assertTrue(gm.locator("#choicebox").is_hidden(),
                         "stage 1 has no hunt-or-shelter choice")
@@ -265,7 +270,9 @@ class StartPage(unittest.TestCase):
         pg.wait_for_selector(".tile", timeout=8000)
         hrefs = [pg.locator(".ways a").nth(i).get_attribute("href")
                  for i in range(pg.locator(".ways a").count())]
-        self.assertEqual(hrefs, ["/", "/gm", "/projector"] * 2)
+        self.assertEqual(hrefs, ["/?stage=1", "/gm?stage=1", "/projector",
+                                 "/?stage=2", "/gm?stage=2", "/projector"],
+                         "each stage hands out its own player and console link")
 
     def test_every_link_on_it_resolves(self):
         """A dead link on this page is a dead end in front of a room."""
@@ -475,7 +482,7 @@ class SvgProjector(unittest.TestCase):
         api("/api/gm/night", {})
         card = api("/api/frame")["frame"]
         self.assertTrue(card.startswith("<svg"))
-        self.assertIn("THE NIGHT", card)
+        self.assertIn("NIGHT 1", card, "the eyebrow says which night")
         drain()
 
 

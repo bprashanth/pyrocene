@@ -66,8 +66,8 @@ CONFIG = {
     # from the biggest thick patch. Three separate stands are three small fires;
     # joined into one band they are a single run that carries end to end.
     "dense_weight": 2,         # a dense square is worth this many thin ones
-    "sev_t1": 18,              # load below this: severity 1
-    "sev_t2": 30,              # load below this: severity 2, else 3
+    "sev_t1": 26,              # load below this: severity 1
+    "sev_t2": 38,              # load below this: severity 2, else 3
     "connect_cells": 16,       # a band this big that also spans...
     "connect_patches": 2,      # ...this many starting patches has joined up
     "spark_p": 0.6,            # with no dense lantana, chance of a small fire anyway
