@@ -15,8 +15,8 @@ void treatment(inout vec3 p,inout vec3 c,inout float a){
  a*=1.-trialGap(p)*.98;
  float s=floor(clamp((p.z+450.)/900.,0.,.9999)*6.)*6.+floor(clamp((p.x+450.)/900.,0.,.9999)*6.);
  if(s==removeSector || s==restoreSector){
-  if(p.y<3.){a*=1.-recovery*.85;c=mix(c,vec3(.36,.31,.21),recovery);}
-  if(s==removeSector && p.y>3.){float localX=mod(p.x+450.,150.)/150.;if(localX<nativeLoss){a*=1.-recovery*.95;}}
+  if(p.y<3.){a*=.15;c=vec3(.36,.31,.21);}
+  if(s==removeSector && p.y>3.){float localX=mod(p.x+450.,150.)/150.;if(localX<nativeLoss){a*=.05;}}
  }
 }`;
 
@@ -103,7 +103,7 @@ export class RoundForest extends ExpeditionForest{
   const draw=(x,y,z,wood=false,growth=false)=>{
    const id=sector(x,z);let alpha=wood?.9:.66,colour=wood?'#b4dcca':y<2?'#c75085':y<10?'#519ebc':'#99d6aa';
    if(growth){y*=this.recovery;alpha*=this.recovery;colour='#85dba8';}
-   else if(this.plan){if((id===r.id||id===e.id)&&y<3)alpha*=1-this.recovery*.85;if(id===r.id&&y>3&&((x+450)%150)/150<r.damage/100)alpha*=1-this.recovery*.95;}
+   else if(this.plan){if((id===r.id||id===e.id)&&y<3)alpha*=.15;if(id===r.id&&y>3&&((x+450)%150)/150<r.damage/100)alpha*=.05;}
    if(!growth){const opening=1-smooth(.65,1,Math.hypot((x-225)/62,(z-75)/62)),link=(1-smooth(17,32,Math.abs(x-75)))*(1-smooth(58,73,Math.abs(z-225)));alpha*=1-Math.max(opening,link)*smooth(3,7,y)*.98;}
    const col=Math.floor((x+450)/15),row=Math.floor((z+450)/15),at=this.fire?.[row*60+col];
    if(Number.isFinite(at)&&this.fireTime*this.duration>=at){const age=(this.fireTime*this.duration-at)/this.duration*240;colour=age<16?'#ffac44':'#956244';if(age>16)alpha*=.78;}

@@ -1,11 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PATCHES,planBudget,review,terrain,runFire,fineFuel} from './round-model.mjs';
+import {PATCHES,planBudget,review,terrain,runFire,fineFuel,healthAt,CONFIG} from './round-model.mjs';
 import {referenceWorld,snapshot,simulate} from './memory-model.mjs';
 test('all nine proposal combinations have transparent and bounded budgets',()=>{
  const balances={AA:7,AB:5,AC:5,BA:0,BB:4,BC:1,CA:-2,CB:-1,CC:2};
- for(const a of PATCHES)for(const b of PATCHES){const x=planBudget(a.key,b.key);assert.equal(x.left,balances[a.key+b.key]);assert.equal(x.shared,a.key===b.key);assert.equal(x.cost,b.planting+(a.key===b.key?0:3));}
+ for(const a of PATCHES)for(const b of PATCHES){const x=planBudget(a.key,b.key);assert.equal(x.left,balances[a.key+b.key]);assert.equal(x.shared,a.key===b.key);assert.equal(x.cost,b.planting+(a.key===b.key?0:3));assert.equal(x.left,CONFIG.grant+x.returns-x.totalCost);assert.equal(x.returns-x.removalCost,a.income);}
  assert.throws(()=>planBudget('D','A'));
+});
+test('recovery year changes fire propagation and health, not the money or baseline',()=>{
+ const plan={removal:'C',ecology:'C'},young=review(plan,0),mid=review(plan,5),grown=review(plan,10);
+ assert(young.future.burned>mid.future.burned);assert(mid.future.burned>grown.future.burned);
+ assert.notDeepEqual(young.future.arrival,grown.future.arrival);assert.deepEqual(young.baseline,grown.baseline);
+ assert.equal(young.left,grown.left);assert.equal(young.health,59);assert.equal(grown.health,65);
+ assert.equal(healthAt(plan,0),young.health);assert.equal(review(plan,0).future.burned,young.future.burned);
 });
 test('shared work clears only once and future restoration does not instantly appear after removal',()=>{
  const before=terrain(),now=terrain({removal:'A',ecology:'A'},{future:false}),future=terrain({removal:'A',ecology:'A'});

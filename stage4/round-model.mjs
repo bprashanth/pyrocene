@@ -9,20 +9,21 @@ export function studyPlot(key){const p=patch(key);return {...WORLD[p.id],disturb
 export function planBudget(removal,ecology){
  const r=patch(removal),e=patch(ecology);if(!r||!e)throw Error('Choose two patches.');
  const cost=e.planting+(removal===ecology?0:CONFIG.clearingCost);
- return {income:r.income,cost,left:CONFIG.grant+r.income-cost,damage:r.damage,cover:e.cover,shared:removal===ecology};
+ return {income:r.income,cost,removalCost:r.removalCost,returns:r.income+r.removalCost,totalCost:cost+r.removalCost,left:CONFIG.grant+r.income-cost,healthLoss:r.healthLoss,healthGain:e.healthGain,damage:r.damage,cover:e.cover,shared:removal===ecology};
 }
 // Authored comparison world on the existing scan. No fire probability is
 // inferred from the points. A fixed ignition, wind and horizon are shared.
 const corridor=new Set([33,27,21,15,9,8,13,22]);
-export function terrain(plan=null,{future=true}={}){
+export function terrain(plan=null,{future=true,years=future?CONFIG.years:0}={}){
  const cells=WORLD.map(c=>({...c,speciesIds:[...c.speciesIds],fuel:corridor.has(c.id)?.94:.55,moisture:corridor.has(c.id)?.13:.97,exposure:corridor.has(c.id)?.8:.2}));
  if(!plan)return cells;
  const r=patch(plan.removal),e=patch(plan.ecology);if(!r||!e)throw Error('Incomplete plan.');
  // Removal is applied once even when the proposals overlap. Open cleared
  // ground is not mature forest; without restoration some low growth returns.
  const removed=new Set([r.id,e.id]);
- for(const id of removed){cells[id].fuel=future?.42:.16;cells[id].moisture=.22;cells[id].exposure=.85;}
- if(future){cells[e.id].fuel=.36;cells[e.id].moisture=.94;cells[e.id].exposure=.25;}
+ const growth=Math.max(0,Math.min(1,years/CONFIG.years));
+ for(const id of removed){cells[id].fuel=.16+.26*growth;cells[id].moisture=.22;cells[id].exposure=.85;}
+ cells[e.id].fuel=.16+.20*growth;cells[e.id].moisture=.22+.72*growth;cells[e.id].exposure=.85-.60*growth;
  return cells;
 }
 export function runFire(plan=null,options={}){
@@ -38,8 +39,8 @@ export function runFire(plan=null,options={}){
 const centre=id=>[(id%6)*150-375,Math.floor(id/6)*150-375];
 const routes=[[33,27],[27,21],[21,15],[15,9],[9,8],[8,13],[21,22]].map(pair=>pair.map(centre));
 const clamp=n=>Math.max(0,Math.min(1,n));
-export function fineFuel(plan=null,{future=true}={}){
- const changed=terrain(plan,{future}),treated=plan?new Set([patch(plan.removal).id,patch(plan.ecology).id]):new Set();
+export function fineFuel(plan=null,options={}){
+ const changed=terrain(plan,options),treated=plan?new Set([patch(plan.removal).id,patch(plan.ecology).id]):new Set();
  return Array.from({length:3600},(_,i)=>{
   const x=(i%60)*15-442.5,z=Math.floor(i/60)*15-442.5,id=Math.floor(i/60/10)*6+Math.floor(i%60/10);
   const width=28+8*Math.sin(x*.019+z*.025)+4*Math.cos(z*.04);
@@ -51,4 +52,5 @@ export function fineFuel(plan=null,{future=true}={}){
   return cell;
  });
 }
-export function review(plan){return {...planBudget(plan.removal,plan.ecology),baseline:runFire(),future:runFire(plan)};}
+export function healthAt(plan,years=CONFIG.years){const b=planBudget(plan.removal,plan.ecology);return CONFIG.initialHealth-b.healthLoss+b.healthGain*Math.max(0,Math.min(1,years/CONFIG.years));}
+export function review(plan,years=CONFIG.years){return {...planBudget(plan.removal,plan.ecology),health:healthAt(plan,years),baseline:runFire(),future:runFire(plan,{years})};}

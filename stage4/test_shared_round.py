@@ -31,13 +31,13 @@ class SharedRoundRules(unittest.TestCase):
   with self.assertRaises(RoundError):self.action('reveal')
   self.propose('ecology','B');self.action('reveal');self.assertEqual(self.action('state',role='ecology')['proposals']['removal'],'A')
   with self.assertRaises(RoundError):self.store.request('commit',{'session':self.s['id'],'token':self.s['token'],'revision':0})
- def test_replay_preserves_survey_but_resets_plan(self):
+ def test_replay_resets_survey_and_plan(self):
   self.propose('removal','C');self.propose('ecology','C');self.action('reveal');self.action('commit');self.action('replay')
-  self.assertEqual(self.s['phase'],'survey');self.assertIsNone(self.s['committed']);self.assertEqual(self.s['visited']['removal'],['C'])
+  self.assertEqual(self.s['phase'],'survey');self.assertIsNone(self.s['committed']);self.assertEqual(self.s['visited']['removal'],[])
   self.assertEqual(self.s['proposals'],{'removal':None,'ecology':None})
  def test_simultaneous_surveys_and_independent_proposals_do_not_conflict(self):
   initial=self.s['revision'];self.action('visit',role='removal',patch='A')
-  body={'session':self.s['id'],'token':self.s['teams']['ecology'],'revision':initial,'patch':'B'}
+  body={'session':self.s['id'],'token':self.s['teams']['ecology'],'revision':initial,'patch':'B','round':self.s['round']}
   self.store.request('visit',body)
   self.s=self.store.request('state',{'session':self.s['id'],'token':self.s['token']})
   revision=self.s['revision'];self.action('propose',role='removal',patch='A')
@@ -45,3 +45,5 @@ class SharedRoundRules(unittest.TestCase):
   self.assertTrue(all(self.action('state')['ready'].values()))
   self.action('reveal')
   with self.assertRaises(RoundError):self.store.request('propose',{**body,'revision':revision,'round':1,'phase':'survey','prior':None})
+  self.action('replay')
+  with self.assertRaises(RoundError):self.store.request('visit',body)

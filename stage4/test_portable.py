@@ -65,8 +65,10 @@ class PortablePlay(unittest.TestCase):
                     self.assertEqual(page.locator('#radio-open,.radio-portrait,dialog[open]').count(),0)
                     page.goto(base+'/round.html')
                     page.wait_for_selector('#loading',state='hidden')
-                    for label in ['Patch B','Close view','Propose B','Propose B','Reveal plans','Commit plan','Run fire']:
+                    for label in ['Begin','Patch B','Close view','Propose','Begin','Propose','Begin','Reveal plans','Commit plan']:
                         page.get_by_role('button',name=label,exact=True).click()
+                    page.locator('#fire-time').fill('10')
+                    page.locator('#fire-time').dispatch_event('input')
                     page.wait_for_function('roundDiagnostics().mode==="fire"')
                     self.assertEqual(page.evaluate('roundDiagnostics().state.committed.left'),4)
                     self.assertGreater(page.evaluate('roundDiagnostics().growthPoints'),2000)

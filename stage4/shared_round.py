@@ -12,7 +12,8 @@ CANDIDATES = {c['key']: c for c in CONFIG['candidates']}
 def budget(removal, ecology):
     r, e = CANDIDATES[removal], CANDIDATES[ecology]
     cost = e['planting'] + (0 if removal == ecology else CONFIG['clearingCost'])
-    return {'income': r['income'], 'cost': cost, 'left': CONFIG['grant'] + r['income'] - cost,
+    return {'income': r['income'], 'cost': cost, 'removalCost':r['removalCost'], 'returns':r['income']+r['removalCost'],
+            'totalCost':cost+r['removalCost'], 'healthLoss':r['healthLoss'], 'healthGain':e['healthGain'], 'left': CONFIG['grant'] + r['income'] - cost,
             'damage': r['damage'], 'cover': e['cover'], 'shared': removal == ecology}
 
 class RoundError(Exception):
@@ -49,7 +50,9 @@ class RoundStore:
             if action == 'state':
                 return self.view(s, role)
             owner = body.get('team') if role == 'room' else role
-            independent = action == 'visit' or (action == 'propose'
+            if 'round' in body and body['round'] != s['round']:
+                raise RoundError(409, 'The room started a new game. Try again.')
+            independent = (action == 'visit' and body.get('round') == s['round']) or (action == 'propose'
                 and body.get('round') == s['round'] and body.get('phase') == s['phase']
                 and isinstance(owner,str) and owner in s['proposals']
                 and body.get('prior') == s['proposals'][owner])
@@ -58,7 +61,7 @@ class RoundStore:
             if action in ('reveal','commit','replay') and role != 'room':
                 raise RoundError(403, 'The room makes this decision.')
             if action == 'replay':
-                s.update(phase='survey', proposals={'removal':None,'ecology':None}, committed=None, round=s['round']+1)
+                s.update(phase='survey', proposals={'removal':None,'ecology':None}, visited={'removal':[],'ecology':[]}, committed=None, round=s['round']+1)
             elif s['phase'] == 'committed':
                 raise RoundError(409, 'This plan is committed.')
             elif action in ('visit','propose'):
