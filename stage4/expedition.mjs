@@ -5,6 +5,7 @@ import { fieldNetwork } from './field-network.mjs';
 import { phosphorImage } from './field-media.mjs';
 import { observationLayers } from './observation-layers.mjs';
 import { ADDITIONAL_SPECIES, INVENTORY_PROFILE, plantLayer, LAYERS } from './forest-flora.mjs';
+import { StructureLab } from './structure-lab.mjs';
 
 const $=id=>document.getElementById(id);
 let state=fresh(), view='forest', busy=false, catalogue=[], humans=[], photos={}, book=null, sort='found', mapPlants=new Set(), mapped=[], currentTab='traces';
@@ -28,7 +29,8 @@ forest.reducedMotion=reduced;
 const network=fieldNetwork({radioFrame,radioBody:$('radio-body'),radioActions:$('radio-actions'),openDialog,toast,visit:async id=>{await camera('overhead');await choose(id);},overlay:async(ids,caption)=>{sensorMap=ids;sensorCaption=caption;mapped=[];await camera('overhead');update();},onChange:update});
 const currentWorld=()=>referenceExperiments&&network.world()||WORLD;
 const observations=referenceExperiments?observationLayers({forest,host:$('landscape'),select:choose,closeView:(v='close')=>camera(v),notes:showObservationNotes,toast}):{kind:()=> 'plants',has:()=>true,pause(){},setBusy(){},before(){},after(){}};
-globalThis.pyroceneDiagnostics=()=>({...forest.performance(),view,observation:observations.kind(),tls:forest.tlsActive,tlsCrop:forest.currentTLS?.id,visited:state.visited.length,plants:knownPlants(state).length,mission:state.mission,completed:state.completed.length,prototype,network:network.stats()});
+const structureLab=new StructureLab({forest,catalogue:()=>catalogue});
+globalThis.pyroceneDiagnostics=()=>({...forest.performance(),view,observation:observations.kind(),tls:forest.tlsActive,tlsCrop:forest.currentTLS?.id,visited:state.visited.length,plants:knownPlants(state).length,mission:state.mission,completed:state.completed.length,prototype,network:network.stats(),structureLab:structureLab.diagnostics()});
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function btn(text,action,cls){const b=el('button',text,cls);b.onclick=action;return b;}
 function link(text,url){const a=el('a',text);a.href=url;a.target='_blank';a.rel='noopener';return a;}
@@ -37,7 +39,7 @@ function act(type,value){state=change(state,type,value);save();}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{toast('This browser cannot save your discoveries. You can still play.');}}
 function openDialog(id){observations.pause();for(const d of document.querySelectorAll('dialog[open]'))d.close();closeBook();$(id).showModal();}
 for(const b of document.querySelectorAll('[data-close]'))b.onclick=()=>$(b.dataset.close).close();
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('plant-guide').hidden)closeBook();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]')&&!$('plant-guide').hidden)closeBook();});
 
 function update(){
   observations.setBusy(busy);
@@ -87,7 +89,7 @@ function showPlotNotes(){
   const species=WORLD[state.selected].speciesIds.map(id=>catalogue.find(s=>s.id===id));
   $('plot-notes').querySelector('.guide-heading span').textContent=`Plants here - ${species.length}`;
   const body=$('plot-notes-body'),record=fieldRecord(state.selected,currentWorld());
-  body.replaceChildren(el('p','A selection from this patch. Choose a name.','plot-intro'));
+  body.replaceChildren(btn('Examine structure',()=>structureLab.open(WORLD[state.selected]),'structure-open'),el('p','A selection from this patch. Choose a name.','plot-intro'));
   const list=el('div');list.id='plot-species';
   for(const layer of ['canopy','understory','ground']){
     const group=species.filter(s=>plantLayer(s)===layer);if(!group.length)continue;
@@ -146,6 +148,7 @@ function renderBook(){
     details.append(el('p',(sp.status==='Invasive'?'This plant is invasive. ':'This plant is native to this region. ')+(sp.description||'')+' '+condition));
     details.append(el('p',(sp.plainUse||sp.use||'')+' '+abundance));
     details.append(el('small',`${LAYERS[plantLayer(sp)].name} - ${sp.growthForm}`,'plant-layer-note'));
+    if(view==='close'&&WORLD[state.selected]?.speciesIds.includes(sp.id))details.append(btn('See its structure',()=>structureLab.open(WORLD[state.selected],sp.id),'structure-open'));
     if(!photo)details.append(el('small','The map shows a structure study, not a botanical portrait.','plant-layer-note'));
     if(sp.sources?.[0])details.append(link('Source',sp.sources[0].url));
     content.append(details);

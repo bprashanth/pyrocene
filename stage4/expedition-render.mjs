@@ -227,6 +227,7 @@ export class ExpeditionForest extends ExplorationForest {
     if(this.selected>=0){const c=centre(this.selected);ctx.strokeStyle='#ddbf78';ctx.lineWidth=1;ctx.beginPath();[[-75,-75],[75,-75],[75,75],[-75,75],[-75,-75]].forEach(([x,z],i)=>{v.set(c.x+x,3,c.z+z).project(this.camera);const px=(v.x*.5+.5)*w,py=(-v.y*.5+.5)*h;i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
   }
   animate(now){
+    if(this.examinationPaused){requestAnimationFrame(this.animate);return;}
     if(this.cameraMotion){const m=this.cameraMotion,t=clamp((now-m.start)/m.duration,0,1),ease=t*t*(3-2*t);this.target.copy(m.from.target).lerp(m.to.target,ease);for(const k of ['distance','angle','elevation'])this[k]=m.from[k]+(m.to[k]-m.from[k])*ease;if(t===1){this.cameraMotion=null;m.resolve(true);}}
     if(this.transition){const tr=this.transition,t=this.reducedMotion?1:clamp((now-tr.start)/tr.duration,0,1),ease=t*t*(3-2*t);this.detailBlend=tr.from+(tr.to-tr.from)*ease;this.detailUniform.value=this.detailBlend;if(t===1){this.transition=null;tr.resolve(true);}}
     if(this.fallback){requestAnimationFrame(this.animate);if(document.hidden)return;this._cpuCamera();this.drawFallback();this._positionExploreLabels();return;}

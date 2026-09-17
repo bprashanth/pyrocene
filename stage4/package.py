@@ -32,6 +32,7 @@ APP_FILES += ('field-media.mjs',)
 APP_FILES += ('observation-layers.mjs',)
 APP_FILES += ('forest-neighbourhood.mjs',)
 APP_FILES += ('forest-flora.mjs', 'inventory-trees.mjs', 'forest-structure.mjs')
+APP_FILES += ('structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css')
 APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs")
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
@@ -39,6 +40,7 @@ DOC_NAMES = (
     "REFERENCE_LAYERS.md",
     "INLINE_DETAIL.md",
     "FOREST_FLORA.md",
+    "STRUCTURE_LAB.md",
     "ASH.md",
     "ASH_BALANCE.md",
     "ASH_PLAYTEST.md",

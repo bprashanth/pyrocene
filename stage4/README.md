@@ -10,6 +10,9 @@ measured scan fragments. It replaces the rejected three-tree arrangement.
 The catalogue has 120 species, with 14 to 18 selected study names per square.
 Close view uses a 45-degree camera, height colours and faint structural guides.
 See [FOREST_FLORA.md](FOREST_FLORA.md) for inventory evidence and model limits.
+Optional **Examine structure** compares live modelled point clouds with linked
+rotation, a movable section and a forest-floor view. The accepted main-map
+geometry is unchanged. See [STRUCTURE_LAB.md](STRUCTURE_LAB.md).
 Communities, audio, camera traps and sensor grants are parked, with their
 experiments retained behind `?references=1`. See [REFERENCE_LAYERS.md](REFERENCE_LAYERS.md).
 Hardware is confirmed as one laptop per team. Teams explore together, then

@@ -1,5 +1,12 @@
 # Before the next fire
 
+Structure experiment, 17 September: the user accepted the dense forest baseline
+`86404c6` and asked to preserve it. Acceptance is recorded in `c93b267`.
+An optional Examine structure lab now compares live modelled 3D point clouds,
+with linked cameras, growth-form highlights, a movable slice and field moisture
+kept separate. It does not replace or rewrite the accepted map. See
+`stage4/STRUCTURE_LAB.md` for research, limitations and the three visual trials.
+
 Forest richness update, 17 September: 120 study species (115 native, five
 invasive), with 14 to 18 names per plot. Close view is now 45 degrees with
 faint stem guides and lower-layer blue/pink clues. GUYADIV supplies 96 tree
