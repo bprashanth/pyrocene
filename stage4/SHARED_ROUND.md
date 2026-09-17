@@ -1,7 +1,8 @@
 # One shared plan
 
-Start in `/expedition.html`. Choose a role and use the top-left Expedition / Play
-selector. `/round.html` remains the Play implementation URL. Before the original
+Start in `/expedition.html`. Choose a role and use the top-left Expedition / Removal
+selector. Removal is the mission name for both teams; `/round.html` remains its
+implementation URL and `play` remains the internal navigation value. Before the original
 trial: `211c4db`, tagged `stage4-before-shared-round`. Before this unified flow:
 `42492bd`, tagged `stage4-before-play-briefing`.
 
@@ -13,13 +14,15 @@ view switches to the other team, with its own introduction. Submit its proposal
 and the view switches to Room. Reveal, discuss, optionally change a proposal
 using the team selector, and commit once. The selector is only available to the
 facilitator. Hazel appears only for the introduction, not as a persistent helper.
-Her image is the exact supplied `/tmp/hazel.png` file, copied as `hazel.png`.
+The briefing labels the player's role as Role: ecologist or Role: removal. The
+portrait has no name or facilitator caption. Her image is the exact supplied
+`/tmp/hazel.png` file, copied as `hazel.png`.
 Only CSS tint and scanlines are applied. Editable copy is in `play-briefing.mjs`.
 Begin can dismiss typing immediately; reduced-motion mode shows all text at once.
 
 For two teams, the facilitator opens Teams and shares the separate Removal and
 Ecologist links. Each team opens its link in Expedition on its own laptop, then
-chooses Play when ready. Both laptops must
+chooses Removal when ready. Both laptops must
 reach the same running server. Internet access is not required. The Room view
 reveals and commits. Until reveal, a team sees only its own proposal and whether
 the other team is ready. These are capability links, not named accounts. Anyone
@@ -31,7 +34,7 @@ surveys and proposals can arrive together. A stale shared commitment is rejected
 Proposals are held in server memory, survive browser reloads and end when the
 server restarts. Returning to Expedition from the facilitator screen resets
 proposals, survey visits and that browser's expedition discoveries. Returning to
-Play starts fresh on the same forest and retains the selected role. Team-only
+Removal starts fresh on the same forest and retains the selected role. Team-only
 links can revisit Expedition but cannot erase the shared room. Old-round writes
 are rejected. At most 128
 rooms are retained. Recovery/fire playback is local to each screen; decisions

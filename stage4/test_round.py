@@ -39,7 +39,7 @@ class RoundPlay(unittest.TestCase):
  def test_expedition_role_briefing_play_sliders_and_reset(self):
   self.page.goto(self.base+'/expedition.html');self.page.locator('#loading').wait_for(state='hidden');self.shot('play-01-expedition')
   self.page.locator('#role').select_option('ecology');self.page.locator('#game-mode').select_option('play');self.page.locator('#briefing[open]').wait_for()
-  expect(self.page.locator('#briefing-role')).to_have_text('ECOLOGIST');self.shot('play-02-briefing');self.begin()
+  expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#game-mode option:checked')).to_have_text('Removal');self.shot('play-02-briefing');self.begin()
   self.inspect('C');expect(self.page.locator('#finding')).to_contain_text('Cost: 9 credits. Health: +6');expect(self.page.locator('#finding')).not_to_contain_text('shared')
   self.assertEqual(self.page.locator('#patch-actions button').all_text_contents(),['Propose','Structure'])
   self.shot('play-03-choice');self.click('Structure');self.page.wait_for_function('roundDiagnostics().lab.draws>0');self.click('Look through');self.page.locator('#structure-focus').select_option('liana')
@@ -93,10 +93,13 @@ class RoundPlay(unittest.TestCase):
   finally:b.close()
  def test_briefing_types_and_can_be_dismissed_early(self):
   self.page.emulate_media(reduced_motion='no-preference');self.page.goto(self.base+'/round.html#role=removal')
-  self.page.locator('#briefing[open]').wait_for();expect(self.page.locator('#briefing-role')).to_have_text('REMOVAL')
+  self.page.locator('#briefing[open]').wait_for();expect(self.page.locator('#briefing-role')).to_have_text('Role: removal')
+  self.assertEqual(self.page.locator('.facilitator-photo span').count(),0)
+  expect(self.page.locator('#briefing-accessible')).not_to_contain_text('The return helps pay')
+  expect(self.page.locator('#briefing-accessible')).not_to_contain_text('Commit the shared plan')
   self.page.wait_for_function('document.querySelector("#briefing-text").textContent.length>12')
   full=self.page.locator('#briefing-accessible').text_content();partial=self.page.locator('#briefing-text').text_content();self.assertLess(len(partial),len(full))
   self.shot('play-briefing-typing');self.click('Begin');expect(self.page.locator('#briefing')).not_to_be_visible()
-  self.page.locator('#role').select_option('ecology');self.page.locator('#briefing[open]').wait_for();expect(self.page.locator('#briefing-role')).to_have_text('ECOLOGIST');self.click('Begin')
+  self.page.locator('#role').select_option('ecology');self.page.locator('#briefing[open]').wait_for();expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#briefing-accessible')).not_to_contain_text('Commit the shared plan');self.click('Begin')
 
 if __name__=='__main__':unittest.main()

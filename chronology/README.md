@@ -57,6 +57,7 @@ Read in filename order.
 | [2026-09-17T1142](2026-09-17T1142-stage4-dense-forest.md) | Parking reference layers and modelling a continuous, dense ground-level forest |
 | [2026-09-17T2000](2026-09-17T2000-stage4-one-shared-plan.md) | Two proposals, one commitment, recovery and fire inside the point-cloud forest |
 | [2026-09-17T2110](2026-09-17T2110-stage4-expedition-to-play.md) | Expedition to Play, Hazel's role briefing and recovery-dependent fire sliders |
+| [2026-09-17T2200](2026-09-17T2200-stage4-removal-briefing.md) | Rename the mission Removal and clarify whose role the briefing describes |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

@@ -126,7 +126,7 @@ function briefing(){
  if(!state||state.phase!=='survey'||role!=='room'&&state.ready[role])return;
  const key=state.id+':'+state.round+':'+role;if(briefed.has(key))return;briefed.add(key);
  const copy=BRIEFINGS[role],text=copy.paragraphs.join('\n\n');clearInterval(typing);
- $('briefing-role').textContent=role==='ecology'?'ECOLOGIST':role.toUpperCase();$('briefing-title').textContent=copy.title;$('briefing-accessible').textContent=text;
+ $('briefing-role').textContent='Role: '+(role==='ecology'?'ecologist':role);$('briefing-title').textContent=copy.title;$('briefing-accessible').textContent=text;
  $('briefing-text').textContent=reduced?text:'';let at=0;if(!reduced)typing=setInterval(()=>{at+=4;$('briefing-text').textContent=text.slice(0,at);if(at>=text.length)clearInterval(typing);},35);
  if(!$('briefing').open)$('briefing').showModal();
 }
