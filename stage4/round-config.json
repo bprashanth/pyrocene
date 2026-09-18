@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "extensions": {"seedStudy": true, "broadFire": true},
   "grant": 2,
   "initialHealth": 60,
   "clearingCost": 3,

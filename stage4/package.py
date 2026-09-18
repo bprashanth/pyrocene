@@ -36,10 +36,12 @@ APP_FILES += ('structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css')
 APP_FILES += ('round.html', 'round.css', 'round.mjs', 'round-render.mjs', 'round-model.mjs', 'round-config.json')
 APP_FILES += ('play-flow.mjs', 'play-flow.css', 'play-briefing.mjs', 'hazel.png')
 APP_FILES += ('neglect-model.mjs',)
+APP_FILES += ('seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json')
 APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs")
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
 DOC_NAMES = (
+    "SEEDS_AND_SCAR.md",
     "WORKING_LOOP.md",
     "REINFESTATION_DISCUSSION.md",
     "NEGLIGENCE.md",

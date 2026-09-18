@@ -672,3 +672,22 @@ using two species-record tabs, Dispersal and Germination. The removal team
 compares operations; the ecologist explains recurrence. Start with one invasive,
 one native and two maps, not a new equipment system. This is a proposal, not
 implemented behaviour. [Scope and research cautions](../stage4/REINFESTATION_DISCUSSION.md).
+
+### Reversible trial: seeds and the shape of fire
+
+The next increment now implements those two tabs inside Negligence's species
+record. As Ecologist, use Close view, then Seeds. Compare signal grass and
+Cecropia: possible arrival is a different layer from establishment conditions.
+The small maps are modelled six-month clues. They do not claim animal sightings
+or prove the cause of regrowth. Both teams still make the same single crew
+decision, with no new budget, mission or required quiz.
+
+The fire trial spreads through broader fuel patches and leaves an irregular
+ground-level scar while retaining standing canopy points. A height grid derived
+from the measured 2017 cloud adds shelter variation to an otherwise authored
+fuel/moisture scenario. This is not a 2023 scar reconstruction. Cooperation's
+money-versus-connectivity tradeoff and the benefits of mature restoration remain.
+
+Both extensions have independent off switches. The exact preceding build is
+tagged `stage4-before-seeds-and-scar` (`db21450`) and preserved as an offline ZIP.
+[How to try, evidence, limits and rollback](../stage4/SEEDS_AND_SCAR.md).

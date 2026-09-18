@@ -76,6 +76,11 @@ inspected alternative. This fix does not change fire inputs or game rules.
 
 ## Verification history
 
+An exact second checkpoint including the preview fix is
+`stage4-before-seeds-and-scar` (`db21450`). The later reversible seed and fire
+trial is documented separately in [SEEDS_AND_SCAR.md](SEEDS_AND_SCAR.md). The
+baseline description above deliberately remains unchanged.
+
 The accepted baseline passed solo and independent-team browser playthroughs,
 no-WebGL phone checks, model/shared-state tests and extracted offline delivery.
 See `../chronology/2026-09-17T2355-stage4-selected-patch-projections.md`.

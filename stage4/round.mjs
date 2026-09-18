@@ -5,6 +5,8 @@ import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {CONFIG,PATCHES,patch,atSector,studyPlot,review,cooperationPreview} from './round-model.mjs';
 import {navigation,flowParams,roleFrom,flowURL} from './play-flow.mjs';
 import {BRIEFINGS} from './play-briefing.mjs';
+import {SeedStudy} from './seed-study.mjs';
+import {SEED_RECORDS} from './seed-model.mjs';
 import {followupCandidates,followupBudget,followupReview,followupStudy,forecastText} from './neglect-model.mjs';
 const $=id=>document.getElementById(id),button=(text,fn,cls='primary')=>{const b=document.createElement('button');b.textContent=text;b.onclick=fn;b.className=cls;return b;};
 let state=null,credentials=null,role=roleFrom(),selected=null,view='forest',busy=true,mutating=false,catalogue=[],result=null,mode='survey',clock=0,years=10,showPlan=true,renderedPlan='';
@@ -18,6 +20,7 @@ let specimenKey='';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const forest=new RoundForest($('landscape'),{select:async id=>{const p=candidates().find(p=>p.id===id);if(p)await choose(p.key);},specimen:meet});forest.reducedMotion=reduced;
 const lab=new StructureLab({forest,catalogue:()=>catalogue});
+const seeds=new SeedStudy($('seed-study'),meet);
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,5500);}
 async function request(action,extra={}){
  const r=await fetch('/api/round/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,round:state?.round,phase:state?.phase,prior:state?.proposals[role],team:role,...extra})});
@@ -27,7 +30,7 @@ function accept(next){
  if(state&&next.revision<=state.revision)return;
  const previous=state;state=next;
  if(state.screen==='expedition'){location.assign(flowURL('expedition.html?fresh=1',credentials,role));return;}
- if(previous&&previous.round!==state.round){if(lab.dialog.open)lab.dialog.close();if($('briefing').open)$('briefing').close();}
+ if(previous&&previous.round!==state.round){if(lab.dialog.open)lab.dialog.close();if($('briefing').open)$('briefing').close();if($('plant').open)$('plant').close();}
  if(previous&&previous.round!==state.round&&view==='close'){
   view='forest';busy=true;forest.setSpecimens([]);forest.setView('forest').then(()=>{busy=false;render();briefing();}).catch(e=>{busy=false;toast(e.message);render();});
  }
@@ -97,6 +100,7 @@ function renderNeglect(){
  actions.replaceChildren();decision.replaceChildren();
  if(!locked&&role!=='room'&&seen&&state.proposals[role]!==selected&&(state.phase==='review'||!state.ready[role]))actions.append(button('Propose',submit));
  if(view==='close'&&p&&!busy)actions.append(button('Structure',()=>openStructure(),'secondary'));
+ if(CONFIG.extensions.seedStudy&&role!=='removal'&&view==='close'&&p&&!busy)actions.append(button('Seeds',()=>meet('urochloa_decumbens'),'secondary'));
  $('status').textContent=locked?`${state.committed.left} credits left.`:role==='room'?`Removal: ${state.proposals.removal||'waiting'}. Ecologist: ${state.proposals.ecology||'waiting'}.`:state.ready[role]?`Proposed: ${state.proposals[role]}. Explain your choice to the room.`:!seen?'Open Close view to study this patch.':'';
  if(role==='room'&&!locked){
   if(state.phase==='survey'){const b=button('Reveal plans',()=>act('reveal'));b.disabled=!Object.values(state.ready).every(Boolean)||mutating;decision.append(b);}
@@ -140,10 +144,15 @@ async function submit(){
   briefing();
  }
 }
-function meet(id){
+function meet(id,tab='dispersal'){
  const s=catalogue.find(s=>s.id===id);if(!s)return;
  $('plant-name').textContent=s.name;$('plant-note').textContent=`${s.status}. ${s.description||s.growthForm}.`;
- $('plant-structure').onclick=()=>{$('plant').close();openStructure(id);};$('plant').showModal();
+ const study=CONFIG.extensions.seedStudy&&isNeglect()&&role!=='removal'&&SEED_RECORDS[id];
+ seeds.open(study?id:null,patch(selected).id,state.previous,tab);
+ const inPlot=study?followupStudy(state.previous,selected,result.forecast).speciesIds.includes(id):true;
+ if(study)$('plant-note').textContent=SEED_RECORDS[id].status+(inPlot?'':' - study example');
+ $('plant-structure').textContent=inPlot?'See its structure':'See patch structure';
+ $('plant-structure').onclick=()=>{$('plant').close();openStructure(inPlot?id:null);};if(!$('plant').open)$('plant').showModal();
 }
 function openStructure(id=null){
  if(isNeglect()){

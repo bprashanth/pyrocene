@@ -1,5 +1,10 @@
 # Why did it return? Discussion, not an implemented mission
 
+Update, 18 September: a small reversible trial of the two species tabs and
+broader fire spread is now implemented. See [SEEDS_AND_SCAR.md](SEEDS_AND_SCAR.md).
+The original discussion below is retained; its proposed field observations and
+causal seed model have not been added. The heat maps are explicitly modelled.
+
 Keep the working two-mission loop. Add a small ecological investigation inside
 Negligence before adding any third mission, new equipment or management budget.
 Baseline: `stage4-working-loop-20260918` (`07f72e3`).

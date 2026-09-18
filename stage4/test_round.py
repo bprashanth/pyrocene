@@ -1,6 +1,7 @@
 """Play through the visible expedition, briefing, proposal and shared sliders."""
 import threading
 import unittest
+import json
 from io import BytesIO
 from pathlib import Path
 from PIL import Image, ImageChops, ImageStat
@@ -106,6 +107,7 @@ class RoundPlay(unittest.TestCase):
    self.click('Structure');self.page.wait_for_function('roundDiagnostics().lab.draws>0');self.seek('structure-year',3);self.assertEqual(self.page.evaluate('roundDiagnostics().years'),3)
    self.page.locator('#structure-lab').get_by_role('button',name='Back',exact=True).click();self.inspect('D');self.seek('recovery',.5);self.assertEqual(self.page.evaluate('roundDiagnostics().forecast.invasive'),.08);self.shot('removal-phone-cleared')
    self.seek('recovery',10);self.assertGreater(self.page.evaluate('roundDiagnostics().forecast.invasive'),.9);self.shot('removal-phone-regrown');self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),390)
+   self.page.locator('#role').select_option('ecology');self.begin();self.click('Seeds');self.page.get_by_role('tab',name='Germination').click();self.shot('seeds-phone-no-webgl');expect(self.page.locator('.seed-clue')).to_contain_text('Patch D');self.page.locator('#plant').get_by_role('button',name='Back',exact=True).click()
   finally:b.close()
  def test_briefing_types_and_can_be_dismissed_early(self):
   self.page.emulate_media(reduced_motion='no-preference');self.page.goto(self.base+'/round.html#role=removal')
@@ -159,5 +161,38 @@ class RoundPlay(unittest.TestCase):
   self.page.locator('#role').select_option('ecology');self.inspect('D');self.click('Propose');self.click('Commit plan');self.seek('fire-time',20);self.shot('neglect-08-committed')
   self.page.reload();self.page.locator('#loading').wait_for(state='hidden');self.assertEqual(self.page.evaluate('roundDiagnostics().state.mission'),'negligence');self.assertEqual(self.page.evaluate('roundDiagnostics().state.committed.removal'),'D')
   self.page.locator('#game-mode').select_option('expedition');self.page.wait_for_url('**/expedition.html?fresh=1#*');self.page.locator('#loading').wait_for(state='hidden');self.page.locator('#role').select_option('removal');self.page.locator('#game-mode').select_option('play');self.begin();self.assertEqual(self.page.evaluate('roundDiagnostics().state.mission'),'cooperation')
+
+ def test_seed_study_and_broad_scar_playthrough(self):
+  self.start();self.inspect('C');self.click('Propose');self.begin();self.click('Propose');self.begin();self.click('Reveal plans');self.click('Commit plan')
+  self.click('Overhead');self.page.wait_for_function('!roundDiagnostics().busy')
+  self.seek('recovery',10);self.click('Without plan')
+  for time in [5,10,20]:self.seek('fire-time',time);self.shot('scar-without-'+str(time))
+  self.click('Close view');self.page.wait_for_function('!roundDiagnostics().busy');self.shot('scar-close-canopy');self.click('Overhead');self.page.wait_for_function('!roundDiagnostics().busy')
+  without=self.page.evaluate('roundDiagnostics().fire.baseline');self.click('With plan');self.shot('scar-restored-20')
+  self.assertLess(self.page.evaluate('roundDiagnostics().fire.future'),without/2)
+  self.seek('fire-time',0);self.page.locator('#game-mode').select_option('negligence');self.begin();self.page.wait_for_function('!roundDiagnostics().busy');self.inspect('C')
+  self.assertEqual(self.page.get_by_role('button',name='Seeds',exact=True).count(),0)
+  self.page.locator('#role').select_option('ecology');self.begin();self.click('Seeds')
+  expect(self.page.locator('#seed-study')).to_be_visible();expect(self.page.locator('#plant-note')).to_have_text('Invasive pasture grass - study example');expect(self.page.get_by_role('button',name='See patch structure',exact=True)).to_be_visible()
+  self.shot('seeds-grass-dispersal');self.page.get_by_role('tab',name='Germination').click();self.shot('seeds-grass-germination')
+  grass=Image.open(BytesIO(self.page.locator('#seed-study canvas').screenshot()))
+  self.page.get_by_label('Seed species').select_option('cecropia_obtusa');expect(self.page.locator('#plant-note')).to_have_text('Native pioneer tree');self.shot('seeds-native-germination')
+  native=Image.open(BytesIO(self.page.locator('#seed-study canvas').screenshot()));self.assertGreater(sum(ImageStat.Stat(ImageChops.difference(grass,native)).mean),.5)
+  self.page.get_by_role('tab',name='Dispersal').click();expect(self.page.locator('.seed-copy')).to_contain_text('bats');self.shot('seeds-native-dispersal')
+  self.page.get_by_role('tab',name='Dispersal').press('ArrowRight');expect(self.page.get_by_role('tab',name='Germination')).to_have_attribute('aria-selected','true')
+  self.assertEqual(self.page.evaluate('roundDiagnostics().state.proposals.ecology'),None)
+  self.click('See its structure');self.page.wait_for_function('roundDiagnostics().lab.draws>0');self.shot('seeds-to-structure');self.page.locator('#structure-lab').get_by_role('button',name='Back',exact=True).click()
+  self.inspect('D');self.click('Seeds');expect(self.page.locator('.seed-clue')).to_contain_text('Patch D (C4):');self.shot('seeds-new-patch');self.page.locator('#plant').get_by_role('button',name='Back',exact=True).click()
+  self.inspect('C');self.click('Seeds');self.page.set_viewport_size({'width':390,'height':844});self.shot('seeds-phone');self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),390)
+  self.page.locator('#plant').get_by_role('button',name='Back',exact=True).click();self.page.set_viewport_size({'width':1440,'height':1000});self.click('Propose');self.click('Propose');self.begin();self.click('Reveal plans');self.click('Commit plan')
+  self.page.wait_for_function('roundDiagnostics().state.phase==="committed"');self.assertTrue(self.page.evaluate('roundDiagnostics().state.committed.care'))
+
+ def test_extensions_can_be_disabled_without_changing_the_loop(self):
+  config=json.loads(Path(__file__).with_name('round-config.json').read_text());config['extensions']={'seedStudy':False,'broadFire':False}
+  self.page.route('**/round-config.json',lambda route:route.fulfill(content_type='application/json',body=json.dumps(config)))
+  self.start();self.inspect('C');self.click('Propose');self.begin();self.click('Propose');self.begin();self.click('Reveal plans');self.click('Commit plan');self.page.wait_for_function('roundDiagnostics().state.phase==="committed"')
+  self.seek('fire-time',20);self.shot('extensions-disabled-fire')
+  self.page.locator('#game-mode').select_option('negligence');self.begin();self.page.wait_for_function('!roundDiagnostics().busy');self.page.locator('#role').select_option('ecology');self.begin();self.inspect('C')
+  expect(self.page.locator('#briefing-accessible')).not_to_contain_text('open Seeds');self.assertEqual(self.page.get_by_role('button',name='Seeds',exact=True).count(),0);self.click('Structure');self.page.wait_for_function('roundDiagnostics().lab.draws>0')
 
 if __name__=='__main__':unittest.main()

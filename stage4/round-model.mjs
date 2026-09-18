@@ -1,5 +1,6 @@
 import CONFIG from './round-config.json' with {type:'json'};
 import {WORLD} from './world.mjs';
+import {broadFuel} from './fire-landscape.mjs';
 import {setWorld,referenceWorld,snapshot,simulate} from './memory-model.mjs';
 export {CONFIG};
 export const PATCHES=CONFIG.candidates;
@@ -48,6 +49,7 @@ export function fineFuel(plan=null,options={}){
  const changed=terrain(plan,options),treated=plan?new Set([patch(plan.removal).id,patch(plan.ecology).id]):new Set();
  if(options.extraRemoval)treated.add(patch(options.extraRemoval).id);
  if(options.clearing)treated.add(patch(options.clearing.key).id);
+ if(options.broadFire??CONFIG.extensions.broadFire)return broadFuel(changed,treated);
  return Array.from({length:3600},(_,i)=>{
   const x=(i%60)*15-442.5,z=Math.floor(i/60)*15-442.5,id=Math.floor(i/60/10)*6+Math.floor(i%60/10);
   const width=28+8*Math.sin(x*.019+z*.025)+4*Math.cos(z*.04);
