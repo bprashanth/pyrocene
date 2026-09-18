@@ -5,6 +5,8 @@ export {CONFIG};
 export const PATCHES=CONFIG.candidates;
 export const patch=key=>[...PATCHES,...CONFIG.followup.newPatches].find(p=>p.key===key);
 export const atSector=id=>PATCHES.find(p=>p.id===id);
+// Inspection is local. Only Propose can change the shared restoration choice.
+export function cooperationPreview(plan,selected,phase){return {...plan,ecology:phase==='review'&&PATCHES.some(p=>p.key===selected)?selected:plan.ecology};}
 export function studyPlot(key){const p=patch(key);return {...WORLD[p.id],disturbance:key==='A'?null:key==='B'?'fire':'logging',exposure:key==='A'?.4:.85};}
 export function planBudget(removal,ecology){
  const r=PATCHES.find(p=>p.key===removal),e=PATCHES.find(p=>p.key===ecology);if(!r||!e)throw Error('Choose two patches.');

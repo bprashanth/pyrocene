@@ -2,7 +2,7 @@ import {RoundForest} from './round-render.mjs';
 import {StructureLab} from './structure-lab.mjs';
 import {WORLD} from './world.mjs';
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
-import {CONFIG,PATCHES,patch,atSector,studyPlot,review} from './round-model.mjs';
+import {CONFIG,PATCHES,patch,atSector,studyPlot,review,cooperationPreview} from './round-model.mjs';
 import {navigation,flowParams,roleFrom,flowURL} from './play-flow.mjs';
 import {BRIEFINGS} from './play-briefing.mjs';
 import {followupCandidates,followupBudget,followupReview,followupStudy,forecastText} from './neglect-model.mjs';
@@ -72,7 +72,7 @@ function render(){
    const b=button('Reveal plans',()=>act('reveal'));b.disabled=!Object.values(state.ready).every(Boolean)||mutating;decision.append(b);
   }else{
    const s=state.budget;status.textContent=`Starting funds: ${CONFIG.grant} credits. Cost: ${s.totalCost}. Return: ${s.returns}. Left: ${s.left}. Forest health: ${result.health.toFixed(0)}/100 at ${years}y.`;
-   $('finding').textContent=`Remove ${state.proposals.removal}. Restore ${state.proposals.ecology}.`;
+   $('finding').textContent=`Proposed: remove ${state.proposals.removal}, restore ${state.proposals.ecology}. Preview: restore ${selected||state.proposals.ecology}.`;
    const b=button('Commit plan',()=>act('commit'));b.disabled=s.left<0||mutating;decision.append(b);
    if(s.left<0)status.textContent+=' Revise a proposal.';
   }
@@ -115,6 +115,7 @@ function renderNeglect(){
 async function choose(key){
  if(busy)return;selected=key;const p=patch(key);forest.selectPlot(p.id);
  if(isNeglect()){carePreview=true;updateOutcome();}
+ else if(state.phase==='review')updateOutcome();
  if(view==='close')await camera('close');else render();
 }
 async function camera(next){
@@ -170,7 +171,7 @@ function updateOutcome(){
  }
  if(!state||state.phase==='survey')return;
  if(!fireCache.has(years))fireCache.set(years,review(state.proposals,years));result=fireCache.get(years);
- mode=clock>0?'fire':'recovery';forest.setPlan(showPlan?state.proposals:null,years/CONFIG.years);
+ mode=clock>0?'fire':'recovery';forest.setPlan(showPlan?cooperationPreview(state.proposals,selected,state.phase):null,years/CONFIG.years);
  const arrival=clock>0?(showPlan?result.future:result.baseline).arrival:null;
  if(forest.fire!==arrival)forest.setFire(arrival,CONFIG.duration);forest.setFireTime(clock);refreshPlants();render();
 }
@@ -208,7 +209,7 @@ $('briefing-begin').onclick=()=>{clearInterval(typing);$('briefing').close();};$
 $('recovery').oninput=()=>{years=Number($('recovery').value);showPlan=true;updateOutcome();};$('fire-time').oninput=()=>{clock=Number($('fire-time').value)/CONFIG.duration;updateOutcome();};
 $('without').onclick=()=>{showPlan=false;updateOutcome();};$('with').onclick=()=>{showPlan=true;updateOutcome();};
 $('care-yes').onclick=()=>{carePreview=true;updateOutcome();};$('care-no').onclick=()=>{carePreview=false;updateOutcome();};
-globalThis.roundDiagnostics=()=>({state,role,selected,view,busy,mode,clock,years,showPlan,budget:state?.budget,health:result?.health,forecast:result?.forecast,planted:result?.planted,fire:result?{baseline:result.baseline.burned,future:result.future.burned}:null,growthPoints:forest.growthPositions?.length/3||0,regrowthPoints:forest.regrowthPositions?.length/3||0,clearingPoints:forest.clearingPositions?.length/3||0,forest:forest.performance(),lab:lab.diagnostics()});
+globalThis.roundDiagnostics=()=>({state,role,selected,view,busy,mode,clock,years,showPlan,previewPlan:forest.plan,budget:state?.budget,health:result?.health,forecast:result?.forecast,planted:result?.planted,fire:result?{baseline:result.baseline.burned,future:result.future.burned}:null,growthPoints:forest.growthPositions?.length/3||0,regrowthPoints:forest.regrowthPositions?.length/3||0,clearingPoints:forest.clearingPositions?.length/3||0,forest:forest.performance(),lab:lab.diagnostics()});
 try{
  const [_,data]=await Promise.all([forest.load(),fetch('field-catalogue.json').then(r=>r.json())]);
  catalogue=[...data.species,...ADDITIONAL_SPECIES];forest.setInventory(catalogue,WORLD);forest.setSettlement(false);

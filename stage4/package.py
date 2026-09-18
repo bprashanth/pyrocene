@@ -40,6 +40,8 @@ APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
 DOC_NAMES = (
+    "WORKING_LOOP.md",
+    "REINFESTATION_DISCUSSION.md",
     "NEGLIGENCE.md",
     "SHARED_ROUND.md",
     "REFERENCE_LAYERS.md",

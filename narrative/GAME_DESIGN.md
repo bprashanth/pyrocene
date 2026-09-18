@@ -630,3 +630,45 @@ audience at ten metres. No fleet of phones has joined at once. The game master
 console has only ever been driven by the person who wrote it.
 
 The next useful thing is one evening with real people and somebody taking notes.
+
+---
+
+## 14. Working Stage 4 game: Cooperation and Negligence
+
+Checkpoint, 18 September 2026: `stage4-working-loop-20260918` (`07f72e3`).
+This preserves the accepted two-mission game before adding seed dispersal or
+germination. [Baseline details and recovery notes](../stage4/WORKING_LOOP.md).
+
+- [Explore the Amazon point-cloud map](http://100.82.28.38:8024/expedition.html)
+- [Start Cooperation](http://100.82.28.38:8024/round.html)
+- [Offline package](http://100.82.28.38:8024/download)
+- [Earlier forest film and evidence gallery](http://100.82.28.38:8022/)
+
+These preparation-machine links require network access to that machine. For
+local setup see [Stage 4](../stage4/README.md). Two teams use one laptop each;
+Teams supplies their separate links. A facilitator can test both roles alone.
+
+In Cooperation the removal team proposes one patch to clear and the ecologist
+proposes one to restore. The room discusses both and commits a shared plan.
+Recovery and fire play within the dense point cloud. Credits and forest health
+are separate. Shared locations avoid paying for clearance twice.
+
+Negligence is selected from the dropdown after Cooperation. Six months later,
+the planted patch and remaining funds carry forward. Choose careful removal
+among the saplings or higher-return clearing in one of two new patches. Both
+teams currently propose where one crew should go. Before proposing, With removal
+and Without removal compare each selected plot's projected structure. The
+planted plot can develop native canopy; unplanted clearings can regain invasives.
+Going backwards to Cooperation or Expedition resets the shared game.
+
+The accepted game has two finite missions, not an endless six-month loop yet.
+Its scan geometry is grounded in measured data, but plot assignments, species
+placement, growth trajectories and fuel/moisture fields are illustrative. Fire
+is simulated, not matched to a historical burn scar. Browser, two-team and
+offline tests have passed; a real room playtest is still needed.
+
+Next discussion: give the ecologist a small investigation within Negligence,
+using two species-record tabs, Dispersal and Germination. The removal team
+compares operations; the ecologist explains recurrence. Start with one invasive,
+one native and two maps, not a new equipment system. This is a proposal, not
+implemented behaviour. [Scope and research cautions](../stage4/REINFESTATION_DISCUSSION.md).

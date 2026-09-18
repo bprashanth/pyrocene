@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PATCHES,planBudget,review,terrain,runFire,fineFuel,healthAt,CONFIG} from './round-model.mjs';
+import {PATCHES,planBudget,review,terrain,runFire,fineFuel,healthAt,CONFIG,cooperationPreview} from './round-model.mjs';
 import {referenceWorld,snapshot,simulate} from './memory-model.mjs';
+test('review previews selected restoration without changing proposals or committed outcomes',()=>{
+ const plan={removal:'A',ecology:'C'};
+ for(const key of ['A','B','C'])assert.deepEqual(cooperationPreview(plan,key,'review'),{removal:'A',ecology:key});
+ assert.deepEqual(plan,{removal:'A',ecology:'C'});assert.deepEqual(cooperationPreview(plan,'B','committed'),plan);assert.deepEqual(cooperationPreview(plan,null,'review'),plan);
+});
 test('all nine proposal combinations have transparent and bounded budgets',()=>{
  const balances={AA:7,AB:5,AC:5,BA:0,BB:4,BC:1,CA:-2,CB:-1,CC:2};
  for(const a of PATCHES)for(const b of PATCHES){const x=planBudget(a.key,b.key);assert.equal(x.left,balances[a.key+b.key]);assert.equal(x.shared,a.key===b.key);assert.equal(x.cost,b.planting+(a.key===b.key?0:3));assert.equal(x.left,CONFIG.grant+x.returns-x.totalCost);assert.equal(x.returns-x.removalCost,a.income);}

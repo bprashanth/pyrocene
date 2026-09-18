@@ -117,6 +117,16 @@ class RoundPlay(unittest.TestCase):
   full=self.page.locator('#briefing-accessible').text_content();partial=self.page.locator('#briefing-text').text_content();self.assertLess(len(partial),len(full))
   self.shot('play-briefing-typing');self.click('Begin');expect(self.page.locator('#briefing')).not_to_be_visible()
   self.page.locator('#role').select_option('ecology');self.page.locator('#briefing[open]').wait_for();expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#briefing-accessible')).not_to_contain_text('Commit the shared plan');self.click('Begin')
+ def test_cooperation_room_previews_each_patch_without_changing_proposals(self):
+  self.start();self.inspect('A');self.click('Propose');self.begin();self.inspect('C');self.click('Propose');self.begin();self.click('Reveal plans');self.click('Forest');self.page.wait_for_function('!roundDiagnostics().busy')
+  proposals=self.page.evaluate('roundDiagnostics().state.proposals');budget=self.page.evaluate('roundDiagnostics().budget');images=[]
+  for key in ['A','B','C']:
+   self.click('Patch '+key);self.seek('recovery',10);expect(self.page.locator('#finding')).to_contain_text('Preview: restore '+key)
+   self.assertEqual(self.page.evaluate('roundDiagnostics().previewPlan.ecology'),key);self.assertEqual(self.page.evaluate('roundDiagnostics().state.proposals'),proposals);self.assertEqual(self.page.evaluate('roundDiagnostics().budget'),budget)
+   self.shot('cooperation-review-'+key);images.append(Image.open(BytesIO(self.page.locator('#landscape>canvas').screenshot())))
+  for a,b in zip(images,images[1:]):self.assertGreater(sum(ImageStat.Stat(ImageChops.difference(a,b)).mean),.05)
+  self.click('Patch B');self.seek('recovery',3);self.assertEqual(self.page.evaluate('roundDiagnostics().previewPlan.ecology'),'B')
+  self.click('Commit plan');self.page.wait_for_function('roundDiagnostics().state.phase==="committed"');self.assertEqual(self.page.evaluate('roundDiagnostics().previewPlan.ecology'),'C');self.assertEqual(self.page.evaluate('roundDiagnostics().state.committed.ecology'),'C');self.seek('fire-time',20)
  def test_negligence_forecast_before_proposal_and_structure_tracks_year(self):
   self.start();self.inspect('C');self.click('Propose');self.begin();self.click('Propose');self.begin();self.click('Reveal plans');self.click('Commit plan')
   self.page.locator('#game-mode').select_option('negligence');self.begin();self.page.wait_for_function('!roundDiagnostics().busy')

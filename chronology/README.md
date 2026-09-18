@@ -60,6 +60,7 @@ Read in filename order.
 | [2026-09-17T2200](2026-09-17T2200-stage4-removal-briefing.md) | Rename the mission Removal and clarify whose role the briefing describes |
 | [2026-09-17T2250](2026-09-17T2250-stage4-cost-of-neglect.md) | Cooperation, then a six-month return with visible costs of neglect before proposing |
 | [2026-09-17T2355](2026-09-17T2355-stage4-selected-patch-projections.md) | Selected-patch projections, temporary clearance benefits and simpler shared navigation |
+| [2026-09-18T0905](2026-09-18T0905-stage4-loop-checkpoint-and-seeds.md) | Freeze the working loop, fix Cooperation previews and discuss seed arrival and establishment |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
