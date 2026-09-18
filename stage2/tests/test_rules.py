@@ -437,7 +437,10 @@ class TwoBatchesPerNight(unittest.TestCase):
         g.choose(choice, None)
         return night, g.resolve_vote()
 
-    def test_the_night_shows_the_removal_then_the_spread(self):
+    def test_the_night_is_one_reveal(self):
+        """The removal and the spread go up together, and this is the reason:
+        a night that takes the ecologist or the ranger moves no ground, so
+        showing the removal on its own announced that a specialist had gone."""
         rng = random.Random(2)
         g = Game(seed=13)
         for i in range(12):
@@ -447,10 +450,28 @@ class TwoBatchesPerNight(unittest.TestCase):
             night, day = self._round(g, rng)
             if g.phase != "playing":
                 break
-            keys = [st["key"] for st in night]
-            self.assertEqual(keys[:2], ["night", "growth"],
-                             f"the night is the removal then the spread, got {keys}")
-            self.assertTrue(all(st["text"] for st in night), "each one gets a line")
+            keys = [st["key"] for st in night if st["key"] != "network"]
+            self.assertEqual(keys, ["night"], f"one reveal, not {keys}")
+            self.assertTrue(all(st["text"] for st in night), "it gets a line")
+
+    def test_a_specialist_night_looks_like_any_other(self):
+        """The card and the shape of the reveal must not say which role went."""
+        seen = {}
+        for role in (ECOLOGIST, RANGER, NATIVE_P, LANTANA):
+            g = Game(seed=13, config={"stage": 1})
+            for i in range(12):
+                g.add_player(f"P{i + 1}")
+            g.start()
+            who = next((p for p in g.players.values() if p.role == role), None)
+            if not who:
+                continue
+            g.eliminate(who.id)
+            st = g.resolve_night()[0]
+            seen[role] = (st["text"], bool(st["cells"]))
+        texts = {v[0] for v in seen.values()}
+        self.assertEqual(len(texts), 1, f"the card differs by role: {seen}")
+        self.assertTrue(all(v[1] for v in seen.values()),
+                        f"every night has to move something: {seen}")
 
     def test_the_vote_shows_the_room_then_the_fire(self):
         rng = random.Random(2)
@@ -514,7 +535,7 @@ class TwoBatchesPerNight(unittest.TestCase):
             g.add_player(f"P{i + 1}")
         g.start()
         night, day = self._round(g, rng, choice="hunt")
-        self.assertEqual([st["key"] for st in night], ["night", "growth"])
+        self.assertEqual([st["key"] for st in night], ["night"])
         self.assertEqual([st["key"] for st in day], ["vote"])
 
 

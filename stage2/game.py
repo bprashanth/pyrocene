@@ -379,30 +379,25 @@ class Game:
         r = self.round
         steps: list = []
         self.log_open(r)
+        # The removal and the spread are shown as one change, on purpose.
+        #
+        # Revealing them separately told the room what it must not know. A night
+        # that takes the ecologist or the ranger moves no ground at all, so an
+        # elimination reveal with nothing in it announced that a specialist had
+        # gone, and one with a stand disappearing announced a native. Lantana
+        # could no longer lie about either. Folding the two into a single reveal
+        # puts the ground lost to a removal and the ground lost to spread on the
+        # board at the same moment, and nobody can tell which was which.
+        before = self.view()
         pid = self.pending["night_kill"]
+        took = []
         if pid:
             p = self.players[pid]
             p.alive = False
             p.out_round = r
             p.out_by = "night"
             self.log_player(pid, p.role, "removed")
-            before = self.view()
-            cells, _ = self._apply_elimination(p)
-            after = self.view()
-            # The card never names anyone. A night with no map change reads the
-            # same whether the ranger saved someone or a specialist was taken,
-            # so the room stays guessing and lantana can lie about it.
-            steps.append(self._step(
-                "night", T("cards", "round.title", r=r),
-                T("cards", "night.about" if cells else "night.nothing"),
-                self._transition(before, after, cells, "elimination"), cells=cells,
-                before=before, after=after,
-                note=T("cards", "night.ground", dir=self._dir_of(cells)) if cells
-                else T("cards", "night.nothing")))
-        else:
-            steps.append(self._step(
-                "night", T("cards", "round.title", r=r), T("cards", "night.nothing"),
-                [self._frame("quiet", "")]))
+            took, _ = self._apply_elimination(p)
 
         # Lantana takes ground before the room votes, not after.
         #
@@ -412,19 +407,21 @@ class Game:
         # ground they have lost, and then they decide. It also means the fire
         # that follows is read off the board they were shown.
         rng = self._rng(r)
-        before = self.view()
         grown, _halo = self._grow(rng)
         leaked = self._leak(rng)
         advance(self.state, self.cfg, [])
         after = self.view()
-        moved = sorted(set(grown) | set(leaked))
+        moved = sorted(set(took) | set(grown) | set(leaked))
         steps.append(self._step(
-            "growth", T("cards", "round.title", r=r),
-            T("cards", "growth.about" if moved else "growth.none"),
+            "night", T("cards", "round.title", r=r),
+            T("cards", "night.about" if moved else "night.nothing"),
             self._transition(before, after, moved, "creep"), cells=moved,
             before=before, after=after,
-            note=T("ember", "growth.one") if len(moved) == 1 else
-            T("ember", "growth", n=len(moved)) if moved else T("ember", "growth.none")))
+            note=(T("cards", "night.ground", dir=self._dir_of(took)) + " "
+                  if took else "") +
+                 (T("ember", "growth.one") if len(grown) + len(leaked) == 1 else
+                  T("ember", "growth", n=len(grown) + len(leaked))
+                  if grown or leaked else T("ember", "growth.none"))))
 
         # The turn the evening is built around, called once, the night it
         # happens. It belongs here rather than after the vote: the room should

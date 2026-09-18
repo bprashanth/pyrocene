@@ -328,10 +328,12 @@ class J04_NightRunsAndEmberMatches(unittest.TestCase):
     def test_each_step_is_one_card_then_one_animation(self):
         fresh(seed=41)
         st = play_round("hunt")
-        self.assertEqual(keys(st)[0], "night", "the night is explained first, on its own")
+        # The night is a single reveal: the ground a removal took and the
+        # ground lantana took, together, so neither says which role went.
+        self.assertEqual(keys(st)[0], "night", "the night comes first, on its own")
         self.assertIn("vote", keys(st))
-        self.assertIn("growth", keys(st))
         self.assertIn("fire", keys(st))
+        self.assertNotIn("growth", keys(st), "the spread is folded into the night")
         for x in st:
             self.assertTrue(x["title"], "every step needs a card title")
             self.assertTrue(x["card"], "every step needs a card to show")
@@ -356,10 +358,11 @@ class J04_NightRunsAndEmberMatches(unittest.TestCase):
         self.skipTest("no sized fire in the seeds tried")
 
     def test_growth_holds_then_turns_the_squares_over(self):
+        # The spread lives inside the night's single reveal now.
         for seed in (41, 42, 43, 44):
             fresh(seed=seed)
             st = play_round("hunt")
-            g = step(st, "growth")
+            g = step(st, "night")
             if g and "creep" in g["kinds"]:
                 self.assertEqual(g["kinds"][0], "focus",
                                  "the board hazes and holds on the squares first")
@@ -376,9 +379,9 @@ class J04_NightRunsAndEmberMatches(unittest.TestCase):
     def test_a_transition_runs_long_enough_to_follow(self):
         fresh(seed=41)
         st = play_round("hunt")
-        g = step(st, "growth")
-        if not g or "creep" not in g["kinds"]:
-            self.skipTest("no growth this seed")
+        g = step(st, "night")
+        self.assertIsNotNone(g, "every round has a night reveal")
+        self.assertIn("creep", g["kinds"], "and it is a transition, not a still")
         self.assertGreaterEqual(sum(g["hold_ms"]), 3200, "too quick to read")
         self.assertLessEqual(sum(g["hold_ms"]), 7000, "too slow, the room will drift")
 

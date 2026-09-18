@@ -49,9 +49,10 @@ def card_svg(title: str, text: str, view: dict, name: str) -> str:
     for k, ln in enumerate(lines):
         out.append(f'<text x="{W/2}" y="{y + k*46}" text-anchor="middle" '
                    f'style="font-size:34px;font-weight:500" fill="{body}">{base.esc(ln)}</text>')
-    out.append(f'<text x="{W/2}" y="{H-56}" text-anchor="middle" '
-               f'style="font-size:14px;letter-spacing:.16em" fill="{body}" opacity=".45">'
-               f'THE GAME MASTER WILL SHOW YOU</text>')
+    # No footer. A half of a round runs on one press now, so most cards go up
+    # while the animation before them is still settling and nobody is waiting
+    # on anybody. Promising that the game master will show you something was
+    # true when every card needed its own press and is noise now.
     css = ".x{}"
     return base.shell("".join(out), css, paper)
 

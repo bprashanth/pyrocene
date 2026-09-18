@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 87 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 88 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -143,27 +143,31 @@ changes nothing on the map.
 eliminates a player, the room votes to hunt lantana or work against fire,
 lantana spreads, fire sparks and spreads based on the environment.
 
-**A round arrives in two halves.** Both stages work the same way.
+**A round arrives in two halves, and each is one press.**
 
-Press **Finish night** and the projector shows two things in order, each with one
-line before it: *A player was eliminated*, then the ground that player held
-changing hands; then *Lantana spread*, then the spread. Only then does the room
-vote. That is the point of the split. They argue about the board in front of
-them rather than about last night's.
+Press **Finish night**. One line goes up, *A player was eliminated, and lantana
+continued to spread*, and then the board shows both at once. Then the room
+votes.
 
-Press **Finish vote** and it shows what the room's decision did and then the
-fire: *The crew cut a fire line* and the trench going in, then *Wildfire* and the
-fire running. Stage 1 has neither, so it shows the vote and stops.
+The two are shown together on purpose. A night that takes the ecologist or the
+ranger moves no ground at all, so revealing the removal on its own announced
+that a specialist had gone, and a stand disappearing announced a native. Folding
+them into one reveal puts the ground lost to a removal and the ground lost to
+spread up at the same moment, and nobody can tell which was which.
+
+Press **Finish vote**. It plays the rest of the round on that one press: what
+the room's decision did, then *Wildfire* and the fire running. Each part still
+puts its line up first and holds it long enough to read. Stage 1 has no crew and
+no fire, so it shows the vote and stops.
 
 Each card is one phrase. The console carries the same event in full, for the
-person doing the talking, because the map does not say which night the trench was
-dug or how many squares went.
+person doing the talking, because the map does not say which night the trench
+was dug or how many squares went.
 
-**Show before** flips the projector between the board either side of the last
-change. There used to be a pulsing overlay hinting where lantana was about to go
-and it did not always match where it went, which is worse than no hint. Flipping
-between two real boards cannot be wrong, and it is what actually gets explained
-in a room.
+**Show before** flips the projector between the boards either side of the whole
+half. There used to be a pulsing overlay hinting where lantana was about to go
+and it did not always match where it went, which is worse than no hint. Two real
+boards cannot be wrong.
 
 ## The one dial the game master has
 
@@ -251,6 +255,7 @@ Everything tunable is in `stage2/config.py`.
 | `village_defend_range` | 8 | Only trench the homes if fuel is this close |
 | `stage` | 2 | 1 is plain Mafia with a replay at the end; 2 adds fire |
 | `hold_ms` | various | How long the projector holds each animation frame |
+| `card_ms` | 2600 | How long a line stays up before the thing it describes |
 
 ## Testing
 

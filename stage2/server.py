@@ -273,39 +273,66 @@ class Room:
         threading.Thread(target=run, daemon=True).start()
 
     def advance(self):
-        """Play the animation for the card on screen, then put up the next card."""
+        """Play the rest of this half of the round, on one press.
+
+        A round arrives in two halves and each is one press. The game master
+        presses after the night and again after the vote, and everything in
+        between runs on its own. Each part still puts its line up first, held
+        long enough to read, and then shows the thing it describes. Making the
+        game master press for every one of those turned running a room into
+        operating a slideshow.
+        """
         if self.mode == "replay":
             return self.step_replay()
         if self.mode != "explain" or self.cursor >= len(self.steps):
             return
-        step = self.steps[self.cursor]
+        steps = self.steps[self.cursor:]
         self.mode = "playing"
         self.broadcast_state()
         epoch = self.epoch
+        card_ms = self.game.cfg.get("card_ms", 2600)
 
         def run():
-            for f in step["beats"]:
+            first_before, last_after = None, None
+            for k, step in enumerate(steps):
                 if self.epoch != epoch:
                     return
-                self.paint(self.draw_frame(f), kind=f["kind"])
-                if not FAST:
-                    time.sleep(f["hold_ms"] / 1000)
+                # The first card is already up, put there when the half began.
+                if k and step.get("text"):
+                    self.paint(self.draw_card(step), kind="card")
+                    self.broadcast_state()
+                    if not FAST:
+                        time.sleep(card_ms / 1000)
+                for f in step["beats"]:
+                    if self.epoch != epoch:
+                        return
+                    self.paint(self.draw_frame(f), kind=f["kind"])
+                    if not FAST:
+                        time.sleep(f["hold_ms"] / 1000)
+                b, a = step.get("before"), step.get("after")
+                if b is not None and a is not None and self._differ(b, a):
+                    if first_before is None:
+                        first_before = b
+                    last_after = a
+                with self.lock:
+                    self.cursor += 1
             with self.lock:
                 if self.epoch != epoch:
                     return
-                b, a = step.get("before"), step.get("after")
-                # Only worth offering when the two boards actually differ. A
-                # night where nothing grew would give the game master a button
-                # that changes nothing on screen.
-                if b is not None and a is not None and self._differ(b, a):
-                    self.pair = (b, a)
+                # Flip between the boards either side of the whole half, not of
+                # whichever part happened to run last.
+                if first_before is not None and last_after is not None:
+                    self.pair = (first_before, last_after)
                     self.pair_at = "after"
-                self.cursor += 1
-                if self.cursor < len(self.steps):
-                    self.show_card()
+                ended = steps[-1]["key"] == "ending"
+                self.steps = []
+                self.cursor = 0
+                if ended:
+                    # Leave the closing card up rather than snapping back to a
+                    # board nobody is going to act on.
+                    self.mode = "idle"
+                    self.broadcast_state()
                 else:
-                    self.steps = []
-                    self.cursor = 0
                     self.show_map()
         threading.Thread(target=run, daemon=True).start()
 

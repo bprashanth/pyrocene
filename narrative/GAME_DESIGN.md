@@ -221,30 +221,36 @@ round it, one trench is not a strategy. Either way they see the run.
 > the optimal action, and the optimal action was invisible. An automated choice
 > should be a good one that is also worth watching.
 
-### Two halves a night
+### Two halves a night, one press each
 
-Press Finish night and the room sees, with one line before each: a player was
-eliminated, then the ground that player held changing hands; lantana spread,
-then the spread. Then they vote. Press Finish vote and they see what their
+Press Finish night and one line goes up, *A player was eliminated, and lantana
+continued to spread*, and the board shows both at once. Then the room votes.
+Press Finish vote and the rest of the round plays on that press: what their
 decision did, then the fire.
 
+The removal and the spread are shown together because showing them apart told
+the room what it must not know. A night that takes the ecologist or the ranger
+moves no ground, so an empty reveal announced a specialist and a vanishing stand
+announced a native. Lantana could no longer lie about either.
+
 Lantana grows before the vote, not after. That is the whole reason the map is in
-the room. They see the ground they have lost, and then they decide. It also
-means the fire that follows is read off the board they were shown.
+the room. They see the ground they have lost, and then they decide.
 
 Each card is one phrase. The console carries the same event in full, for the
-person doing the talking.
-
-**Show before** flips the projector between the boards either side of the last
-change. There was a pulsing overlay hinting where lantana was about to go, and
-it did not always match where it went. Two real boards cannot be wrong.
+person doing the talking. **Show before** flips the projector between the boards
+either side of the half. There was a pulsing overlay hinting where lantana was
+about to go, and it did not always match where it went.
 
 > **The move.** Show consequence before choice. A room that decides and then
 > learns what the world did has been given a quiz. A room that sees what the
 > world did and then decides has been given a problem.
 >
-> And prefer two true states to one clever animation. A hint that is sometimes
-> wrong costs more trust than it buys attention.
+> Watch what your reveals subtract. Ours were honest one at a time and together
+> they leaked the thing the whole game rests on, because an empty reveal is
+> itself a fact. If a step can show nothing, check what nothing tells them.
+>
+> And count the presses. Every one is the facilitator looking at a screen
+> instead of the room.
 
 ### The one dial
 

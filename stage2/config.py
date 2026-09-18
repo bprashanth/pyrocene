@@ -90,6 +90,8 @@ CONFIG = {
     # The game master controls the gaps between one explanation and the next, so
     # these only pace what moves. STAGE2_FAST=1 zeroes all of them.
     "run_hold_ms": 520,        # holds inside stage 2's single run of a night
+    "card_ms": 2600,           # how long a line stays up before the thing it describes
+
 
     "hold_ms": {
         # A transition runs about four seconds: hold on the squares, turn them
