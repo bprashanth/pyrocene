@@ -98,7 +98,7 @@
   if (sc0.models.forefire) addPanel("as_played", "forefire", FF);
   if (sc0.models.cell2fire) addPanel("as_played", "cell2fire", C2);
   const sq = n => `${n} square${n === 1 ? "" : "s"}`;
-  addRow("MANAGEMENT PLAN", R.proposal.text || `${sq(R.proposal.cleared.length)} of thick lantana cleared, fire line of ${sq(R.proposal.line.length)}`);
+  addRow("MANAGEMENT PLAN", R.proposal.text || `${sq(R.proposal.cleared.length)} cut where the band is thinnest, then a fire line of ${sq(R.proposal.line.length)} to hold it`);
   addMap(sc1, "The plan");
   if (sc1.models.forefire) addPanel("proposal", "forefire", FF);
   if (sc1.models.cell2fire) addPanel("proposal", "cell2fire", C2);

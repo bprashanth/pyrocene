@@ -71,6 +71,10 @@
     <a class="tile" href="https://pyrocene.netlify.app">
       <h2>Stage 3</h2>
     </a>
+
+    <a class="tile" id="stage4" href="#">
+      <h2>Stage 4</h2>
+    </a>
   </div>
 </main>
 <script>
@@ -79,6 +83,8 @@
   // over tailscale or on the laptop itself without three different bookmarks.
   document.getElementById("films").href =
     location.protocol + "//" + location.hostname + ":__FILMS_PORT__/";
+  document.getElementById("stage4").href =
+    location.protocol + "//" + location.hostname + ":__STAGE4_PORT__/";
 </script>
 </body>
 </html>

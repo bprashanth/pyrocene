@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Board -> every model -> one results file the comparison page reads.
 
-    /tmp/forefire_venv.rskvjS/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board-sample-night5.json
+    ~/.cache/pyrocene-lab-venv/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board-sample-night5.json
 
 Scenarios: the board as it was when the big fire started, and the same board
 with the squares the replay marks as the ones that joined the stand cleared

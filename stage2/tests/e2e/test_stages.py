@@ -257,10 +257,10 @@ class StartPage(unittest.TestCase):
         pg.on("pageerror", lambda e: errors.append(str(e)))
         pg.goto(BASE + "/start")
         pg.wait_for_selector(".tile", timeout=8000)
-        self.assertEqual(pg.locator(".tile").count(), 5)
+        self.assertEqual(pg.locator(".tile").count(), 6)
         text = pg.inner_text("main")
         for name in ("Stage 1", "Stage 2", "Fire lab",
-                     "Forest structure studies", "Stage 3"):
+                     "Forest structure studies", "Stage 3", "Stage 4"):
             self.assertIn(name, text)
         self.assertEqual(errors, [])
 
@@ -298,6 +298,14 @@ class StartPage(unittest.TestCase):
         pg.wait_for_selector("#films", timeout=8000)
         href = pg.get_attribute("#films", "href")
         self.assertIn(":8022/", href)
+        self.assertIn(urllib.parse.urlparse(BASE).hostname, href)
+
+    def test_the_stage_four_link_follows_the_host_you_came_in_on(self):
+        pg = page(1280, 900)
+        pg.goto(BASE + "/start")
+        pg.wait_for_selector("#stage4", timeout=8000)
+        href = pg.get_attribute("#stage4", "href")
+        self.assertIn(":8024/", href)
         self.assertIn(urllib.parse.urlparse(BASE).hostname, href)
 
     def test_it_says_almost_nothing(self):

@@ -16,6 +16,22 @@ The implementation details and exact commands then continue in
 [`lidar/README.md`](lidar/README.md) and
 [`rainforest_continuity/README.md`](rainforest_continuity/README.md).
 
+## Where the liana TLS material lives
+
+The open Nouragues NOU-11 TLS tiles are under
+`/mnt/seagate/videos/pyrocene/data/rainforest-continuity/nouragues/tls_nou11_sample/`.
+The prepared sample used by the renderer is
+`/mnt/seagate/videos/pyrocene/rainforest-continuity/artifacts/nouragues-tls.npz`;
+its sibling manifest records every input tile and checksum. The source is
+Zenodo record [`4661301`](https://zenodo.org/records/4661301), CC BY 4.0.
+
+This TLS is real tropical-forest geometry without species labels. The liana
+classification shown in `liana-structure.mp4` comes from the published image
+`nouragues/liana-paper-figures/gr2.jpg`, while the mapped liana-zone files are
+under `nouragues/liana-infested-forest-dryad/`. Do not describe the NOU-11 TLS
+sample itself as liana-labelled. Exact paths, processing and claim limits are
+in [`rainforest_continuity/README.md`](rainforest_continuity/README.md).
+
 ## Canonical event pair
 
 Show them in this order after the room game and fire-model lab.

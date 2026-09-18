@@ -7,7 +7,7 @@ number of metres, so the real distances fit. The reported wind and dryness
 are plugged in. "Thick lantana" stands for whatever the invasive fuel was:
 the page says which.
 
-    /tmp/forefire_venv.rskvjS/bin/python cases.py         # writes one board JSON per case
+    ~/.cache/pyrocene-lab-venv/bin/python cases.py         # writes one board JSON per case
 """
 import json, math, random
 
