@@ -6,12 +6,14 @@ import { phosphorImage } from './field-media.mjs';
 import { observationLayers } from './observation-layers.mjs';
 import { ADDITIONAL_SPECIES, INVENTORY_PROFILE, plantLayer, LAYERS } from './forest-flora.mjs';
 import { StructureLab } from './structure-lab.mjs';
+import { speciesRecord } from './species-record.mjs';
 import { expeditionNavigation } from './play-flow.mjs';
 expeditionNavigation();
 
 const $=id=>document.getElementById(id);
 let state=fresh(), view='forest', busy=false, catalogue=[], humans=[], photos={}, book=null, sort='found', mapPlants=new Set(), mapped=[], currentTab='traces';
 let reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let cameraSerial=0;
 let sensorMap=[],sensorCaption='';
 let bookContext='collection';
 const prototype=new URLSearchParams(location.search).get('mode')||'cases';
@@ -53,7 +55,7 @@ function update(){
   $('place-context').hidden=id===null;
   $('place-coordinate').textContent=id===null?'':`FIELD POSITION ${coordinate(id)}`;
   $('place-description').textContent=busy?'Looking closer.':observations.kind()!=='plants'?(view==='close'?'Reference record - practice location.':'Choose a marked place.') :view==='close'?'Choose a plant name.':'Choose a square, then Close view.';
-  document.querySelectorAll('[data-view]').forEach(b=>{b.disabled=busy||(b.dataset.view==='close'&&id===null);b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-pressed',String(b.dataset.view===view));});
+  document.querySelectorAll('[data-view]').forEach(b=>{b.disabled=b.dataset.view==='close'&&(busy||id===null);b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-pressed',String(b.dataset.view===view));});
   forest.setPlots([]);
   forest.setSpecimens(observations.kind()==='plants'&&state.visited.includes(id)?WORLD[id].speciesIds.map(sp=>({id:sp,speciesId:sp,label:catalogue.find(s=>s.id===sp)?.name||sp})):[]);
   forest.setFieldVisited(state.visited.includes(id));
@@ -71,7 +73,8 @@ async function choose(id){
   if(view==='close')await camera('close');else update();
 }
 async function camera(next){
-  if(busy||next==='close'&&state.selected===null)return;
+  if(next==='close'&&(busy||state.selected===null))return;
+  const token=++cameraSerial;
   closeBook();$('plot-notes').hidden=true;
   busy=true;view=next;update();
   try{
@@ -84,7 +87,7 @@ async function camera(next){
     }
     observations.after(next,state.selected);
   }catch(e){toast(e.message);}
-  finally{busy=false;update();}
+  finally{if(token===cameraSerial){busy=false;update();}}
 }
 function showPlotNotes(){
   const species=WORLD[state.selected].speciesIds.map(id=>catalogue.find(s=>s.id===id));
@@ -141,17 +144,7 @@ function renderBook(){
     const condition=c?.moisture>.7?'The fallen leaves here are damp.':c?.moisture<.3?'The fallen leaves here are dry and break easily.':'Leaves below the surface are damp. The top layer is drier.';
     const count=ACTIVE.filter(c=>c.speciesIds.includes(sp.id)).length;
     const abundance=count>=6?'It appears in several places on this practice map.':'It appears in only a few places on this practice map.';
-    const details=el('div',undefined,'plant-details plain-note');
-    const photo=photos[sp.id];
-    if(photo){const f=phosphorImage('assets/'+photo.file,sp.name+' reference');f.append(el('figcaption','Species reference - '+photo.author+' / '+photo.license));details.append(f);}
-    details.append(el('h2',sp.name));
-    if(sp.name!==sp.scientific)details.append(el('small',sp.scientific,'scientific-name'));
-    details.append(el('p',(sp.status==='Invasive'?'This plant is invasive. ':'This plant is native to this region. ')+(sp.description||'')+' '+condition));
-    details.append(el('p',(sp.plainUse||sp.use||'')+' '+abundance));
-    details.append(el('small',`${LAYERS[plantLayer(sp)].name} - ${sp.growthForm}`,'plant-layer-note'));
-    if(view==='close'&&WORLD[state.selected]?.speciesIds.includes(sp.id))details.append(btn('See its structure',()=>structureLab.open(WORLD[state.selected],sp.id),'structure-open'));
-    if(!photo)details.append(el('small','The map shows a structure study, not a botanical portrait.','plant-layer-note'));
-    if(sp.sources?.[0])details.append(link('Source',sp.sources[0].url));
+    const details=speciesRecord({species:sp,photo:photos[sp.photoAssetId||sp.id],plot:here,condition,abundance,onStructure:view==='close'&&WORLD[state.selected]?.speciesIds.includes(sp.id)?()=>structureLab.open(WORLD[state.selected],sp.id):null});
     content.append(details);
 
   }else{

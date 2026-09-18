@@ -691,3 +691,11 @@ money-versus-connectivity tradeoff and the benefits of mature restoration remain
 Both extensions have independent off switches. The exact preceding build is
 tagged `stage4-before-seeds-and-scar` (`db21450`) and preserved as an offline ZIP.
 [How to try, evidence, limits and rollback](../stage4/SEEDS_AND_SCAR.md).
+
+The next UI revision puts the field record back into every stage. Click a plant
+name for its green reference image, native/invasive status, description and seed
+tabs. There is no separate Seeds button. Negligence asks the ecologist to explain
+the return of invasives and discuss whether new seedlings or nearby sources need
+attention. Unrecorded species traits remain explicitly unknown. Crew choices
+and budgets are unchanged. Close view now overlaps the zoom and rising points
+and allows a return to Forest or Overhead while loading.

@@ -1,5 +1,41 @@
 # Reversible seed study and surface-fire scar
 
+## Current interface: shared field record
+
+Updated 18 September after play feedback. There is no Seeds button or separate
+species picker now. Click a plant name in Expedition, Cooperation or Negligence.
+The same right-hand field record shows its green reference image, a Native or
+Invasive badge, and About / Dispersal / Germination tabs. It does not take over
+the landscape. This record is available to both roles in both missions.
+
+Five seed profiles are currently sourced: Marandu, signal, Guinea and molasses
+grass, plus Cecropia. Other species retain their descriptions, uses, reference
+images where available and structure link. Their seed tabs explicitly state
+that the traits have not been added; they do not show a fabricated species map.
+Grass source maps now follow the selected species' authored occurrence, rather
+than the same fixed set of grass squares for every species.
+
+The Negligence ecologist investigates why invasives return at the restored site.
+Their explanation can favour removing invasive seedlings, treating nearby seed
+sources or further investigation. The executable v0 decision remains one of the
+available crew patches. No new treatment action or causal scoring was added.
+
+The exact preceding interface is tagged `stage4-before-unified-field-record`
+at `549e581`. The earlier extension switches remain: `seedStudy` now controls the
+two seed tabs everywhere, not a separate button. `broadFire` is unchanged.
+
+Close view previously waited for the 900 ms zoom, built the plot, then ran a
+1000 ms growth animation. On local software-rendered Chromium the measured
+transition was about 2 seconds, including about 53 ms to construct the plot.
+About 4 MB of cold scan requests could add network delay on the laptop. Common
+scan data now preloads after the main forest, selected squares prefetch their
+crop, and plant growth overlaps the zoom. A local normal-motion browser test
+measured 0.93 seconds with detail ready after about 26 ms. This is not a timing
+measurement on the participant's laptop. Forest and Overhead can cancel entry.
+The dense point count and measured source fragments have not been reduced.
+
+The original trial description below records the earlier interface.
+
 Trial extension, 18 September 2026. The two missions, money, proposal rules and
 survival trajectories are unchanged. No third mission or extra equipment.
 

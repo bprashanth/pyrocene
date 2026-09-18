@@ -18,7 +18,7 @@ export class ExpeditionForest extends ExplorationForest {
     this.flora=new Map();this.plotInventory=[];this.anchorMap=new Map();this.focusedSpecimen=null;
     this.structureStyle=new URLSearchParams(location.search).get('structure')||'soft';
     document.addEventListener('keydown',e=>{
-      if(!['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]')||this.tlsActive)return;
+      if(e.defaultPrevented||!['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]')||this.tlsActive)return;
       e.preventDefault();
       const d=Math.max(8,this.goal.distance/30),x=['a','ArrowLeft'].includes(e.key)?-d:['d','ArrowRight'].includes(e.key)?d:0,z=['w','ArrowUp'].includes(e.key)?-d:['s','ArrowDown'].includes(e.key)?d:0;
       this.goal.target.x=clamp(this.goal.target.x+x,-420,420);this.goal.target.z=clamp(this.goal.target.z+z,-420,420);
@@ -38,7 +38,13 @@ export class ExpeditionForest extends ExplorationForest {
     return meta;
   }
   setPlots(){super.setPlots([]);}
-  setInventory(catalogue,plots){this.flora=new Map(catalogue.map(s=>[s.id,s]));this.plotInventory=plots;}
+  setInventory(catalogue,plots){this.flora=new Map(catalogue.map(s=>[s.id,s]));this.plotInventory=plots;this._cachedPlot(0).catch(()=>{});}
+  selectPlot(id){
+    const selected=super.selectPlot(id);
+    // Begin network work when a square is chosen, not after Close view.
+    if(selected&&!this.observationPoints)this._cachedPlot(id).catch(()=>{});
+    return selected;
+  }
   setSpecimens(entries=[]){
     this.allSpecimens=entries;
     const max=this.width<=700?3:6,chosen=[];
@@ -88,12 +94,18 @@ export class ExpeditionForest extends ExplorationForest {
   _manifestPlot(manifest,id){const p=manifest.plots[id%manifest.plots.length];this.currentTLS=p;return p;}
   _makeTLSCache(bytes,plot,manifest){const cached=super._makeTLSCache(bytes,plot,manifest);cached.plot=plot;return cached;}
   async _cachedPlot(id){
+    this.plotRequests??=new Map();
+    if(this.plotRequests.has(id))return this.plotRequests.get(id);
+    const request=this._fetchPlot(id).catch(e=>{this.plotRequests.delete(id);throw e;});
+    this.plotRequests.set(id,request);return request;
+  }
+  async _fetchPlot(id){
     if(!this.neighbourhoodPromise)this.neighbourhoodPromise=Promise.all(['tls-manifest.json','forest-fragments.json'].map(async file=>{const r=await fetch('assets/'+file);if(!r.ok)throw Error('The forest detail could not load.');return r.json();})).then(([m,wood])=>Promise.all([m.plots[1],wood].map(async p=>{const r=await fetch(this._assetURL(p.file));if(!r.ok)throw Error('The forest detail could not load. Try Close view again.');return {...p,points:new Float32Array(await r.arrayBuffer())};}))).then(s=>this.neighbourhoodSources=s).catch(e=>{this.neighbourhoodPromise=null;throw e;});
-    await this.neighbourhoodPromise;
-    const manifest=await this._loadTLSManifest(),plot=this._manifestPlot(manifest,id),key=plot.id;
+    const manifest=await this._loadTLSManifest(),plot=manifest.plots[id%manifest.plots.length],key=plot.id;
     if(this.tlsCache.has(key))return this.tlsCache.get(key);
-    const r=await fetch(this._assetURL(plot.file));if(!r.ok)throw Error('This ground scan could not load. Try Close view again.');
-    const cached=this._makeTLSCache(await r.arrayBuffer(),plot,manifest);this.tlsCache.set(key,cached);return cached;
+    const bytes=fetch(this._assetURL(plot.file)).then(r=>{if(!r.ok)throw Error('This ground scan could not load. Try Close view again.');return r.arrayBuffer();});
+    const [buffer]=await Promise.all([bytes,this.neighbourhoodPromise]);
+    const cached=this._makeTLSCache(buffer,plot,manifest);this.tlsCache.set(key,cached);return cached;
   }
   _blend(to,duration){
     if(this.transition){this.transition.resolve(false);this.transition=null;}
@@ -123,9 +135,16 @@ export class ExpeditionForest extends ExplorationForest {
       if(!Number.isInteger(id))throw Error('Choose a square first.');
       // Photo/audio/building references do not need a TLS download or decoding.
       const reference={plot:{id:'reference-'+this.observationKind,bounds:{x:[0,0],z:[0,0]}},anchors:[],count:0,fallback:[],group:{children:[{geometry:{attributes:{position:{array:new Float32Array()}}}}]}};
-      const [cached]=await Promise.all([this.observationPoints?Promise.resolve(reference):this._cachedPlot(id),this._move('ground')]);
+      const started=performance.now();
+      const move=this._move('ground');
+      const cached=await (this.observationPoints?Promise.resolve(reference):this._cachedPlot(id));
       if(token!==this.viewToken)return false;
-      this._enterTLS(cached);await this._blend(1,1000);
+      this._enterTLS(cached);
+      // Grow the detail during the zoom, not in a second one-second phase.
+      this.closeTiming={readyMs:performance.now()-started};
+      await Promise.all([move,this._blend(1,700)]);
+      this.closeTiming.totalMs=performance.now()-started;
+      if(token!==this.viewToken)return false;
     }else await this._move(view==='overhead'?'overhead':'forest');
     this.viewChanged?.(view,this.plotId);this._updateExploreVisibility();this._renderLabels();return true;
   }

@@ -130,6 +130,12 @@ export class RoundForest extends ExpeditionForest{
  }
  _positionExploreLabels(){
   super._positionExploreLabels();
+  // Phone proposal panels used to cover plant labels, making the field guide
+  // unreachable. Keep the three labels in the clear strip below that panel.
+  if(this.width<=700&&this.tlsActive){
+   const panel=document.getElementById('round-panel'),top=panel?panel.getBoundingClientRect().bottom-this.host.getBoundingClientRect().top+24:120;
+   let i=0;for(const b of this.exploreLabels.children){if(b.hidden)continue;const y=Math.min(top+i++*40,this.height-85);b.style.transform=`translate(${this.width/2}px,${y}px)`;}
+  }
   for(const {p,b}of this.patchPins||[]){const v=new T.Vector3((p.id%6)*150-375,42,Math.floor(p.id/6)*150-375).project(this.camera);b.hidden=this.tlsActive||Math.abs(v.x)>.92||Math.abs(v.y)>.85;b.style.transform=`translate(${(v.x*.5+.5)*this.width}px,${(-v.y*.5+.5)*this.height}px)`;b.classList.toggle('chosen',this.selected===p.id);}
  }
  // The same geometry, treatment and arrival field rendered without WebGL.

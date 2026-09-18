@@ -62,6 +62,7 @@ Read in filename order.
 | [2026-09-17T2355](2026-09-17T2355-stage4-selected-patch-projections.md) | Selected-patch projections, temporary clearance benefits and simpler shared navigation |
 | [2026-09-18T0905](2026-09-18T0905-stage4-loop-checkpoint-and-seeds.md) | Freeze the working loop, fix Cooperation previews and discuss seed arrival and establishment |
 | [2026-09-18T0940](2026-09-18T0940-stage4-seeds-and-scar.md) | Reversible seed-study tabs and a broader, height-informed surface-fire scar |
+| [2026-09-18T1105](2026-09-18T1105-stage4-shared-record-and-close-transition.md) | Shared field records throughout the game and overlapping, cancellable Close view |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
