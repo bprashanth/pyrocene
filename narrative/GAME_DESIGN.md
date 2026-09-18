@@ -705,3 +705,12 @@ the return of invasives and discuss whether new seedlings or nearby sources need
 attention. Unrecorded species traits remain explicitly unknown. Crew choices
 and budgets are unchanged. Close view now overlaps the zoom and rising points
 and allows a return to Forest or Overhead while loading.
+
+### Trial: what gets measured gets paid
+
+A separate single-player loop on the same forest, at `/policy.html`. Three short
+missions differ only in the payment rule: by the tonne, by the tree, both. One
+crew, one choice a season, two numbers. It ends by making the player the funder.
+The accepted two-mission game above is unchanged. This has been played by its
+author and by scripted crews, not by a room.
+[Design, what is built, and what play changed](../stage4/v1_policy_gaming.md).
