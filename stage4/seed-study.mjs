@@ -18,7 +18,7 @@ export class SeedStudy{
   const title=germ?'Establishment conditions':'Possible seed arrival';
   this.host.querySelector('figcaption').textContent=`${previous?'Six-month model':'Study model'}: ${title.toLowerCase()}. Dim to bright: low to high.`;
   const key=previous&&['A','B','C','D','E'].find(k=>patch(k).id===plot),label=key?`Patch ${key} (${coordinate(plot)})`:coordinate(plot);
-  this.host.querySelector('.seed-clue').textContent=`${label}: ${selected?level(selected[field]):'unknown'} ${germ?'suitability for establishment':'seed arrival'}. ${germ?'Germination alone does not ensure survival.':species==='cecropia_obtusa'?'Bat presence does not prove seed delivery.':'New growth may also come from surviving plants.'}`;
+  this.host.querySelector('.seed-clue').textContent=`${label}: ${selected?level(selected[field]):'unknown'} ${germ?'suitability for establishment':'seed arrival'}. ${germ?'There is much more to surviving the jungle than germinating in it.':species==='cecropia_obtusa'?'Bats may pass through. Did they leave seeds here?':'Look closely at the new growth. Some may come from plants that survived the clearing.'}`;
   this.host.querySelector('.seed-limit').textContent=record.limit;
   const links=this.host.querySelector('.seed-links');links.replaceChildren();
   for(const [url,title]of [[record.source,record.citation],[record.extraSource,record.extraCitation]])if(url){const p=document.createElement('p'),a=document.createElement('a');a.href=url;a.textContent=title;a.target='_blank';a.rel='noopener';p.append(a);links.append(p);}

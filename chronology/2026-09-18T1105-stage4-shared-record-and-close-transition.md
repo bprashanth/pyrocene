@@ -68,3 +68,9 @@ structure and offline checks remain. Screenshots use `record-*` in the external
 
 This is an application-side improvement and local browser measurement. It still
 needs the user's laptop check before calling the reported pause resolved there.
+
+Follow-up wording pass: the five seed records now use short field observations
+and questions with a restrained sense of uncertainty. Removed the repeated
+"alone" caveats. Kept the documented ability to germinate in darkness rather
+than introducing an unsupported shade response for Marandu. Source limitations,
+maps and game mechanics are unchanged. All 61 model tests passed.
