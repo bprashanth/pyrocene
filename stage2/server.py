@@ -34,6 +34,7 @@ STYLE = os.environ.get("STAGE2_STYLE", "drawn")
 # Where the film gallery is. Its own port, because the masters are large and
 # live outside the repo; run.sh sets this so /start can link to it.
 FILMS_PORT = int(os.environ.get("PYROCENE_FILMS_PORT", "8022"))
+STAGE4_PORT = int(os.environ.get("PYROCENE_STAGE4_PORT", "8024"))
 
 
 class Room:
@@ -54,6 +55,13 @@ class Room:
         self.replay: list = []        # the map, round by round, for the walk-through
         self.replay_at = 0
         self.replaying = False        # a night of the replay is on screen now
+        # The two boards either side of the change just shown, and which one is
+        # up. The pulsing overlay that used to hint at where lantana was about
+        # to go did not always match where it went, which is worse than no hint
+        # at all. This replaces it: the game master flips between before and
+        # after and says what changed.
+        self.pair = None
+        self.pair_at = "after"
         # Bumped whenever the room starts over. Animation threads carry the
         # value they began with and stop as soon as it changes, so a reset in
         # the middle of a replay does not leave the old one painting frames over
@@ -93,7 +101,8 @@ class Room:
         d["step"] = self.game.step
         d["steps_left"] = max(0, len(self.steps) - self.cursor)
         cur = self.steps[self.cursor] if self.cursor < len(self.steps) else None
-        d["current"] = {"title": cur["title"], "text": cur["text"]} if cur else None
+        d["current"] = ({"title": cur["title"], "text": cur["text"],
+                         "note": cur.get("note") or ""} if cur else None)
         d["actions"] = list(ACTIONS)
         d["fast"] = FAST
         d["style"] = STYLE
@@ -104,6 +113,8 @@ class Room:
         d["replay_at"] = self.replay_at
         d["replay_total"] = len(self.replay)
         d["replaying"] = self.replaying
+        d["can_flip"] = self.pair is not None
+        d["showing"] = self.pair_at
         d["finale"] = self.game.finale
         d["reprieve"] = self.game.reprieve
         return d
@@ -195,7 +206,23 @@ class Room:
         self.epoch += 1
         self.begin(g.intro_steps())
 
+    @staticmethod
+    def _differ(a: dict, b: dict) -> bool:
+        ca = {c["index"]: (c["cover"], c.get("stage", 0), c.get("fireline")) for c in a["cells"]}
+        cb = {c["index"]: (c["cover"], c.get("stage", 0), c.get("fireline")) for c in b["cells"]}
+        return ca != cb
+
+    def flip(self):
+        """Put the other side of the last change on the projector."""
+        if not self.pair:
+            return
+        self.pair_at = "before" if self.pair_at == "after" else "after"
+        view = self.pair[0 if self.pair_at == "before" else 1]
+        self.paint(self.draw_frame(self.game._frame("settle", "", view)), kind="map")
+        self.broadcast_state()
+
     def begin(self, steps: list):
+        self.pair = None
         self.steps = steps
         self.cursor = 0
         if not steps:
@@ -246,32 +273,66 @@ class Room:
         threading.Thread(target=run, daemon=True).start()
 
     def advance(self):
-        """Play the animation for the card on screen, then put up the next card."""
+        """Play the rest of this half of the round, on one press.
+
+        A round arrives in two halves and each is one press. The game master
+        presses after the night and again after the vote, and everything in
+        between runs on its own. Each part still puts its line up first, held
+        long enough to read, and then shows the thing it describes. Making the
+        game master press for every one of those turned running a room into
+        operating a slideshow.
+        """
         if self.mode == "replay":
             return self.step_replay()
         if self.mode != "explain" or self.cursor >= len(self.steps):
             return
-        step = self.steps[self.cursor]
+        steps = self.steps[self.cursor:]
         self.mode = "playing"
         self.broadcast_state()
         epoch = self.epoch
+        card_ms = self.game.cfg.get("card_ms", 2600)
 
         def run():
-            for f in step["beats"]:
+            first_before, last_after = None, None
+            for k, step in enumerate(steps):
                 if self.epoch != epoch:
                     return
-                self.paint(self.draw_frame(f), kind=f["kind"])
-                if not FAST:
-                    time.sleep(f["hold_ms"] / 1000)
+                # The first card is already up, put there when the half began.
+                if k and step.get("text"):
+                    self.paint(self.draw_card(step), kind="card")
+                    self.broadcast_state()
+                    if not FAST:
+                        time.sleep(card_ms / 1000)
+                for f in step["beats"]:
+                    if self.epoch != epoch:
+                        return
+                    self.paint(self.draw_frame(f), kind=f["kind"])
+                    if not FAST:
+                        time.sleep(f["hold_ms"] / 1000)
+                b, a = step.get("before"), step.get("after")
+                if b is not None and a is not None and self._differ(b, a):
+                    if first_before is None:
+                        first_before = b
+                    last_after = a
+                with self.lock:
+                    self.cursor += 1
             with self.lock:
                 if self.epoch != epoch:
                     return
-                self.cursor += 1
-                if self.cursor < len(self.steps):
-                    self.show_card()
+                # Flip between the boards either side of the whole half, not of
+                # whichever part happened to run last.
+                if first_before is not None and last_after is not None:
+                    self.pair = (first_before, last_after)
+                    self.pair_at = "after"
+                ended = steps[-1]["key"] == "ending"
+                self.steps = []
+                self.cursor = 0
+                if ended:
+                    # Leave the closing card up rather than snapping back to a
+                    # board nobody is going to act on.
+                    self.mode = "idle"
+                    self.broadcast_state()
                 else:
-                    self.steps = []
-                    self.cursor = 0
                     self.show_map()
         threading.Thread(target=run, daemon=True).start()
 
@@ -414,14 +475,31 @@ class Handler(BaseHTTPRequestHandler):
         qs = urllib.parse.parse_qs(u.query)
         p = u.path
         if p in ("/", "/index.html"):
+            # The player link off the index carries the stage too, so handing
+            # out one address puts the room in the right game.
+            want = (qs.get("stage") or [None])[0]
+            if want in ("1", "2") and int(want) != ROOM.stage and ROOM.game.phase == "lobby":
+                ROOM.stage = int(want)
+                ROOM.game = Game(seed=None, config={"stage": ROOM.stage})
+                ROOM.epoch += 1
+                ROOM.show_map()
             return self._file("phone.html", "text/html; charset=utf-8")
         if p == "/start":
             # The films run on their own port because the masters are hundreds
             # of megabytes and live off the repo. run.sh tells us which one so
             # the tile still points somewhere when the ports are moved.
             return self._file("start.html", "text/html; charset=utf-8",
-                              {"__FILMS_PORT__": FILMS_PORT})
+                              {"__FILMS_PORT__": FILMS_PORT, "__STAGE4_PORT__": STAGE4_PORT})
         if p == "/gm":
+            # /gm?stage=2 puts the room straight into stage 2, so an evening can
+            # skip stage 1 entirely. Only before a game starts: switching under
+            # a game in progress would throw the board away.
+            want = (qs.get("stage") or [None])[0]
+            if want in ("1", "2") and int(want) != ROOM.stage and ROOM.game.phase == "lobby":
+                ROOM.stage = int(want)
+                ROOM.game = Game(seed=None, config={"stage": ROOM.stage})
+                ROOM.epoch += 1
+                ROOM.show_map()
             return self._file("gm.html", "text/html; charset=utf-8")
         if p == "/projector":
             return self._file("projector.html", "text/html; charset=utf-8")
@@ -449,6 +527,7 @@ class Handler(BaseHTTPRequestHandler):
             out = []
             for st in steps:
                 out.append({"key": st["key"], "title": st["title"], "text": st["text"],
+                            "note": st.get("note") or "",
                             "cells": st["cells"],
                             "kinds": [b["kind"] for b in st["beats"]],
                             "card": ROOM.draw_card(st),
@@ -540,6 +619,11 @@ class Handler(BaseHTTPRequestHandler):
                     n = int(body.get("n") or (g.cfg["max_rounds"] + delta))
                     g.set_max_rounds(n)
                     ROOM.broadcast_state()
+                    return self._json(200, ROOM.gm_payload())
+                if p == "/api/gm/flip":
+                    if ROOM.mode == "playing":
+                        return self._json(409, {"error": "finish what is on screen first"})
+                    ROOM.flip()
                     return self._json(200, ROOM.gm_payload())
                 if p == "/api/gm/skip":
                     if ROOM.mode == "playing":

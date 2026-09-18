@@ -1,0 +1,9 @@
+#plant-guide:has(.species-record){width:360px;max-height:calc(100dvh - 180px)}
+#record-close{margin-left:auto;font:12px Arial,sans-serif}
+@media(max-width:700px){#round-panel{max-height:52dvh!important}}
+.species-record .species-status{display:table;margin:12px 0 16px;padding:4px 8px;border:1px solid #709b82;border-radius:3px;color:#bce5c7;font:12px monospace}
+.species-record .species-status[data-status=invasive]{color:#f0a8c8;border-color:#94647b}
+.record-tabs{display:flex;gap:15px;border-bottom:1px solid #36513f;margin-bottom:16px}.record-tabs button{padding:8px 0;font-size:12px}.record-tabs [aria-selected=true]{color:#d8eada;border-bottom:2px solid #a5d7b5}.record-tabs button:focus-visible{outline:2px solid #e3c879;outline-offset:3px}
+.species-record [hidden]{display:none!important}.species-record .phosphor-frame{margin:0 0 16px}.species-record .structure-open{display:block;margin-top:18px}.species-record .plant-layer-note{display:block;margin-bottom:14px}
+.species-record figure{margin:12px 0}.species-record canvas{display:block;width:100%;height:auto;image-rendering:pixelated}.species-record figcaption{font:10px/1.5 monospace;color:#91ad9d;margin:8px 0}.species-record .seed-clue{font-size:12px;color:#dac896}.species-record .seed-sources{font-size:12px;color:#93b39c}.species-record .seed-sources p{font-size:12px}.species-record .scientific-name{display:block}
+@media(max-width:700px){#plant-guide:has(.species-record){top:85px;bottom:85px;left:12px;right:12px;width:auto;max-height:none}#plant-guide .plain-note{padding:16px}#plant-guide .guide-heading{padding:12px 16px;min-height:48px}}

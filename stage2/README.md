@@ -16,7 +16,7 @@ own frozen copy of the engine under `stage2/engine/` and imports only that.
 | Projector drawing | `render.py`, `frames.py`, `maps/` | Live board rendering; six map styles with their own [readme](maps/README.md) |
 | Pages | `static/` | `gm.html`, `phone.html`, `projector.html`, vendored xterm |
 | Balance | `sim.py` | Whole games in memory, for tuning. Never runs at event time |
-| Tests | `tests/` | 85 tests; `test_isolation.py` guards the live game |
+| Tests | `tests/` | 88 tests; `test_isolation.py` guards the live game |
 | Event log | `logs/` | One JSON per game, written as it is played; the input to every replay |
 | Post-game replay | `simulation/` | Two independent builds, not wired to a button at the moment. [Contract](simulation/SPEC.md), [fixture](simulation/sample-game.json), [`claude`](simulation/claude/README.md), [`codex`](simulation/codex/NOTES.md) |
 | History | `../chronology/` | Dated notes on what was built, what went wrong and what is untested |
@@ -143,71 +143,31 @@ changes nothing on the map.
 eliminates a player, the room votes to hunt lantana or work against fire,
 lantana spreads, fire sparks and spreads based on the environment.
 
-**A stage 2 round is one press.** Finish night puts nothing on the projector.
-The room wakes, hears no verdict and goes straight to the vote. Mark the vote,
-press Finish vote, then press **Show what happened** once and the whole night
-runs in order: the removal, the spread, whatever the crew did and the fire.
-About twelve to seventeen seconds, then the board settles and the room argues
-over it.
+**A round arrives in two halves, and each is one press.**
 
-This is the opposite of stage 1 on purpose. Stage 1 stops at every change,
-because the map is the lesson there and the room has nothing else to attend to.
-Stage 2 is a game being played, and stopping it four times a night to read a
-card about ground nobody can act on gets in the way of the thing the room is
-doing. The explaining happens in the replay, where there is time for it. The
-game master reads the forest percentage off the console and carries on.
+Press **Finish night**. One line goes up, *A player was eliminated, and lantana
+continued to spread*, and then the board shows both at once. Then the room
+votes.
 
-**Resilience.** The room never picks which one. The game master either picks or
-presses Resolve and lets the system choose.
+The two are shown together on purpose. A night that takes the ecologist or the
+ranger moves no ground at all, so revealing the removal on its own announced
+that a specialist had gone, and a stand disappearing announced a native. Folding
+them into one reveal puts the ground lost to a removal and the ground lost to
+spread up at the same moment, and nobody can tell which was which.
 
-The automatic choice used to reach for water as soon as severity hit 3, on the
-reasoning that a fire that big runs past any single break. That is defensible
-and it was wrong here: water holds tonight's fire to a few squares, so the one
-night the room would have watched a connected band carry a fire across the map,
-they saw a puddle instead. Once there is a band worth fearing the automatic
-choice is a trench. If it holds, the room sees a break work. If the fire goes
-round it, they see why one trench is not a strategy. Either way they see the
-run.
+Press **Finish vote**. It plays the rest of the round on that one press: what
+the room's decision did, then *Wildfire* and the fire running. Each part still
+puts its line up first and holds it long enough to read. Stage 1 has no crew and
+no fire, so it shows the vote and stops.
 
-| Action | What it does |
-|---|---|
-| Fire line | A permanent trench hugging the homes, or the biggest block of forest. Repeated nights extend the same ring. |
-| Water | Tonight's fire is held to a few squares whatever the fuel. |
-| Early warning | A forecast of tomorrow night. Changes nothing tonight. |
+Each card is one phrase. The console carries the same event in full, for the
+person doing the talking, because the map does not say which night the trench
+was dug or how many squares went.
 
-**Fire, and the thing stage 2 is actually about.** Severity comes from the
-largest connected **band** of burnable lantana, not from the biggest thick
-patch. Three separate stands of ten squares are three small fires. The same
-thirty squares joined into one band is a single run that carries end to end, and
-the ground it crosses on the way is what turns a nuisance into a loss.
-
-That is the whole lesson, and the round order is built to deliver it:
-
-| Nights | What the room sees | What it should learn |
-|---|---|---|
-| 1 to 2 | Small fires, a few squares, in whichever patch they start | Hunting lantana now is cheap and it works |
-| 3 to 4 | The patches meet. One card says so, once | The moment the network closes, removing one player stops breaking the chain |
-| 5 on | One fire running the length of the band into forest or homes | From here it is fire work, and fire work is expensive |
-
-Lantana is pushed to join up the way it does in the field: fastest along roads,
-and fastest into the gaps between stands that are already close. Water splits a
-band, because a creeping fire cannot cross a river any more than the plant can.
-
-Measured over 120 scripted games: the joined-up card appears in 116 of them,
-median night 3, and the biggest fire of a game is a median of 55 squares of the
-264 on the board.
-
-**What the animations say.** Every change greys out the rest of the board and
-holds on the squares that are about to move, so a room knows where to look on a
-22 by 12 grid. Then those squares turn over a few at a time and the full map
-comes back. A fire starts at one square, spreads wave by wave, and shows the
-bare ground it left. If it meets a trench, those cells flash and the ground
-behind them is untouched.
-
-**The cards never name anyone.** They say what happened to the land, not who
-went out or what they were. A night that changes nothing on the map reads the
-same whether the ranger saved someone or a specialist was taken, so the room
-keeps guessing and lantana can lie about it.
+**Show before** flips the projector between the boards either side of the whole
+half. There used to be a pulsing overlay hinting where lantana was about to go
+and it did not always match where it went, which is worse than no hint. Two real
+boards cannot be wrong.
 
 ## The one dial the game master has
 
@@ -276,7 +236,7 @@ Everything tunable is in `stage2/config.py`.
 | `owned_fraction` | 0.66 | Share of land split into patches; the rest is commons |
 | `growth_established` / `growth_dense` | 0.30 / 0.42 | How fast lantana spreads per neighbour |
 | `reinvade_p` / `regen_p` | 0.55 / 0.22 | What bare ground becomes |
-| `sev_t1` / `sev_t2` | 18 / 30 | Band load that pushes fire to severity 2 and 3 |
+| `sev_t1` / `sev_t2` | 26 / 38 | Band load that pushes fire to severity 2 and 3 |
 | `dense_weight` | 2 | How many thin squares one dense square is worth |
 | `connect_cells` / `connect_patches` | 16 / 2 | Band size and spread that counts as joined up |
 | `road_mult` | 2.2 | How much faster lantana takes roadside ground |
@@ -295,7 +255,7 @@ Everything tunable is in `stage2/config.py`.
 | `village_defend_range` | 8 | Only trench the homes if fuel is this close |
 | `stage` | 2 | 1 is plain Mafia with a replay at the end; 2 adds fire |
 | `hold_ms` | various | How long the projector holds each animation frame |
-| `run_hold_ms` | 520 | Shorter holds inside stage 2's single run of a night |
+| `card_ms` | 2600 | How long a line stays up before the thing it describes |
 
 ## Testing
 

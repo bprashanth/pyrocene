@@ -221,21 +221,36 @@ round it, one trench is not a strategy. Either way they see the run.
 > the optimal action, and the optimal action was invisible. An automated choice
 > should be a good one that is also worth watching.
 
-### One press a round
+### Two halves a night, one press each
 
-Stage 2 does not stop the room. Finish night shows nothing. The room wakes, hears
-no verdict, goes straight to the vote. Then the game master presses **Show what
-happened** once and the whole night runs in order. The removal, the spread, the
-crew's work, the fire. Twelve to seventeen seconds, ending on the board they are
-about to argue over.
+Press Finish night and one line goes up, *A player was eliminated, and lantana
+continued to spread*, and the board shows both at once. Then the room votes.
+Press Finish vote and the rest of the round plays on that press: what their
+decision did, then the fire.
 
-Stage 1 stops at every change because there the map is the lesson. Stage 2 is a
-game being played. Stopping it four times a night to read a card about ground
-nobody can act on gets in the way of the thing they are doing.
+The removal and the spread are shown together because showing them apart told
+the room what it must not know. A night that takes the ecologist or the ranger
+moves no ground, so an empty reveal announced a specialist and a vanishing stand
+announced a native. Lantana could no longer lie about either.
 
-> **The move.** Interrupt the room in proportion to how much they can act on what
-> you are showing. Same content, different pacing, depending on whether they are
-> deciding or watching.
+Lantana grows before the vote, not after. That is the whole reason the map is in
+the room. They see the ground they have lost, and then they decide.
+
+Each card is one phrase. The console carries the same event in full, for the
+person doing the talking. **Show before** flips the projector between the boards
+either side of the half. There was a pulsing overlay hinting where lantana was
+about to go, and it did not always match where it went.
+
+> **The move.** Show consequence before choice. A room that decides and then
+> learns what the world did has been given a quiz. A room that sees what the
+> world did and then decides has been given a problem.
+>
+> Watch what your reveals subtract. Ours were honest one at a time and together
+> they leaked the thing the whole game rests on, because an empty reveal is
+> itself a fact. If a step can show nothing, check what nothing tells them.
+>
+> And count the presses. Every one is the facilitator looking at a screen
+> instead of the room.
 
 ### The one dial
 
@@ -573,7 +588,21 @@ on purpose.
 | [`stage2/simulation/claude/lab/README.md`](../stage2/simulation/claude/lab/README.md) | The fire lab |
 | [`stage2/simulation/codex/README.md`](../stage2/simulation/codex/README.md) | The canonical Codex Linux event films, playback links, evidence limits and production map |
 
-### The online game
+### Stage 4: Amazon field exploration
+
+The current continuation is the restored draggable Amazon point-cloud map.
+Teams use one laptop each, inspect selected squares in place, learn about
+plants and field conditions, then reconstruct a physical map for the fire lab.
+Close view reveals ground structure without a separate scan or field-team step.
+The Island of Ash Stage 3 experiment remains at its own route, not the default.
+See [the expedition guide](../stage4/EXPEDITION.md) and
+[the in-place detail notes](../stage4/INLINE_DETAIL.md).
+See [STAGE_4.md](STAGE_4.md) for the
+design decisions and [the runtime guide](../stage4/README.md) for play and
+offline delivery. The original four Stage 4 outlines are preserved as inputs,
+not claims that their proposed reconstruction was implemented.
+
+### The original online game
 
 | Doc | What is in it |
 |---|---|
@@ -607,3 +636,72 @@ audience at ten metres. No fleet of phones has joined at once. The game master
 console has only ever been driven by the person who wrote it.
 
 The next useful thing is one evening with real people and somebody taking notes.
+
+---
+
+## 14. Working Stage 4 game: Cooperation and Negligence
+
+Checkpoint, 18 September 2026: `stage4-working-loop-20260918` (`07f72e3`).
+This preserves the accepted two-mission game before adding seed dispersal or
+germination. [Baseline details and recovery notes](../stage4/WORKING_LOOP.md).
+
+- [Explore the Amazon point-cloud map](http://100.82.28.38:8024/expedition.html)
+- [Start Cooperation](http://100.82.28.38:8024/round.html)
+- [Offline package](http://100.82.28.38:8024/download)
+- [Earlier forest film and evidence gallery](http://100.82.28.38:8022/)
+
+These preparation-machine links require network access to that machine. For
+local setup see [Stage 4](../stage4/README.md). Two teams use one laptop each;
+Teams supplies their separate links. A facilitator can test both roles alone.
+
+In Cooperation the removal team proposes one patch to clear and the ecologist
+proposes one to restore. The room discusses both and commits a shared plan.
+Recovery and fire play within the dense point cloud. Credits and forest health
+are separate. Shared locations avoid paying for clearance twice.
+
+Negligence is selected from the dropdown after Cooperation. Six months later,
+the planted patch and remaining funds carry forward. Choose careful removal
+among the saplings or higher-return clearing in one of two new patches. Both
+teams currently propose where one crew should go. Before proposing, With removal
+and Without removal compare each selected plot's projected structure. The
+planted plot can develop native canopy; unplanted clearings can regain invasives.
+Going backwards to Cooperation or Expedition resets the shared game.
+
+The accepted game has two finite missions, not an endless six-month loop yet.
+Its scan geometry is grounded in measured data, but plot assignments, species
+placement, growth trajectories and fuel/moisture fields are illustrative. Fire
+is simulated, not matched to a historical burn scar. Browser, two-team and
+offline tests have passed; a real room playtest is still needed.
+
+Next discussion: give the ecologist a small investigation within Negligence,
+using two species-record tabs, Dispersal and Germination. The removal team
+compares operations; the ecologist explains recurrence. Start with one invasive,
+one native and two maps, not a new equipment system. This is a proposal, not
+implemented behaviour. [Scope and research cautions](../stage4/REINFESTATION_DISCUSSION.md).
+
+### Reversible trial: seeds and the shape of fire
+
+The next increment now implements those two tabs inside Negligence's species
+record. As Ecologist, use Close view, then Seeds. Compare signal grass and
+Cecropia: possible arrival is a different layer from establishment conditions.
+The small maps are modelled six-month clues. They do not claim animal sightings
+or prove the cause of regrowth. Both teams still make the same single crew
+decision, with no new budget, mission or required quiz.
+
+The fire trial spreads through broader fuel patches and leaves an irregular
+ground-level scar while retaining standing canopy points. A height grid derived
+from the measured 2017 cloud adds shelter variation to an otherwise authored
+fuel/moisture scenario. This is not a 2023 scar reconstruction. Cooperation's
+money-versus-connectivity tradeoff and the benefits of mature restoration remain.
+
+Both extensions have independent off switches. The exact preceding build is
+tagged `stage4-before-seeds-and-scar` (`db21450`) and preserved as an offline ZIP.
+[How to try, evidence, limits and rollback](../stage4/SEEDS_AND_SCAR.md).
+
+The next UI revision puts the field record back into every stage. Click a plant
+name for its green reference image, native/invasive status, description and seed
+tabs. There is no separate Seeds button. Negligence asks the ecologist to explain
+the return of invasives and discuss whether new seedlings or nearby sources need
+attention. Unrecorded species traits remain explicitly unknown. Crew choices
+and budgets are unchanged. Close view now overlaps the zoom and rising points
+and allows a return to Forest or Overhead while loading.

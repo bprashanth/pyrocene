@@ -15,11 +15,21 @@ python3 -m stage2.server
 
 Six panels, one slider. Top row: the board as played, drawn as the game
 draws it, then ForeFire and Cell2Fire burning it. Bottom row: the same board
-with a plan (`proposal.py`: clear the largest thick stand, dig a fire line
-along the downwind edge of what is left), drawn with the game's own
-iconography, then the two models burning that. If the plan cleared the
-square the fire started on, the same fire starts on the nearest lantana
-left.
+with a plan, then the two models burning that.
+
+The plan (`proposal.py`) cuts the fuel network rather than levelling it. It
+runs the fire once to see which ground is actually at risk in the half hour
+shown, finds the few squares whose removal strands the most of that, clears
+them, and lines the fire's side of the gap so the front cannot walk around it.
+Five squares and a four square line, against a fire that took fifty three
+squares without them. That contrast is the whole point of the panel, and it
+only works because the cut is chosen where the fire goes: an earlier version
+picked the waist by graph distance and put it on the side the fire never
+reached, where even walling the board off changed the burn by six squares.
+
+If the plan cleared the square the fire started on, the same fire starts on
+the nearest lantana left. That is why the ignition marker sometimes sits in a
+different place in the lower row.
 
 ## Real fires
 
@@ -31,9 +41,9 @@ models), fuel table, plan and sources. The page's menu switches between the
 sample game and the cases.
 
 ```bash
-/tmp/forefire_venv.rskvjS/bin/python cases.py       # writes board-<case>.json under /mnt/seagate/models/pyrocene/lab/
+~/.cache/pyrocene-lab-venv/bin/python cases.py       # writes board-<case>.json under /mnt/seagate/models/pyrocene/lab/
 CELL2FIRE=/mnt/seagate/models/pyrocene/lab/cell2fire/Cell2Fire \
-  /tmp/forefire_venv.rskvjS/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board-lahaina.json
+  ~/.cache/pyrocene-lab-venv/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board-lahaina.json
 ```
 
 To add a case, add a function to `cases.py` that returns a board with
@@ -42,9 +52,20 @@ To add a case, add a function to `cases.py` that returns a board with
 
 ## Run it
 
-Needs the ForeFire venv (`/tmp/forefire_venv.rskvjS/bin/python`, or
-`pip install forefire` from the wheel kept in `/mnt/seagate/models/pyrocene/lab/`)
-and, for the Cell2Fire panel, the binary kept there too.
+Needs the lab's own python. Build it once:
+
+```bash
+./setup.sh
+```
+
+That puts a virtualenv with ForeFire in `~/.cache/pyrocene-lab-venv`, from the
+wheel kept in `/mnt/seagate/models/pyrocene/lab/`. It is in the home cache and
+not on the drive with everything else because the drive is exfat and a
+virtualenv needs a symlink, which exfat will not make. `PYROCENE_LAB_VENV` and
+`PYROCENE_LAB_ASSETS` move either end.
+
+The Cell2Fire panel also wants the binary kept beside the wheel. Without it the
+lab still runs, one panel short.
 
 ```bash
 # 1. export the board just before the biggest fire from a game log
@@ -58,7 +79,7 @@ const f=nt.fire; fs.writeFileSync("/mnt/seagate/models/pyrocene/lab/board.json",
 # 2. run every model on both scenarios, write results/<name>.json and a contact sheet
 cd stage2/simulation/claude/lab
 CELL2FIRE=/mnt/seagate/models/pyrocene/lab/cell2fire/Cell2Fire \
-  /tmp/forefire_venv.rskvjS/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board.json --name mygame
+  ~/.cache/pyrocene-lab-venv/bin/python run_all.py --board /mnt/seagate/models/pyrocene/lab/board.json --name mygame
 ```
 
 Then `?run=mygame` on the page. `results/index.json` feeds the page's menu.

@@ -21,7 +21,7 @@ The night
 Lantana took ground in the {dir} during the night.
 
 [night.nothing]
-The land is the same as it was.
+A player was eliminated. The land is the same as it was.
 
 [vote.title]
 The vote
@@ -64,3 +64,27 @@ The season ends
 
 [prompt.show]
 the game master will show you
+
+[night.about]
+A player was eliminated, and lantana continued to spread.
+
+[growth.about]
+Lantana spread.
+
+[vote.about]
+The room voted someone out.
+
+[line.about]
+The crew cut a fire line.
+
+[water.about]
+A response team is standing by with water.
+
+[ews.about]
+A lookout is posted.
+
+[fire.about]
+Wildfire.
+
+[fire.quiet]
+No fire tonight.

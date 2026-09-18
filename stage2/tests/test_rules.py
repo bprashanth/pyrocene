@@ -162,18 +162,24 @@ class Connectivity(unittest.TestCase):
     def test_the_evening_builds(self):
         """Small scattered fires first, one big connected run later. If this
         inverts, the game teaches that early action does not matter."""
-        early, late = [], []
+        first, early, late = [], [], []
         for seed in range(1, 31):
             g = play(seed)
             for k, h in enumerate(g.history, start=1):
                 f = h.get("fire") or {}
                 n = len(f.get("burned_cells") or [])
+                if k == 1:
+                    first.append(n)
                 (early if k <= 2 else late).append(n)
         self.assertGreater(len(early), 40)
         self.assertGreater(len(late), 30)
         mean_early = sum(early) / len(early)
         mean_late = sum(late) / len(late)
-        self.assertLess(mean_early, 10, f"early fires should be small, got {mean_early:.1f}")
+        # The first night is the one that has to be small: it is where the room
+        # learns that hunting now is cheap. Averaging the first two together
+        # hides that, because night two is already climbing on purpose.
+        self.assertLess(sum(first) / len(first), 8,
+                        f"night one should be a spark, got {sum(first)/len(first):.1f}")
         self.assertGreater(mean_late, 2.5 * mean_early,
                            f"late fires should dwarf early ones: {mean_early:.1f} then {mean_late:.1f}")
 
@@ -412,9 +418,10 @@ class SeasonLength(unittest.TestCase):
         self.assertTrue(g.finale)
 
 
-class OneRunPerNight(unittest.TestCase):
-    """Stage 2 is a game being played. The room argues, votes, and is told
-    nothing; then the whole night runs once, on one press."""
+class TwoBatchesPerNight(unittest.TestCase):
+    """A round arrives in two halves. The night shows what was taken and what
+    lantana gained, before the room votes, so they argue about the board in
+    front of them. The vote shows what the room did and then the fire."""
 
     def _round(self, g, rng, choice="resilience"):
         prey = [p for p in g.players.values()
@@ -430,7 +437,10 @@ class OneRunPerNight(unittest.TestCase):
         g.choose(choice, None)
         return night, g.resolve_vote()
 
-    def test_the_night_shows_nothing_and_the_round_shows_everything(self):
+    def test_the_night_is_one_reveal(self):
+        """The removal and the spread go up together, and this is the reason:
+        a night that takes the ecologist or the ranger moves no ground, so
+        showing the removal on its own announced that a specialist had gone."""
         rng = random.Random(2)
         g = Game(seed=13)
         for i in range(12):
@@ -440,32 +450,85 @@ class OneRunPerNight(unittest.TestCase):
             night, day = self._round(g, rng)
             if g.phase != "playing":
                 break
-            self.assertEqual(night, [], "the night must not stop the room")
-            keys = [st["key"] for st in day]
-            self.assertEqual(keys, ["round"], f"one press, not {keys}")
-            self.assertEqual(day[0]["text"], "", "nothing to read")
-            self.assertIn("Night", day[0]["title"])
+            keys = [st["key"] for st in night if st["key"] != "network"]
+            self.assertEqual(keys, ["night"], f"one reveal, not {keys}")
+            self.assertTrue(all(st["text"] for st in night), "it gets a line")
 
-    def test_the_one_run_holds_the_whole_night_in_order(self):
+    def test_a_specialist_night_looks_like_any_other(self):
+        """The card and the shape of the reveal must not say which role went."""
+        seen = {}
+        for role in (ECOLOGIST, RANGER, NATIVE_P, LANTANA):
+            g = Game(seed=13, config={"stage": 1})
+            for i in range(12):
+                g.add_player(f"P{i + 1}")
+            g.start()
+            who = next((p for p in g.players.values() if p.role == role), None)
+            if not who:
+                continue
+            g.eliminate(who.id)
+            st = g.resolve_night()[0]
+            seen[role] = (st["text"], bool(st["cells"]))
+        texts = {v[0] for v in seen.values()}
+        self.assertEqual(len(texts), 1, f"the card differs by role: {seen}")
+        self.assertTrue(all(v[1] for v in seen.values()),
+                        f"every night has to move something: {seen}")
+
+    def test_the_vote_shows_the_room_then_the_fire(self):
         rng = random.Random(2)
         g = Game(seed=13)
         for i in range(12):
             g.add_player(f"P{i + 1}")
         g.start()
+        seen = 0
         for _ in range(4):
             night, day = self._round(g, rng)
             if g.phase != "playing" or not day:
                 break
-            kinds = [f["kind"] for f in day[0]["beats"]]
-            parts = [st["key"] for st in g.last_phases]
-            self.assertIn("fire", "".join(parts) + "".join(kinds) if parts else "")
-            # the board is the last thing the room is left looking at
-            self.assertEqual(kinds[-1], "settle")
-            # and the fire comes after the spread, not before it
-            if "creep" in kinds and "ignite" in kinds:
-                self.assertLess(kinds.index("creep"), kinds.index("ignite"))
+            keys = [st["key"] for st in day if st["key"] != "ending"]
+            self.assertEqual(keys[-1], "fire", f"the fire comes last, got {keys}")
+            self.assertIn(keys[0], ("line", "water", "ews", "vote"))
+            self.assertNotIn("growth", keys, "growth belongs to the night now")
+            seen += 1
+        self.assertGreater(seen, 1)
 
-    def test_stage_one_still_stops_at_every_change(self):
+    def test_lantana_grows_before_the_room_votes(self):
+        """The whole reason for moving it. If the room votes first they are
+        arguing about last night's board."""
+        rng = random.Random(4)
+        g = Game(seed=13)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        prey = [p for p in g.players.values()
+                if p.alive and p.role in (NATIVE_P, ECOLOGIST, RANGER)]
+        g.eliminate(rng.choice(prey).id)
+        before = sum(1 for c in g.state.cells if c.cover == INVASIVE)
+        g.resolve_night()
+        after = sum(1 for c in g.state.cells if c.cover == INVASIVE)
+        self.assertGreater(after, before, "lantana should have moved in the night")
+        self.assertEqual(g.step, "day")
+
+    def test_each_card_is_one_line(self):
+        """One word or one phrase, then the thing itself. A paragraph here and
+        the room reads instead of watching."""
+        rng = random.Random(6)
+        g = Game(seed=13)
+        for i in range(12):
+            g.add_player(f"P{i + 1}")
+        g.start()
+        for _ in range(3):
+            night, day = self._round(g, rng)
+            if g.phase != "playing":
+                break
+            for st in night + day:
+                if st["key"] in ("ending", "network"):
+                    continue
+                self.assertLess(len(st["text"]), 70,
+                                f"{st['key']} card is too long: {st['text']!r}")
+                # One sentence, or the forecast, which is two short ones.
+                self.assertLessEqual(st["text"].count("."), 2, st["text"])
+
+    def test_stage_one_has_no_fire_and_no_crew(self):
         rng = random.Random(2)
         g = Game(seed=13, config={"stage": 1})
         for i in range(12):
@@ -473,9 +536,7 @@ class OneRunPerNight(unittest.TestCase):
         g.start()
         night, day = self._round(g, rng, choice="hunt")
         self.assertEqual([st["key"] for st in night], ["night"])
-        self.assertIn("vote", [st["key"] for st in day])
-        self.assertTrue(all(st["text"] for st in night + day),
-                        "stage 1 reads a card at every change")
+        self.assertEqual([st["key"] for st in day], ["vote"])
 
 
 class Openings(unittest.TestCase):
@@ -515,7 +576,7 @@ class Openings(unittest.TestCase):
                 return
             g.choose("resilience", "ews")
             g.resolve_vote()
-            said = [st for st in g.last_phases if st["title"] == "Early warning"]
+            said = [st for st in g.last_phases if st["key"] == "ews"]
             self.assertEqual(len(said), 1, "one card, not two")
             self.assertTrue(said[0]["text"].startswith("Forecast for next night:"),
                             said[0]["text"])

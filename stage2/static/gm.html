@@ -77,11 +77,13 @@
   </div>
 
   <div id="onscreen" class="card" hidden>
-    <h2>Ready to show</h2>
+    <h2 id="onscreenhead">Ready to show</h2>
     <p id="cardtitle" style="margin:0 0 4px;font-weight:700;color:var(--orange)"></p>
-    <p id="cardtext" style="margin:0 0 14px;color:var(--muted)"></p>
+    <p id="cardtext" style="margin:0 0 4px;color:var(--ink)"></p>
+    <p id="cardnote" style="margin:0 0 14px;color:var(--muted);font-size:13px"></p>
     <div class="row">
       <button id="advance" class="primary">Show what happened</button>
+      <button id="flip" hidden>Show before</button>
       <button id="skip" hidden>Continue</button>
       <span id="playing" class="muted" hidden>playing...</span>
     </div>
@@ -199,15 +201,15 @@
        : lobby ? "lobby" : s.phase === "ended" ? "game over" : "in play");
     $("#lobby").hidden = !lobby;
     $("#game").hidden = lobby;
-    $("#onscreen").hidden = !s.current;
+    $("#onscreen").hidden = !s.current && !s.can_flip;
     $("#night").hidden = lobby || s.phase !== "playing" || busy || s.step !== "night";
     $("#day").hidden = lobby || s.phase !== "playing" || busy || s.step !== "day";
     // Stage 1 has only the vote: there is no fire to shelter from.
     $("#choicebox").hidden = s.stage === 1;
     $("#replaybox").hidden = lobby || !s.can_replay;
-    // Stage 1 is played in the room with this app only keeping score, so the
-    // game master can apply a round without putting anything on the projector.
-    $("#skip").hidden = s.stage !== 1;
+    // Stage 1 can be applied without playing it, for a room that would rather
+    // keep talking. Only offered while there is actually something to skip.
+    $("#skip").hidden = s.stage !== 1 || !s.current;
     // Offered once stage 1 is over, so the room moves on without a restart and
     // without everybody retyping their name.
     $("#nextstage").hidden = !(s.stage === 1 && s.phase === "ended");
@@ -218,7 +220,7 @@
     $("#seasonnote").textContent = s.finale ? "tonight is the last night"
       : s.reprieve ? "bought back a night: this fire burns fuel"
       : `${s.max_rounds - s.round} more after tonight`;
-    $("#skiphint").hidden = s.stage !== 1;
+    $("#skiphint").hidden = s.stage !== 1 || !s.current;
     // One button that walks the replay. Hiding it once the replay started left
     // the game master with no way to move it forward.
     $("#replay").textContent = replaying ? "Next night" : "Replay the map";
@@ -242,10 +244,22 @@
       // Stage 2 hands back one step with nothing written on it: the whole night
       // runs as a single animation and the projector keeps the map. Say what
       // the press does rather than leaving the panel blank.
-      $("#cardtext").textContent = s.current.text ||
-        "The removal, the spread, the crew's work and the fire, in order, in one run.";
+      $("#cardtext").textContent = s.current.text;
+      // The projector gets the phrase; you get the detail to talk over.
+      $("#cardnote").textContent = s.current.note || "";
+    } else {
+      $("#cardtitle").textContent = "";
+      $("#cardtext").textContent = "";
+      $("#cardnote").textContent = "";
     }
     $("#advance").hidden = s.mode !== "explain";
+    // Flip between the board before the last change and the board after it, so
+    // the room can be told what moved instead of being asked to remember.
+    $("#flip").hidden = !s.can_flip || s.mode === "playing";
+    $("#flip").textContent = s.showing === "after" ? "Show before" : "Show after";
+    // Once the cards are done there is nothing left to show, only the two
+    // boards to flip between. Say so, and stop offering to skip nothing.
+    $("#onscreenhead").textContent = s.current ? "Ready to show" : "The last change";
     $("#playing").hidden = s.mode !== "playing";
     $("#stepsleft").textContent = s.steps_left > 1 ? `${s.steps_left} to go this round` : "";
 
@@ -290,6 +304,7 @@
   });
   $("#seed").onclick = async () => { await post("/api/gm/seed", { n: +$("#seedn").value || 12 }); };
   $("#start").onclick = async () => { await post("/api/gm/start", { lantana: +$("#lantana").value || null }); };
+  $("#flip").onclick = async () => { await post("/api/gm/flip"); };
   $("#skip").onclick = async () => { await post("/api/gm/skip"); };
   $("#tostage2").onclick = async () => { await post("/api/gm/next_stage"); };
   $("#fewer").onclick = async () => { await post("/api/gm/rounds", { delta: -1 }); };
