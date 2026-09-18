@@ -8,8 +8,8 @@ export class SeedStudy{
   this.host=host;
   host.innerHTML='<p class="seed-copy"></p><figure><canvas width="336" height="336" role="img"></canvas><figcaption></figcaption></figure><p class="seed-clue"></p><details class="seed-sources"><summary>Sources</summary><p class="seed-limit"></p><p>Teaching maps, not surveyed seed or animal densities. Establishment conditions are not germination probabilities or survival forecasts.</p><div class="seed-links"></div></details>';
  }
- open(species,plot,previous,tab='dispersal'){
-  const record=SEED_RECORDS[species],germ=tab==='germination',values=record&&seedLayers(species,previous),field=germ?'establishment':'arrival',selected=values?.[plot];
+ open(species,plot,previous,tab='dispersal',context=null){
+  const record=SEED_RECORDS[species],germ=tab==='germination',values=record&&(context?.layers||seedLayers(species,previous)),field=germ?'establishment':'arrival',selected=values?.[plot];
   this.host.querySelector('figure').hidden=!record;
   this.host.querySelector('.seed-sources').hidden=!record;
   this.host.querySelector('.seed-copy').textContent=record?record[tab]:`${germ?'Germination conditions':'Dispersal'} have not been added for this species yet.`;
@@ -20,6 +20,7 @@ export class SeedStudy{
   const key=previous&&['A','B','C','D','E'].find(k=>patch(k).id===plot),label=key?`Patch ${key} (${coordinate(plot)})`:coordinate(plot);
   this.host.querySelector('.seed-clue').textContent=`${label}: ${selected?level(selected[field]):'unknown'} ${germ?'suitability for establishment':'seed arrival'}. ${germ?'There is much more to surviving the jungle than germinating in it.':species==='cecropia_obtusa'?'Bats may pass through. Did they leave seeds here?':'Look closely at the new growth. Some may come from plants that survived the clearing.'}`;
   this.host.querySelector('.seed-limit').textContent=record.limit;
+  if(context){this.host.querySelector('figcaption').textContent=context.caption;this.host.querySelector('.seed-clue').textContent=context.clue;}
   const links=this.host.querySelector('.seed-links');links.replaceChildren();
   for(const [url,title]of [[record.source,record.citation],[record.extraSource,record.extraCitation]])if(url){const p=document.createElement('p'),a=document.createElement('a');a.href=url;a.textContent=title;a.target='_blank';a.rel='noopener';p.append(a);links.append(p);}
   const canvas=this.host.querySelector('canvas'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,336,336);ctx.fillStyle='#071711';ctx.fillRect(0,0,336,336);ctx.font='12px monospace';ctx.textAlign='center';

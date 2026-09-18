@@ -1,5 +1,11 @@
 # Stage 4 / The Amazon
 
+New reversible trial: [The open ledger](LEDGER.md) at `/ledger.html`. One crew,
+six-month turns, paid clearance and unfinished restoration on the point-cloud
+map. Includes Close view, species records, undo and optional continued play.
+The accepted Cooperation / Negligence game is unchanged. The supplied policy
+draft remains at `/policy.html` for comparison.
+
 Current default: the Amazon-learning expedition at `/expedition.html`, with
 the central measured map, click-drag camera, Forest / Overhead / Close views
 and Lia's green radio calls. Close view now opens ground detail inside the

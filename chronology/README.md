@@ -64,6 +64,7 @@ Read in filename order.
 | [2026-09-18T0940](2026-09-18T0940-stage4-seeds-and-scar.md) | Reversible seed-study tabs and a broader, height-informed surface-fire scar |
 | [2026-09-18T1105](2026-09-18T1105-stage4-shared-record-and-close-transition.md) | Shared field records throughout the game and overlapping, cancellable Close view |
 | [2026-09-18T2134](2026-09-18T2134-stage4-push-readiness.md) | Media and credential ignore rules, secret scan and origin push readiness |
+| [2026-09-19](2026-09-19-stage4-open-ledger.md) | Independent CLI playtests, open commitments, dynamic seed evidence and reversible exploration |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

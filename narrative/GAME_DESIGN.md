@@ -714,3 +714,13 @@ crew, one choice a season, two numbers. It ends by making the player the funder.
 The accepted two-mission game above is unchanged. This has been played by its
 author and by scripted crews, not by a room.
 [Design, what is built, and what play changed](../stage4/v1_policy_gaming.md).
+
+The next reversible trial is [The open ledger](../stage4/LEDGER.md), playable at
+`/ledger.html`. One crew manages six-month commitments with the existing Close
+view, field records and structure comparison. Clearing pays immediately but
+opens follow-up work. Repeated clearance damages native regrowth; successful
+shade closes the commitment. Seeds enrich an established pioneer stand, not
+bare grassland. Players can undo, review the earlier forest or continue with the
+same budget after the initial period. Independent Claude and Cursor CLI plays
+exposed misleading seed and timing cues; browser replays check their outcomes.
+These are agent playtests, not evidence that a room has found the game fun.
