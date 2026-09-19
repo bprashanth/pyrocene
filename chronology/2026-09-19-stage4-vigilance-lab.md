@@ -86,3 +86,17 @@ live rooms. Shared-room API and model regression tests also pass.
 and player results. Raw CLI transcripts and screenshots stay in external QA
 storage, not Git. The lab has no new portable package or multiplayer protocol.
 Review it, borrow only useful pieces, and keep the accepted layout.
+
+## Final checkpoint and player result
+
+`7a7d2b7` checkpoints the playable V2 lab. A focused Claude retry reached three
+closed targets on turn 21 with 33 credits and health 65. Its exact move trace
+also passed through the browser, including a screenshot of the closed canopy.
+The final Cursor medium-reasoning check did not win. All 11 V2 final tool traces
+are sanitised in `PLAYER_TRACES.json` and replayed by tests. This preserves the
+losing evidence without committing raw model reasoning or CLI metadata.
+
+Final verification: 80 JavaScript model/regression tests, five lab browser
+playthroughs, five shared-room API tests and one two-team browser playthrough.
+All pass. A source diff against `stage4-before-vigilance` is empty for Stage 4
+outside `stage4/labs/`. No push was made.

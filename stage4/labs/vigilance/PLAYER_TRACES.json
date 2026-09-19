@@ -51,7 +51,8 @@
         "turn": 21,
         "loss": 4.6
       },
-      "refused": null
+      "refused": null,
+      "model": "claude-haiku-4-5-20251001"
     },
     {
       "file": "focused-cursor-247.jsonl",
@@ -83,7 +84,8 @@
       "refused": {
         "token": "wait",
         "reason": "Not enough for this job and the crew."
-      }
+      },
+      "model": "gpt-5.4-mini-low"
     },
     {
       "file": "retry-claude-613.jsonl",
@@ -138,7 +140,8 @@
         "turn": 24,
         "loss": 10.2
       },
-      "refused": null
+      "refused": null,
+      "model": "claude-haiku-4-5-20251001"
     },
     {
       "file": "retry-cursor-727.jsonl",
@@ -178,7 +181,8 @@
         "turn": 15,
         "loss": 5
       },
-      "refused": null
+      "refused": null,
+      "model": "gpt-5.4-mini-low"
     },
     {
       "file": "severe-claude-613.jsonl",
@@ -226,7 +230,8 @@
         "turn": 24,
         "loss": 17.799999999999997
       },
-      "refused": null
+      "refused": null,
+      "model": "claude-haiku-4-5-20251001"
     },
     {
       "file": "severe-cursor-727.jsonl",
@@ -275,7 +280,8 @@
         "turn": 24,
         "loss": 7
       },
-      "refused": null
+      "refused": null,
+      "model": "gpt-5.4-mini-low"
     },
     {
       "file": "v2-claude-113.jsonl",
@@ -327,7 +333,8 @@
         "turn": 24,
         "loss": 11.2
       },
-      "refused": null
+      "refused": null,
+      "model": "claude-haiku-4-5-20251001"
     },
     {
       "file": "v2-cues-claude-319.jsonl",
@@ -368,7 +375,8 @@
         "turn": 15,
         "loss": 1.2
       },
-      "refused": null
+      "refused": null,
+      "model": "claude-haiku-4-5-20251001"
     },
     {
       "file": "v2-cues-cursor-431.jsonl",
@@ -401,7 +409,8 @@
         "turn": 10,
         "loss": 0.6
       },
-      "refused": null
+      "refused": null,
+      "model": "gpt-5.4-mini-low"
     },
     {
       "file": "v2-cursor-247.jsonl",
@@ -433,7 +442,60 @@
       "refused": {
         "token": "wait",
         "reason": "Not enough for this job and the crew."
-      }
+      },
+      "model": "gpt-5.4-mini-low"
+    },
+    {
+      "file": "mini-medium-cursor-727.jsonl",
+      "seed": 727,
+      "distribution": "severe",
+      "calls": 35,
+      "unrecognised": 0,
+      "tokens": [
+        "clear:middle",
+        "clear:neck",
+        "plant:neck",
+        "clear:edge",
+        "plant:edge",
+        "clear:east",
+        "buy:community:neck",
+        "plant:east",
+        "clear:middle",
+        "buy:firebreak:edge",
+        "clear:north",
+        "clear:far",
+        "buy:firebreak:east",
+        "wait",
+        "plant:east",
+        "clear:edge",
+        "clear:neck",
+        "plant:neck",
+        "clear:middle",
+        "clear:north",
+        "clear:east",
+        "buy:community:neck",
+        "buy:firebreak:edge",
+        "buy:firebreak:east",
+        "wait",
+        "clear:far",
+        "plant:neck",
+        "wait",
+        "wait"
+      ],
+      "metrics": {
+        "credits": 6,
+        "health": 26,
+        "canopies": 0,
+        "targets": 0,
+        "open": 3,
+        "income": 0,
+        "won": false,
+        "status": "playing",
+        "turn": 24,
+        "loss": 19.400000000000002
+      },
+      "refused": null,
+      "model": "gpt-5.4-mini-medium"
     }
   ]
 }

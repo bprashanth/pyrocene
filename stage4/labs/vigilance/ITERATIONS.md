@@ -155,6 +155,14 @@ It is still only one agent's success after feedback and revision. The weaker
 players' repeated premature stops also limit their usefulness as human-player
 proxies. Their failures remain recorded; we did not tune rates until they all won.
 
+One final Cursor check used the same small model with medium reasoning,
+`gpt-5.4-mini-medium`, on severe seed 727. It still spread its commitments,
+repeatedly cleared damaged sites, and stopped at turn 24 with 6 credits,
+health 26 and no closed targets. More reasoning did not produce a successful
+strategy in this run. This result is retained beside the low-reasoning runs,
+not substituted for them. `PLAYER_TRACES.json` contains all 11 final V2 tool
+traces with their model names and audited outcomes; tests replay every trace.
+
 ### What has not earned a transfer
 
 Seed monitoring reads a genuine changing model quantity: native neighbours
