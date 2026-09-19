@@ -41,7 +41,7 @@ class LedgerPlay(unittest.TestCase):
   self.page.locator('#patch-actions .primary').click();self.settle();expect(self.page.locator('#ledger-count')).to_have_text('1')
   for key in ['middle','neck','middle','east']:self.work(key)
   expect(self.page.locator('#closed-count')).to_contain_text('1 / 3');self.shot('first-shade')
-  snapshot=self.page.evaluate('ledgerDiagnostics().game');self.page.locator('#history').fill('1');self.page.locator('#history').dispatch_event('input');expect(self.page.locator('#status')).to_contain_text('Past turn');self.assertEqual(self.page.evaluate('ledgerDiagnostics().game'),snapshot)
+  snapshot=self.page.evaluate('ledgerDiagnostics().game');self.page.locator('#history-disclosure summary').click();self.page.locator('#history').fill('1');self.page.locator('#history').dispatch_event('input');expect(self.page.locator('#status')).to_contain_text('Past turn');self.assertEqual(self.page.evaluate('ledgerDiagnostics().game'),snapshot)
   self.page.locator('#resume').click();self.page.locator('#undo').click();self.settle();self.assertEqual(self.page.evaluate('ledgerDiagnostics().moves.length'),4);self.work('east');self.assertEqual(self.page.evaluate('ledgerDiagnostics().game'),snapshot)
   for key in ['neck','neck','edge','edge','east','east','edge']:self.work(key)
   expect(self.page.locator('#result')).to_be_visible();self.assertGreaterEqual(self.page.evaluate('ledgerDiagnostics().summary.closed'),3);self.shot('paced-result')

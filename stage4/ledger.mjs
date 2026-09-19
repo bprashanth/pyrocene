@@ -8,7 +8,7 @@ import {StructureLab} from './structure-lab.mjs';
 const $=id=>document.getElementById(id),el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,fn,cls)=>{const b=el('button',text,cls);b.onclick=fn;return b;};
 const params=new URLSearchParams(location.search),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const names={invaded:'Invasive grass',open:'Open ground',young:'Young planting',pioneer:'Closed canopy',forest:'Mixed forest'},verbs={clear:'Clear',plant:'Plant pioneers',tend:'Weed among saplings',enrich:'Add canopy trees'};
+const names={invaded:'Invasive grass',open:'Open ground',young:'Young planting',pioneer:'Closed canopy',forest:'Mixed forest'},verbs={clear:'Clear grass',plant:'Plant trees',tend:'Weed around saplings',enrich:'Add canopy trees'};
 const SAVE='pyrocene-open-ledger-v1';
 let game,frames=[],moves=[],seen=[],selected=null,view='forest',review=null,busy=true,moving=false,viewToken=0,catalogue=[],photos={},previousResult=null;
 const display=()=>review===null?game:frames[review],name=k=>plotInfo(k)?.name||'Pasture';
@@ -33,10 +33,10 @@ function render(){
  $('phase').textContent=`${isPast?'REVIEW':'TURN'} ${Math.min(g.season,g.rule.seasons)} / ${g.rule.seasons} - SIX MONTHS`;
  $('credits').textContent=g.credits;$('health').textContent=Math.round(s.health);
  const next=g.rule.fires.find(t=>t>=g.season),fireLine=dry(g)?'Dry season: fire after this job.':next?`Dry season in ${next-g.season} turn${next-g.season===1?'':'s'}.`:'Last turn.';
- $('season-note').textContent=`Crew: -${g.living} / turn. Standing cover: +${carbonIncome(g)}. ${fireLine}`;$('season-note').classList.toggle('dry',dry(g));
+ $('season-note').textContent=`Each turn: crew −${g.living}, forest +${carbonIncome(g)}. ${fireLine}`;$('season-note').classList.toggle('dry',dry(g));
  const entry=selected&&g.plots[selected],choice=selected&&choices(g).find(c=>c.key===selected);
  $('task').textContent=selected?`${name(selected)} - ${coordinate(plotInfo(selected).id)}`:'Where should the crew go?';
- $('finding').textContent=entry?names[entry.state]+'. '+(entry.state==='invaded'?plotInfo(selected).about:entry.state==='open'?'Clearing started a commitment.':entry.state==='young'?'The trees still need time and care.':entry.state==='pioneer'?'Shade holds. Other native trees still need to arrive.':'Shade and native seed routes are returning.'):'Choose a patch. Inspect it freely before sending the crew.';
+ $('finding').textContent=entry?(entry.state==='invaded'?plotInfo(selected).about:entry.state==='open'?'Cleared ground. Plant before grass returns.':entry.state==='young'?'Young trees. Keep the returning grass back.':entry.state==='pioneer'?'Canopy closed. Other native trees can now join it.':'Mixed forest. Shade and native seed routes have returned.'):'Choose a patch. Looking is free. Each job takes six months.';
  $('evidence').textContent=entry?(view==='close'?evidence(g,selected).groundLine:entry.clearings>1?`Cleared ${entry.clearings} times. Native regrowth has lost ${entry.nativeLoss} health.`:entry.state==='invaded'?`${choice.tonnes} tonnes standing now. Fire and regrowth change the harvest.`:''):'';
  $('budget').textContent='';$('status').textContent=isPast?'Past turn. Return to now to make a decision.':ended?'The experiment is complete. Explore or undo a turn.':'';
  const actions=$('patch-actions');actions.replaceChildren();
@@ -45,13 +45,13 @@ function render(){
   const forecast=choice.affordable?preview(g,selected):null;
   if(forecast)line+=`\nBalance after crew: ${forecast.game.credits}`;
   $('budget').textContent=line;
-  const b=button(verbs[choice.job]+' - '+name(selected),()=>send(selected),'primary');b.disabled=busy||moving||!choice.affordable;actions.append(b);
+  const b=button(verbs[choice.job],()=>send(selected),'primary');b.disabled=busy||moving||!choice.affordable;actions.append(b);
   if(!choice.affordable)$('status').textContent=`Need ${Math.max(0,choice.cost+g.living-choice.pay-g.credits)} more credits to cover this work and the crew.`;
   else if(choice.job==='clear'&&entry.clearings>0)$('status').textContent=`Another clearance here would cost up to 2 health in native regrowth.`;
   else if(forecast?.events.some(e=>e.type==='fire'&&e.killed.includes(selected)))$('status').textContent='Fire can reach these seedlings this turn. Follow the connected grass from the pasture.';
-  else if(choice.job==='plant')$('status').textContent=`Protected pioneers need about 3 growing turns to close. ${g.rule.carbon.pioneer?`Closed cover pays ${g.rule.carbon.pioneer} per turn. Mixed forest pays ${g.rule.carbon.forest}.`:'This rule pays nothing for standing cover.'}`;
+  else if(choice.job==='plant')$('status').textContent=`About 3 growing turns to shade if protected. ${g.rule.carbon.pioneer?`Then +${g.rule.carbon.pioneer} per turn; mixed forest +${g.rule.carbon.forest}.`:'Standing trees earn nothing under this rule.'}`;
   else if(choice.job==='enrich')$('status').textContent=`Adds mixed canopy here. This patch then pays ${g.rule.carbon.forest} per turn. Native seed routes may offer another way.`;
-  else if(choice.job==='tend')$('status').textContent='Trees grow between visits. Weed when grass threatens them; you need not tend every turn.';
+  else if(choice.job==='tend')$('status').textContent='Trees grow between visits. Weed when grass threatens them.';
  }
  if(entry&&view==='close'){const b=button('Structure',()=>structure(),'secondary');b.disabled=busy||moving;actions.append(b);}
  if(!isPast&&!ended){const b=button('Let six months pass',()=>send(null),'wait');b.disabled=busy||moving;actions.append(b);}
@@ -125,9 +125,9 @@ async function start(mission,restoredMoves=[],intro=true,turnLimit=0){
  for(const key of restoredMoves){if(game.status!=='playing')break;try{act(game,key);moves.push(key);frames.push(clone(game));}catch{break;}}
  forest.setFire(null,1);forest.setInventory(catalogue,WORLD.map(p=>({...p})));showWorld();$('last-turn').textContent=moves.length?'Saved experiment resumed.':'Survey is free. One job advances six months.';busy=false;render();save();
  if(intro){$('briefing-text').replaceChildren(...[
-  `One crew. One job every six months. ${mission==='both'?'Try to close three canopies while keeping the crew funded.':'See what this payment rule leaves behind.'}`,
+  `One job every six months. ${mission==='both'?'Close three canopies without running out of credits.':'See what this payment rule leaves behind.'}`,
   mission==='tonne'?'You earn from tonnes removed. Standing forest earns nothing under this rule.':mission==='tree'?'You earn from standing cover. Clearance earns nothing. Can you keep the crew funded until shade returns?':'Clearance pays now. Standing cover pays later. The crew needs 3 credits each turn.',
-  'Cleared and planted patches enter your ledger. Help them reach shade before grass returns. You can undo a turn and try another approach.'
+  'Plant cleared ground. Keep grass back until shade holds. Looking is free. Undo lets you try again.'
  ].map(t=>el('p',t)));$('briefing').showModal();}
 }
 $('briefing-begin').onclick=()=>$('briefing').close();$('call-ok').onclick=()=>$('call').hidden=true;$('record-close').onclick=closeRecord;

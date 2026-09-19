@@ -1,4 +1,5 @@
 .ledger-game #round-panel{width:280px;background:linear-gradient(120deg,#0b1a16f2,#0b1a16dc);max-height:calc(100dvh - 210px);overflow:auto}
+.learn-link{color:#c5d8b5;text-decoration:underline;text-underline-offset:4px;font-size:13px}.game-options{position:relative;font-size:13px}.game-options summary,#history-disclosure summary{cursor:pointer;padding:8px 0;color:#adc1ae}.game-options>div{position:absolute;left:0;top:34px;width:210px;display:grid;gap:12px;padding:18px;background:#0b1a16;border:1px solid #526c58;box-shadow:0 12px 32px #0008;z-index:30}.game-options small{color:#a8b2a4}.game-options button{text-align:left}#history-disclosure{width:100%}#history-disclosure label{margin-right:8px}.ledger-game #briefing-begin{margin-left:18px}
 .ledger-game #round-panel h1{font-size:24px;margin:18px 0 10px}.ledger-game p{line-height:1.5}
 #meters{display:flex;gap:30px;padding:16px 0 10px;border-bottom:1px solid #395147}#meters span{display:block;font:10px monospace;color:#9eb5a7}#meters b{font:30px Georgia,serif;color:#d3e4d8}
 #meters{position:sticky;top:-1px;background:#0c1b16;z-index:2}

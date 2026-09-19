@@ -36,6 +36,7 @@ APP_FILES += ('structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css')
 APP_FILES += ('round.html', 'round.css', 'round.mjs', 'round-render.mjs', 'round-model.mjs', 'round-config.json')
 APP_FILES += ('policy.html', 'policy.css', 'policy.mjs', 'policy-render.mjs', 'policy-model.mjs', 'policy-copy.mjs', 'policy-config.json', 'policy-bots.mjs')
 APP_FILES += ('ledger.html', 'ledger.css', 'ledger.mjs', 'ledger-render.mjs', 'ledger-model.mjs')
+APP_FILES += ('prelude/index.html', 'prelude/prelude.css', 'prelude/prelude.mjs', 'prelude/board.mjs')
 APP_FILES += ('play-flow.mjs', 'play-flow.css', 'play-briefing.mjs', 'hazel.png')
 APP_FILES += ('neglect-model.mjs',)
 APP_FILES += ('seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json')
@@ -71,6 +72,7 @@ DOC_NAMES = (
     "MODEL_ASSUMPTIONS.md",
     "FACILITATOR.md",
     "LEDGER.md",
+    "prelude/README.md",
     "model_assumptions.md",
     "v0_data.md",
 )

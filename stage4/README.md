@@ -6,6 +6,10 @@ map. Includes Close view, species records, undo and optional continued play.
 The accepted Cooperation / Negligence game is unchanged. The supplied policy
 draft remains at `/policy.html` for comparison.
 
+Learn that loop first on [the paper forest](prelude/README.md) at `/prelude/`.
+Five optional prompts lead to a first canopy, then the board stays open for
+experiments. It uses the same rules and never overwrites the forest save.
+
 Current default: the Amazon-learning expedition at `/expedition.html`, with
 the central measured map, click-drag camera, Forest / Overhead / Close views
 and Lia's green radio calls. Close view now opens ground detail inside the

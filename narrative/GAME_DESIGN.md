@@ -724,3 +724,10 @@ bare grassland. Players can undo, review the earlier forest or continue with the
 same budget after the initial period. Independent Claude and Cursor CLI plays
 exposed misleading seed and timing cues; browser replays check their outcomes.
 These are agent playtests, not evidence that a room has found the game fun.
+
+Before entering that forest, [The paper forest](../stage4/prelude/README.md) at
+`/prelude/` teaches the same loop with the drawn map's ink and hatching. Optional
+prompts take a planting through to shade in five turns. Players can ignore the
+prompts, undo or keep playing. It imports the overnight rules unchanged, and
+practice never replaces a saved forest game. The forest's secondary controls
+are now tucked away; its point clouds and mechanics are unchanged.

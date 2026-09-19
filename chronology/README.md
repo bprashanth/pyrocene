@@ -65,6 +65,8 @@ Read in filename order.
 | [2026-09-18T1105](2026-09-18T1105-stage4-shared-record-and-close-transition.md) | Shared field records throughout the game and overlapping, cancellable Close view |
 | [2026-09-18T2134](2026-09-18T2134-stage4-push-readiness.md) | Media and credential ignore rules, secret scan and origin push readiness |
 | [2026-09-19](2026-09-19-stage4-open-ledger.md) | Independent CLI playtests, open commitments, dynamic seed evidence and reversible exploration |
+| [2026-09-19](2026-09-19-stage4-prelude-checkpoint.md) | Freeze the unreviewed overnight mechanics before presentation changes |
+| [2026-09-19](2026-09-19-stage4-paper-prelude.md) | A playable paper-map prelude and simpler forest controls, using the same rules |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
