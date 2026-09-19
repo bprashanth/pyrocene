@@ -47,7 +47,7 @@ export function canBuy(g,tool,k){
  if(!t||g.status!=='playing')return 'This purchase is unavailable.';
  if(t.scope==='plot'&&!p)return 'Choose a patch.';
  if(active(g,k,tool))return 'Already funded. Renew after it expires.';
- if(g.credits<t.cost+RULES.crew)return 'Keep 2 credits for the next crew turn.';
+ if(g.credits<t.cost+RULES.crew)return `Keep ${RULES.crew} credits for the next crew turn.`;
  if(t.kind==='protection'&&(!p||!['open','young'].includes(p.state)))return 'Protect cleared ground or young planting.';
  return null;
 }
@@ -104,9 +104,10 @@ export function act(g,verb,k=null){
   }
  }
  const pay=metrics(g).income;g.credits+=pay-RULES.crew;
+ for(const item of PLOTS)if(['open','young'].includes(g.plots[item.key].state))for(const [tool,until]of Object.entries(g.plots[item.key].tools))if(until===g.turn&&TOOLS[tool]?.kind==='protection')events.push({type:'expired',plot:item.key,tool,text:`${item.name}: ${TOOLS[tool].name.toLowerCase()} ends now. Renew if the planting still needs it.`});
  events.push({type:'budget',income:pay,crew:RULES.crew,text:`Forest +${pay}. Crew −${RULES.crew}. Balance ${g.credits}.`});
  g.moves.push({type:'work',verb,key:k});g.log.push({turn:g.turn,events});g.turn++;
- if(g.credits<RULES.crew&&metrics(g).income<RULES.crew&&!PLOTS.some(p=>{const q=quote(g,job(g,p.key),p.key);return q.valid&&g.credits-q.cost+q.returns>=RULES.crew;}))g.status='broke';
+ if(g.credits<RULES.crew&&!PLOTS.some(p=>{const q=quote(g,job(g,p.key),p.key);return q.valid&&g.credits-q.cost+q.returns>=RULES.crew;}))g.status='broke';
  else if(g.turn>g.limit)g.status='done';
  return events;
 }
@@ -114,10 +115,13 @@ const level=x=>x>.67?'high':x>.34?'medium':'low';
 export function observe(g,k=null){
  const m=metrics(g),plots=PLOTS.map(item=>{const p=g.plots[item.key],q=quote(g,job(g,item.key),item.key),report={key:item.key,name:item.name,target:!!item.target,state:p.state,canopy:Math.round(p.canopy*100),grass:level(p.weeds),last:p.last,job:job(g,item.key),cost:q.cost||0,returns:q.returns||0,affordable:q.valid&&g.credits-q.cost+q.returns>=RULES.crew,protection:Object.keys(p.tools).filter(t=>active(g,item.key,t)).map(t=>({tool:t,turns:remaining(g,item.key,t)}))};
   if(active(g,item.key,'heatmap')){const v=pressure(g,item.key);report.invasives={cover:Math.round(p.weeds*100),pressure:level(v.value),sources:v.sources.map(s=>({from:s.key,strength:level(s.value)}))};}
-  if(active(g,item.key,'ews'))report.weather={dryness:level(climate(g,item.key)),response:active(g,item.key,'community')?'Community crew can respond.':'Alerts need a community crew to reduce fire damage.'};
+  if(active(g,item.key,'ews'))report.weather={dryness:level(climate(g,item.key)),response:active(g,item.key,'community')?'Community crew can respond. A firebreak adds protection.':'Alerts do not stop fire. Community crews can act on them. Firebreaks reduce incoming spread.'};
   if(active(g,item.key,'dispersers')){const v=seedRoute(g,item.key);report.nativeSeeds={arrival:level(v.value),via:v.via,note:'Seed arrival enriches closed canopy. It does not plant bare ground.'};}
   return report;
  });
- return {version:VERSION,turn:g.turn,limit:g.limit,metrics:m,season:g.turn%4===0?'dry':g.turn%4===3?'drying':'wetter',plots:k?plots.filter(p=>p.key===k):plots,tools:Object.entries(TOOLS).map(([id,t])=>({id,...t,owned:t.scope==='all'&&active(g,null,id)})),latest:g.log.at(-1)?.events||[],goal:'Close Neck, Edge and East while keeping the crew funded. Each job takes six months. Purchases cost credits but no turn.'};
+ const earn=plots.filter(p=>p.job==='clear'&&p.affordable).sort((a,b)=>b.returns-a.returns)[0],young=plots.filter(p=>p.state==='young'),weeding=young.find(p=>p.grass!=='low');
+ const cue=g.credits<RULES.crew+RULES.plant&&earn?`Cash is low, but this run is not over. Clear ${earn.name} to fund care. You may earn outside the three targets.`:weeding?`Grass is returning at ${weeding.name}. Weed around the saplings or fund community care before it takes over.`:young.some(p=>p.last.includes('Dry soil'))&&!active(g,null,'ews')?'Dry soil is slowing growth. Weather alerts reveal which patches are dry; soil protection reduces the stress.':young.length>=2?'Several plantings need time. Tending removes grass; trees grow between visits. Opening another plot is optional.':null;
+ for(const p of young)p.growingTurns=Math.ceil((1-p.canopy/100)/RULES.growth);
+ return {version:VERSION,turn:g.turn,limit:g.limit,metrics:m,cue,season:g.turn%4===0?'dry':g.turn%4===3?'drying':'wetter',plots:k?plots.filter(p=>p.key===k):plots,tools:Object.entries(TOOLS).map(([id,t])=>({id,...t,owned:t.scope==='all'&&active(g,null,id)})),latest:g.log.at(-1)?.events||[],goal:'Close Neck, Edge and East while keeping the crew funded. Each job takes six months. Purchases cost credits but no turn.'};
 }
 export function replay(seed,moves,distribution='varied'){const g=newGame(seed,distribution);for(const m of moves)m.type==='buy'?buy(g,m.tool,m.key):act(g,m.verb,m.key);return g;}

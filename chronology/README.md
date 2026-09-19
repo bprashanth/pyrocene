@@ -67,6 +67,8 @@ Read in filename order.
 | [2026-09-19](2026-09-19-stage4-open-ledger.md) | Independent CLI playtests, open commitments, dynamic seed evidence and reversible exploration |
 | [2026-09-19](2026-09-19-stage4-prelude-checkpoint.md) | Freeze the unreviewed overnight mechanics before presentation changes |
 | [2026-09-19](2026-09-19-stage4-paper-prelude.md) | A playable paper-map prelude and simpler forest controls, using the same rules |
+| [2026-09-19](2026-09-19-stage4-vigilance-checkpoint.md) | Freeze the accepted game before isolated sensor and protection experiments |
+| [2026-09-19](2026-09-19-stage4-vigilance-lab.md) | Paid information, temporary care, seeded risks and audited CLI players in a disposable lab |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
