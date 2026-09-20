@@ -59,7 +59,7 @@ export function seedContext(g,key,species){
  for(const info of PLOTS){const p=g.plots[info.key],v=evidence(g,info.key),open=['invaded','open','young'].includes(p.state);
   layers[info.id]={arrival:native?(v.visits?.85:.15):Math.min(1,.12+v.sources.length*.23+p.weeds*.2),establishment:native?(open?.72:.3):(open?.9:.12)};
  }
- return {layers,caption:'Teaching model for this turn. Bright means higher. Yellow marks this patch.',clue:native?e.nativeLine:`${e.seedLine} ${e.groundLine}`};
+ return {layers,plot:studyPlot(g,key),caption:'Teaching model for this turn. Bright means higher. Yellow marks this patch.',clue:native?e.nativeLine:`${e.seedLine} ${e.groundLine}`};
 }
 // At most one short intervention at a turning point. It never blocks play.
 export function cue(g,events,seen=[]){
