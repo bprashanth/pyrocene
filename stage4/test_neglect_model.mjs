@@ -1,9 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {succession,clearingSuccession,plotForecast,followupBudget,followupReview,followupCandidates,followupStudy} from './neglect-model.mjs';
+import {succession,clearingSuccession,plotForecast,followupBudget,followupReview,followupCandidates,followupStudy,followupHealthEffect} from './neglect-model.mjs';
 import {planBudget} from './round-model.mjs';
 import {buildStructure,structureSummary} from './structure-model.mjs';
 const previous={removal:'C',ecology:'C',...planBudget('C','C')};
+test('follow-up health display matches the existing forecast, without adding a bonus',()=>{
+ for(const old of ['A','B','C']){
+  const plan={removal:old,ecology:old,...planBudget(old,old)};
+  for(const choice of [old,'D','E']){
+   const delta=followupReview(plan,choice,10,true).health-followupReview(plan,choice,10,false).health;
+   assert(Math.abs(delta-followupHealthEffect(plan,choice))<1e-9);
+   assert(choice===old?delta>0:delta<0);
+  }
+ }
+});
 test('same six-month starting point; divergent growth is explicit and reversible',()=>{
  const cared=succession(.5,true),uncared=succession(.5,false);assert.equal(cared.alive,uncared.alive);assert.equal(cared.invasive,uncared.invasive);
  assert.equal(succession(10,true).alive,80);assert.equal(succession(10,false).alive,15);assert.equal(succession(10,false).lost,65);

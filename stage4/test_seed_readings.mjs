@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WORLD} from './world.mjs';
-import {occurrenceStudy,patchReadings,germinationAssessment,GERMINATION_EVIDENCE} from './seed-model.mjs';
+import {occurrenceStudy,patchReadings,germinationAssessment,GERMINATION_EVIDENCE,habitatBand,habitatReadings} from './seed-model.mjs';
+import {succession} from './neglect-model.mjs';
 
 test('all inventoried taxa get an occurrence map, without inventing seed arrival',()=>{
  const before=JSON.stringify(WORLD);
@@ -30,4 +31,16 @@ test('native pioneer germination does not falsely improve with canopy closure',(
  assert.match(germinationAssessment('cecropia_obtusa',{light:1.9}),/closing shade can reduce/);
  assert.match(germinationAssessment('piper_aduncum',{light:.2}),/Shade may limit/);
  assert.match(germinationAssessment('carapa_guianensis',{water:.2}),/canopy shelter/);
+});
+test('immersive habitat bands are fixed profiles, not renamed laboratory optima',()=>{
+ const grass=habitatBand('urochloa_brizantha'),pioneer=habitatBand('cecropia_obtusa'),forest=habitatBand('carapa_guianensis');
+ assert.notDeepEqual(grass.temperature,GERMINATION_EVIDENCE.urochloa_brizantha.temperature);
+ assert(pioneer.light[0]>forest.light[1]-.1);assert(grass.light[0]>forest.light[1]);
+ for(const id of new Set(WORLD.flatMap(p=>p.speciesIds))){const b=habitatBand(id);for(const k of ['temperature','water','ph','light'])assert(b[k][0]<=b[k][1]);}
+ assert.deepEqual(habitatBand('urochloa_brizantha'),grass);
+});
+test('immersive microclimate follows the selected projected forest, not species or a fake pH cure',()=>{
+ const cared=habitatReadings(27,null,{forecast:succession(10,true)}),lost=habitatReadings(27,null,{forecast:succession(10,false)});
+ assert(cared.temperature<lost.temperature);assert(cared.light<lost.light);assert(cared.water>lost.water);
+ assert.equal(cared.ph,cared.closed.ph);assert.equal(cared.ph,lost.ph);
 });

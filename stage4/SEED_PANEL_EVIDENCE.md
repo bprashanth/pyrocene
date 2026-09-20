@@ -1,5 +1,45 @@
 # Seed panels: what is measured and what is invented
 
+## Main-game presentation update, 20 September 2026
+
+The user selected canopy-fill ledger blocks for the future Vigilance stage and
+asked for immersive, compact panels in Cooperation and Negligence now. These
+stages opt into `speciesRecord({immersive:true})`. Expedition, `/ledger.html`
+and the disposable labs retain the previous study display described below.
+
+The immersive display removes the occurrence-count assessment and simulated
+timestamp from the reading flow. Instructions come before the map or charts;
+research limits remain in Sources and Teams / About this game. All four charts
+are vertical: temperature, soil moisture, soil pH, and light. The panel stays
+360 px wide on desktop.
+
+**“Species thrives in” does not rename a laboratory test into a tolerance
+range.** It uses a separate, explicitly authored establishment profile from
+`habitatBand()`. There are five broad profiles: introduced grass, native opening
+species, climber, wet forest, and other forest vegetation. The ranges are game
+assumptions, not 120 newly researched physiological limits. They do not change
+to match whichever patch the user clicks. Native pioneers retain an opening
+profile. There is overlap, not a binary native/invasive environmental test.
+
+The qualitative rationale is consistent with [grass shade experiments](https://www.scielo.br/j/pab/a/9X4SnqRd8mJdPYRMJG8HB5g/?lang=en)
+and [Amazon secondary-forest recovery research](https://www.nature.com/articles/s41467-021-22050-1).
+Neither paper supplies the numeric habitat bands used here. The laboratory
+records and their original caveats remain separately available in Sources.
+
+Patch readings now follow the selected recovery projection and With / Without
+removal **in the immersive round display only**. Changing the year while a
+record is open preserves its selected tab and updates the readings. About uses
+the same soil-moisture condition rather than retaining a contradictory static
+dry-ground description. No projection advances the game or changes a proposal.
+
+pH is an illustrative acidic-soil setting, 4.5–5.1 across the selected plots.
+It is held constant between current and closed-canopy cases. Canopy closure
+does not promise to engineer soil acidity. pH bands overlap between profiles;
+the participant must combine evidence rather than treating each axis as a
+native/invasive classifier. Soil moisture and light remain qualitative scales.
+
+The earlier display contract below still applies to the non-immersive panels.
+
 Updated 20 September 2026. These are shared field-guide panels, not a change to
 Cooperation or Negligence rules. The numerical germination results below must
 not be treated as probabilities of establishment in the game.

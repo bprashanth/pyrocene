@@ -115,3 +115,35 @@ export function germinationAssessment(species,readings){
  if(INVASIVE_IDS.has(species))return readings.light>1.2?'Open ground can favour invasion; canopy closure can limit establishment, not erase seeds.':'Shade can restrict grass establishment; keep watching for new seedlings.';
  return e.advice;
 }
+
+// Illustrative establishment profiles for the immersive round UI. These are
+// NOT the laboratory GERMINATION_EVIDENCE above, nor measured species limits.
+// Profiles stay fixed when patches change, including the native pioneers.
+export function habitatBand(species){
+ const id=typeof species==='string'?species:species.id;
+ const profile=INVASIVE_IDS.has(id)?'grass':['cecropia_obtusa','piper_aduncum','manihot_esculenta','bactris_gasipaes'].includes(id)?'opening':/liana/i.test(species.growthForm||'')?'climber':['euterpe_oleracea','mauritia_flexuosa'].includes(id)?'wetForest':'forest';
+ const bands={
+  grass:{temperature:[28,36],water:[.3,1.4],ph:[4.3,6.5],light:[1.2,2]},
+  opening:{temperature:[26,34],water:[.7,1.7],ph:[4.2,6.2],light:[.9,2]},
+  climber:{temperature:[25,32],water:[.8,1.8],ph:[4,6.2],light:[.4,1.7]},
+  wetForest:{temperature:[24,30],water:[1.3,2],ph:[4,6],light:[.1,1.2]},
+  forest:{temperature:[24,29],water:[1.1,1.9],ph:[4,6],light:[.1,.9]}
+ };
+ return {...bands[profile],profile};
+}
+
+export function habitatReadings(plot,previous=null,context=null){
+ let input=context;
+ const f=context?.forecast,base=WORLD[plot];
+ if(f){
+  const growth=f.kind==='planted'?f.nativeFraction*f.year/10:null;
+  input={plot:{...base,moisture:growth===null?f.moisture:.15+.79*growth,exposure:growth===null?f.exposure:.9-.65*growth,disturbance:null}};
+ }else if(context?.recovery!=null){
+  const growth=clamp(context.recovery/10);input={plot:{...base,moisture:.22+.72*growth,exposure:.85-.6*growth,disturbance:null}};
+ }
+ const r=patchReadings(plot,input?.plot?null:previous,input);if(!r)return null;
+ // Acidic-soil scenario, not a prediction that canopy closure engineers pH.
+ // Parent material is held fixed for both markers.
+ const ph=Number((4.5+(plot%5)*.15).toFixed(1));
+ return {...r,ph,closed:{...r.closed,ph}};
+}

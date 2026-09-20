@@ -6,10 +6,28 @@ import {CONFIG,PATCHES,patch,atSector,studyPlot,review,cooperationPreview} from 
 import {navigation,flowParams,roleFrom,flowURL} from './play-flow.mjs';
 import {BRIEFINGS} from './play-briefing.mjs';
 import {speciesRecord} from './species-record.mjs';
-import {followupCandidates,followupBudget,followupReview,followupStudy,forecastText} from './neglect-model.mjs';
+import {habitatReadings} from './seed-model.mjs';
+import {followupCandidates,followupBudget,followupReview,followupStudy,followupHealthEffect,forecastText} from './neglect-model.mjs';
 const $=id=>document.getElementById(id),button=(text,fn,cls='primary')=>{const b=document.createElement('button');b.textContent=text;b.onclick=fn;b.className=cls;return b;};
 let state=null,credentials=null,role=roleFrom(),selected=null,view='forest',busy=true,mutating=false,catalogue=[],result=null,mode='survey',clock=0,years=10,showPlan=true,renderedPlan='';
 navigation('play',role);
+document.querySelector('header').append(document.querySelector('.game-navigation'));
+const pickerLabel=document.createElement('label');pickerLabel.className='round-plant-picker';pickerLabel.htmlFor='plot-plants';pickerLabel.textContent='Plants in this plot';
+const plantPicker=document.createElement('select');plantPicker.id='plot-plants';plantPicker.setAttribute('aria-label','Plants in this plot');pickerLabel.append(plantPicker);$('patch-actions').before(pickerLabel);
+plantPicker.onchange=()=>{if(plantPicker.value)meet(plantPicker.value);};
+let pickerKey='';
+let recordKey='';
+const recordVersion=()=>[selected,state?.mission,state?.phase,years,carePreview,showPlan,view].join(':');
+const missionGoal=document.createElement('p');missionGoal.id='mission-goal';$('task').after(missionGoal);
+function renderPlantPicker(){
+ pickerLabel.hidden=!selected;plantPicker.disabled=busy;
+ if(!selected)return;
+ const ids=[...new Set([...WORLD[patch(selected).id].speciesIds,...(forest.plan?.ecology===selected?patch(selected).mix||[]:[])])];
+ const key=selected+':'+ids.join(',');if(key===pickerKey)return;pickerKey=key;
+ plantPicker.replaceChildren(new Option('Choose a plant',''));
+ for(const id of ids){const sp=catalogue.find(s=>s.id===id);if(sp)plantPicker.append(new Option(sp.name,id));}
+}
+const seedDisclosure=document.createElement('p');seedDisclosure.textContent='Plant locations and microclimate readings are simulated. Species thrives in bands are illustrative habitat ranges for this scenario, not measured limits or laboratory germination optima. Soil pH is an acidic-soil scenario. Health in Negligence compares each job with leaving it undone over ten years; care protects recovery rather than adding a second bonus.';$('teams').querySelector('details').append(seedDisclosure);
 const assumption=document.createElement('p');assumption.textContent='Negligence uses invented survival and cover trajectories. In the planted patch, With removal funds careful follow-up during establishment. In unplanted patches it is one clearance, followed by regrowth. The projection starts six months after the first planting. These are game assumptions, not field predictions.';$('teams').querySelector('details').append(assumption);
 const fireCache=new Map(),briefed=new Set();let typing=null;
 let carePreview=true;
@@ -21,7 +39,7 @@ let specimenKey='';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const forest=new RoundForest($('landscape'),{select:async id=>{const p=candidates().find(p=>p.id===id);if(p)await choose(p.key);},specimen:meet});forest.reducedMotion=reduced;
 const lab=new StructureLab({forest,catalogue:()=>catalogue});
-const closeRecord=()=>{$('plant-guide').hidden=true;};
+const closeRecord=()=>{$('plant-guide').hidden=true;plantPicker.value='';};
 $('record-close').onclick=closeRecord;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]'))closeRecord();});
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,5500);}
@@ -57,6 +75,13 @@ async function refresh(){try{accept(await request('state'));}catch(e){toast(e.me
 function teamVisits(){return state?.visited[role]||[];}
 function render(){
  if(!state)return;
+ renderPlantPicker();
+ missionGoal.hidden=!isNeglect()||role!=='removal'||state.phase==='committed';
+ missionGoal.textContent='Remove invasives for credit. Returning weeds among last season’s saplings need careful hand work.';
+ if(!$('plant-guide').hidden&&recordKey!==recordVersion()){
+  const id=$('guide-content').querySelector('.species-record')?.dataset.species,tab=$('guide-content').querySelector('[aria-selected=true]')?.dataset.tab;
+  if(id){meet(id);$('guide-content').querySelector(`[data-tab="${tab}"]`)?.click();}
+ }
  if(isNeglect()){renderNeglect();return;}
  $('care-comparison').hidden=true;$('forecast-metrics').hidden=true;$('comparison').hidden=false;$('recovery').min=0;$('recovery').step=1;
  const p=patch(selected),seen=p&&teamVisits().includes(p.key),locked=state.phase==='committed';
@@ -98,13 +123,14 @@ function renderNeglect(){
  $('phase').textContent=locked?'COMMITTED':'SIX MONTHS LATER';$('task').textContent=locked?'Shared plan':role==='room'?'Choose one follow-up.':role==='ecology'?'Why are invasives returning?':'Where should the crew go?';
  $('patches').hidden=locked;for(const b of $('patches').children){b.setAttribute('aria-pressed',String(b.dataset.patch===selected));b.disabled=busy;}
  const care=selected===old,budget=p?followupBudget(state.previous,selected):null;
- $('finding').replaceChildren(document.createTextNode(locked?`Crew: ${state.committed.removal}. Planted patch: ${old}.`:care?'Weeds are returning among your saplings. Removing them needs careful hand work.':p?.note||'Inspect three patches. Choose one.'));
+ const note=care?'Hand weeding returns little but protects the planted trees.':selected==='D'?'Dense invasives here. Removal without replanting will lead to dense invasives again.':selected==='E'?'Invasives are spreading into this opening. Without replanting they will return after removal.':'Inspect three patches. Choose one.';
+ $('finding').replaceChildren(document.createTextNode(locked?`Crew: ${state.committed.removal}. Planted patch: ${old}.`:note));
  if(!locked&&role==='ecology'&&care)$('finding').textContent='Study the returning plants. Are nearby seed sources or conditions here helping the invasion?';
- if(!locked&&budget){const cost=document.createElement('span');cost.className='choice-cost';cost.textContent=` Cost: ${budget.cost} credits. Return: ${budget.returns}.`;$('finding').append(cost);}
+ if(!locked&&budget){const cost=document.createElement('span'),effect=followupHealthEffect(state.previous,selected),health=Number(effect.toFixed(1));cost.className='choice-cost';cost.textContent=` Cost: ${budget.cost} credits. Return: ${budget.returns}. Health: ${health>0?'+':''}${health}${care?' by 10y':''}.`;$('finding').append(cost);}
  actions.replaceChildren();decision.replaceChildren();
  if(!locked&&role!=='room'&&seen&&state.proposals[role]!==selected&&(state.phase==='review'||!state.ready[role]))actions.append(button('Propose',submit));
  if(view==='close'&&p&&!busy)actions.append(button('Structure',()=>openStructure(),'secondary'));
- $('status').textContent=locked?`${state.committed.left} credits left.`:role==='room'?`Removal: ${state.proposals.removal||'waiting'}. Ecologist: ${state.proposals.ecology||'waiting'}.`:state.ready[role]?`Proposed: ${state.proposals[role]}. Explain your choice to the room.`:!seen?'Open Close view to study this patch.':'';
+ $('status').textContent=locked?`${state.committed.left} credits left.`:role==='room'?`Removal: ${state.proposals.removal||'waiting'}. Ecologist: ${state.proposals.ecology||'waiting'}.`:state.ready[role]?`Proposed: ${state.proposals[role]}. Explain your choice to the room.`:'';
  if(role==='room'&&!locked){
   if(state.phase==='survey'){const b=button('Reveal plans',()=>act('reveal'));b.disabled=!Object.values(state.ready).every(Boolean)||mutating;decision.append(b);}
   else{const agree=state.proposals.removal===state.proposals.ecology,b=button('Commit plan',()=>act('commit'));b.disabled=!agree||state.budget.left<0||mutating;decision.append(b);$('status').textContent=agree?`Cost: ${state.budget.cost}. Return: ${state.budget.returns}. Left: ${state.budget.left}.`:'One crew. Revise a proposal to agree on one patch.';}
@@ -149,8 +175,12 @@ async function submit(){
 }
 function meet(id){
  const s=catalogue.find(s=>s.id===id);if(!s)return;
- const plot=patch(selected).id,c=WORLD[plot],condition=c.moisture>.7?'The fallen leaves here are damp.':c.moisture<.3?'The fallen leaves here are dry.':'Litter moisture varies in this patch.';
- $('guide-content').replaceChildren(speciesRecord({species:s,photo:photos[s.photoAssetId||s.id],plot,previous:isNeglect()?state.previous:null,condition,onStructure:()=>{closeRecord();openStructure(id);}}));
+ const plot=patch(selected).id;
+ const seedContext={plot:studyPlot(selected),forecast:isNeglect()?result?.forecast:null,recovery:!isNeglect()&&forest.plan?.ecology===selected?years:null};
+ const water=habitatReadings(plot,isNeglect()?state.previous:null,seedContext).water,condition=water<.7?'The soil here is dry.':water<1.65?'The soil here is damp.':'The soil here is wet.';
+ $('guide-content').replaceChildren(speciesRecord({species:s,photo:photos[s.photoAssetId||s.id],plot,previous:isNeglect()?state.previous:null,condition,seedContext,immersive:true,onStructure:view==='close'?()=>{closeRecord();openStructure(id);}:null}));
+ recordKey=recordVersion();
+ plantPicker.value=id;
  $('guide-content').scrollTop=0;$('plant-guide').hidden=false;forest.focusSpecimen(id);
 }
 function openStructure(id=null){

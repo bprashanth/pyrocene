@@ -21,6 +21,11 @@ export function clearingSuccession(key,years,removed){
 export function plotForecast(previous,key,years,removed){return key===previous.ecology?{...succession(years,removed),key}:clearingSuccession(key,years,removed);}
 export function forecastText(f){return f.kind==='planted'?`${Math.round(f.alive)}/100 planted trees survive. ${Math.round(f.invasive*100)}% invasive cover.`+(f.lost>1?` ${Math.round(f.lost)} fewer survivors than with removal.`:''):`${Math.round(f.invasive*100)}% invasive cover. No trees planted.`;}
 export function followupCandidates(previous){return [patch(previous.ecology),...F.newPatches];}
+// Marginal 10-year health compared with leaving this follow-up undone.
+// Display only: care preserves the existing forecast, not a second health bonus.
+export function followupHealthEffect(previous,choice){
+ return choice===previous.ecology?patch(choice).healthGain*(succession(CONFIG.years,true).nativeFraction-succession(CONFIG.years,false).nativeFraction):-patch(choice).healthLoss;
+}
 export function followupBudget(previous,choice){
  if(!followupCandidates(previous).some(p=>p.key===choice))throw Error('Choose a follow-up patch.');
  const care=choice===previous.ecology,p=patch(choice),cost=care?F.careCost:p.removalCost,returns=care?F.careReturn:p.removalCost+p.income;
