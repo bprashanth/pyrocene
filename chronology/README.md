@@ -85,3 +85,4 @@ one, both stay and the later one says what changed.
 - [2026-09-21: Unstable plots and connected fire](2026-09-21-stage4-unstable-plots.md): readable map IDs, compact controls, free plot selection, forest health and canopy-dependent fire penetration in Strategy only.
 - [2026-09-21: Smaller plots and uncertain removal returns](2026-09-21-stage4-small-plots.md): finer work squares, paid empty visits, free inspection, a compact strip and fire-killed planting that must be replanted or lost.
 - [2026-09-21: Combined enters the main game](2026-09-21-stage4-combined.md): centred Unstable plots, fewer controls and fresh independent entry from every main stage, without changing the shared missions.
+- [2026-09-21: Community buffer experiment](2026-09-21-stage4-community.md): separate shade-crop and nursery partnerships, locally financed care, damaged buffers returning to the ledger, paired browser play and reversible integration boundaries.

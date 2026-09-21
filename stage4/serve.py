@@ -55,6 +55,7 @@ APP_FILES |= {'neglect-model.mjs'}
 APP_FILES |= {'seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json'}
 APP_FILES |= {'species-record.mjs', 'species-record.css'}
 APP_FILES |= {'strategy.html', 'strategy.css', 'strategy.mjs', 'strategy-model.mjs', 'strategy-render.mjs'}
+APP_FILES |= {'community/index.html', 'community/community.css', 'community/community.mjs', 'community/model.mjs', 'community/render.mjs'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(
@@ -383,6 +384,8 @@ class Stage4Handler(BaseHTTPRequestHandler):
             target = _resolved_file(self.stage_server.app_root, relative)
         elif decoded == "/prelude/":
             target = _resolved_file(self.stage_server.app_root, "prelude/index.html")
+        elif decoded in {"/community", "/community/"}:
+            target = _resolved_file(self.stage_server.app_root, "community/index.html")
         elif decoded.startswith("/assets/"):
             relative = decoded[len("/assets/") :]
             if relative not in SERVED_ASSETS:
