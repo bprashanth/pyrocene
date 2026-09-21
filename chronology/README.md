@@ -72,6 +72,7 @@ Read in filename order.
 | [2026-09-20](2026-09-20-stage4-ledger-previews-seed-panels.md) | Three thin ledger-strip previews and shared dispersal / germination panels with research limits |
 | [2026-09-20](2026-09-20-stage4-compact-round-panels.md) | Canopy fill chosen; compact accepted-game panels, care health and immersive species comparisons |
 | [2026-09-21](2026-09-21-stage4-before-strategy.md) | Freeze the accepted shared game before a separate single-player Strategy stage |
+| [2026-09-21](2026-09-21-stage4-strategy.md) | Private Strategy stage, canopy ledger, recurring fire and audited strategy trials |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and

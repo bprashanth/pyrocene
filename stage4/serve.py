@@ -54,6 +54,7 @@ APP_FILES |= {'play-flow.mjs', 'play-flow.css', 'play-briefing.mjs', 'hazel.png'
 APP_FILES |= {'neglect-model.mjs'}
 APP_FILES |= {'seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json'}
 APP_FILES |= {'species-record.mjs', 'species-record.css'}
+APP_FILES |= {'strategy.html', 'strategy.css', 'strategy.mjs', 'strategy-model.mjs', 'strategy-render.mjs'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(

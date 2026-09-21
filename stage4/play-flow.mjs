@@ -5,6 +5,7 @@ export function flowURL(page,credentials,role){const p=new URLSearchParams({...c
 export function navigation(mode,role){
  const nav=document.createElement('nav');nav.className='game-navigation';nav.setAttribute('aria-label','Game');
  nav.innerHTML='<select id="game-mode" aria-label="Game mode"><option value="expedition">Expedition</option><option value="play">Cooperation</option><option value="negligence" disabled>Negligence</option></select><select id="role" aria-label="Team view"><option value="removal">Removal</option><option value="ecology">Ecologist</option><option value="room">Room</option></select><button id="teams-open">Teams</button>';
+ const strategy=new Option('Strategy','strategy');strategy.disabled=true;nav.querySelector('#game-mode').append(strategy);
  document.querySelector('header .wordmark').after(nav);nav.querySelector('#game-mode').value=mode;nav.querySelector('#role').value=role;return nav;
 }
 export function expeditionNavigation(){

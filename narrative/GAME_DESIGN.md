@@ -731,3 +731,19 @@ prompts take a planting through to shade in five turns. Players can ignore the
 prompts, undo or keep playing. It imports the overnight rules unchanged, and
 practice never replaces a saved forest game. The forest's secondary controls
 are now tucked away; its point clouds and mechanics are unchanged.
+
+### Strategy: private practice after Negligence
+
+The accepted Cooperation and Negligence game remains the shared starting point.
+After committing Negligence, choose Strategy to carry that plan into a private
+single-player experiment. Remove, restore and revisit young planting while a
+five-slot canopy ledger tracks unfinished work. Six-month turns bring weeds,
+growth and occasional spreading fire. Rush, One at a time and Anchor are advice
+cards, not different rules. The goal is three closed canopies in twelve years,
+with burned plots and the credit balance shown separately.
+
+The development build is [Strategy](http://100.82.28.38:8033/strategy.html).
+The current 8024 shared server links to it without losing open rooms; a freshly
+started server can serve both stages together. See [Strategy notes](../stage4/STRATEGY.md)
+for model limits, tests and rollback, and the
+[implementation chronology](../chronology/2026-09-21-stage4-strategy.md).
