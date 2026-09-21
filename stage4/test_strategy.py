@@ -36,6 +36,29 @@ class StrategyPlay(unittest.TestCase):
   self.page.locator('#patch-actions button').nth(index).click(); self.ready()
   expect(self.page.locator('#toast')).to_be_hidden()
  def shot(self, name): self.page.screenshot(path=str(QA/(name+'.png')))
+ def test_opening_copy_and_named_strategies(self):
+  self.page.goto(self.base+'/strategy.html')
+  self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+  intro=self.page.locator('#strategy-intro')
+  expect(intro).to_be_visible()
+  expect(intro.locator('p em')).to_have_text('both')
+  expect(intro).to_contain_text('where the canopy hasn\'t closed')
+  expect(intro).to_contain_text('Each turn is a 6 month cycle')
+  expect(self.page.locator('#starting-grant')).to_have_text('You are given a starting grant of 12 credits.')
+  expect(self.page.locator('#foundation-note')).to_be_hidden()
+  expect(self.page.locator('#strategy-cards strong')).to_have_text(['1. Opportunistic','2. Hold','3. Anchor'])
+  for caveat in self.page.locator('#strategy-cards em').all_text_contents(): self.assertTrue(caveat.startswith('Caveat:'))
+  self.shot('strategy-opening-opportunistic-hold-anchor')
+  self.page.locator('[data-strategy="1"]').click(); self.page.locator('#begin').click(); self.ready()
+  expect(self.page.locator('#approach-open')).to_have_text('2. Hold')
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
+  # A shared handoff keeps its actual balance, not an extra 12-credit grant.
+  foundation={'restored':13,'cleared':22,'credits':4,'cared':True}
+  self.page.goto(self.base+'/strategy.html#'+urlencode({'foundation':json.dumps(foundation)}))
+  self.page.reload()
+  self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+  expect(self.page.locator('#starting-grant')).to_have_text('You carry forward 4 credits from the shared game.')
+  expect(self.page.locator('#foundation-note')).to_be_visible()
  def select_map(self, plot_id):
   # Overhead returns before the orbit easing completes. Click the stable
   # rendered coordinate, not a point from an earlier camera frame.

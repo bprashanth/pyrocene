@@ -39,8 +39,8 @@ has no removal or planting job; selecting it does not authorise native clearance
 
 The three advice cards change no rules or random probabilities:
 
-- Rush opens and plants new ground quickly, leaving older work vulnerable.
-- One at a time tends a planting while other fuel remains in the landscape.
+- Opportunistic removes and restores where returns are highest, leaving older work vulnerable.
+- Hold tends one plot until canopy closes while other fuel remains in the landscape.
 - Anchor uses neighbouring forest to shelter planting and then spreads.
 
 The experimental target is three restored canopies in 24 six-month actions.

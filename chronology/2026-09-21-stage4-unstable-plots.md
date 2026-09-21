@@ -100,3 +100,18 @@ added during this UI/fire revision. The old agent campaigns remain historical
 strategy-1 evidence in [strategy-trials](../stage4/strategy-trials/README.md).
 
 See [STRATEGY.md](../stage4/STRATEGY.md) for rules, entry links and test commands.
+
+## Opening copy follow-up
+
+Replaced the opening with the user's explanation of controlling both actions,
+the unstable-plot ledger, fire resilience, six-month turns and twelve-year
+deadline. The three cards now read Opportunistic, Hold and Anchor, each with a
+one-line approach and an explicit Caveat. Fresh games describe the 12-credit
+grant; shared-game continuations show the actual inherited balance without
+promising another grant. Removed the repeated starting-budget sentence below
+the cards. No mechanics, balances, saved-game version or scripted policies
+changed. Historical Rush / One-at-a-time trial labels remain as recorded.
+
+Checked the opening screenshot and added a browser test for the copy, card
+selection and inherited-credit variant. Screenshot:
+`strategy-opening-opportunistic-hold-anchor.png` in the QA directory above.

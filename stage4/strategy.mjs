@@ -6,9 +6,9 @@ import {speciesRecord} from './species-record.mjs';
 import {StructureLab} from './structure-lab.mjs';
 const $=id=>document.getElementById(id);
 const strategies=[
- {name:'Rush',line:'Clear and plant across the landscape.',weak:'However, old work can fill with weeds while you move on.'},
- {name:'One at a time',line:'Stay with one planting until its canopy closes.',weak:'Your planting gets attention, but fire can spread through the land left waiting.'},
- {name:'Anchor',line:'Start beside standing forest, then grow outwards.',weak:'Neighbours shelter young trees. However, planting still costs money and young trees can burn.'}
+ {name:'Opportunistic',line:'Remove and restore where the returns are highest.',weak:'Caveat: old work can fill with weeds while you move on.'},
+ {name:'Hold',line:'Stay with one plot until its canopy closes.',weak:'Caveat: your plot gets the most attention, but fire can spread through the land left waiting.'},
+ {name:'Anchor',line:'Start beside standing forest and grow outward.',weak:'Caveat: planting still costs money and young trees can burn, even with shelter nearby.'}
 ];
 const params=new URLSearchParams(location.hash.slice(1));
 let foundation=null,seed=Number(params.get('seed'))||113;
@@ -72,7 +72,7 @@ async function take(verb){
  }catch(e){toast(e.message);}finally{busy=false;render();}
  if(game.status!=='playing')showReplay();
 }
-function showIntro(){const cards=$('strategy-cards');cards.replaceChildren();strategies.forEach((s,i)=>{const b=button('',()=>{approach=i;save();showCards();});const title=document.createElement('strong');title.textContent=(i+1)+'. '+s.name;const line=document.createElement('span');line.textContent=s.line;const weak=document.createElement('em');weak.textContent=s.weak;b.append(title,line,weak);b.dataset.strategy=i;cards.append(b);});showCards();$('foundation-note').textContent=foundation?`Your shared planting at ${coordinate(foundation.restored)} carries forward. You start with ${newGame(seed,foundation).credits} credits. From here, your decisions are private.`:'Start with 12 credits. Try closing three canopies before twelve years have passed.';$('strategy-intro').showModal();}
+function showIntro(){const cards=$('strategy-cards');cards.replaceChildren();strategies.forEach((s,i)=>{const b=button('',()=>{approach=i;save();showCards();});const title=document.createElement('strong');title.textContent=(i+1)+'. '+s.name;const line=document.createElement('span');line.textContent=s.line;const weak=document.createElement('em');weak.textContent=s.weak;b.append(title,line,weak);b.dataset.strategy=i;cards.append(b);});showCards();$('starting-grant').textContent=foundation?`You carry forward ${newGame(seed,foundation).credits} credits from the shared game.`:'You are given a starting grant of 12 credits.';$('foundation-note').hidden=!foundation;$('foundation-note').textContent=foundation?`Your shared planting at ${coordinate(foundation.restored)} carries forward. From here, your decisions are private.`:'';$('strategy-intro').showModal();}
 function showCards(){document.querySelectorAll('[data-strategy]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.strategy)===approach)));render();}
 function showReplay(){$('run-summary').textContent=`${game.seasonMonths/12} years: ${newCanopies()} new canopies, ${metrics(game).burnedPlots} plots burned and ${ledger(game).length} plots still vulnerable. ${game.credits} credits remain.`;$('replay-dialog').showModal();}
 function restart(newWeather){if(busy)return;if(newWeather)seed=crypto.getRandomValues(new Uint32Array(1))[0];game=newGame(seed,foundation);moves=[];forest.setState(game,true);forest.setFireEvent(null);save();const p=new URLSearchParams(location.hash.slice(1));p.set('seed',seed);history.replaceState(null,'',location.pathname+'#'+p);$('replay-dialog').close();render();showIntro();}
