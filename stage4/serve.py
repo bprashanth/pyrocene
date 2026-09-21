@@ -47,10 +47,14 @@ APP_FILES |= {'forest-neighbourhood.mjs'}
 APP_FILES |= {'forest-flora.mjs', 'inventory-trees.mjs', 'forest-structure.mjs'}
 APP_FILES |= {'structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css'}
 APP_FILES |= {'round.html', 'round.css', 'round.mjs', 'round-render.mjs', 'round-model.mjs', 'round-config.json'}
+APP_FILES |= {'policy.html', 'policy.css', 'policy.mjs', 'policy-render.mjs', 'policy-model.mjs', 'policy-copy.mjs', 'policy-config.json', 'policy-bots.mjs'}
+APP_FILES |= {'ledger.html', 'ledger.css', 'ledger.mjs', 'ledger-render.mjs', 'ledger-model.mjs'}
+APP_FILES |= {'prelude/index.html', 'prelude/prelude.css', 'prelude/prelude.mjs', 'prelude/board.mjs'}
 APP_FILES |= {'play-flow.mjs', 'play-flow.css', 'play-briefing.mjs', 'hazel.png'}
 APP_FILES |= {'neglect-model.mjs'}
 APP_FILES |= {'seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json'}
 APP_FILES |= {'species-record.mjs', 'species-record.css'}
+APP_FILES |= {'strategy.html', 'strategy.css', 'strategy.mjs', 'strategy-model.mjs', 'strategy-render.mjs'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(
@@ -377,6 +381,8 @@ class Stage4Handler(BaseHTTPRequestHandler):
         if decoded == "/":
             relative = "index.html"
             target = _resolved_file(self.stage_server.app_root, relative)
+        elif decoded == "/prelude/":
+            target = _resolved_file(self.stage_server.app_root, "prelude/index.html")
         elif decoded.startswith("/assets/"):
             relative = decoded[len("/assets/") :]
             if relative not in SERVED_ASSETS:

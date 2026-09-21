@@ -705,3 +705,49 @@ the return of invasives and discuss whether new seedlings or nearby sources need
 attention. Unrecorded species traits remain explicitly unknown. Crew choices
 and budgets are unchanged. Close view now overlaps the zoom and rising points
 and allows a return to Forest or Overhead while loading.
+
+### Trial: what gets measured gets paid
+
+A separate single-player loop on the same forest, at `/policy.html`. Three short
+missions differ only in the payment rule: by the tonne, by the tree, both. One
+crew, one choice a season, two numbers. It ends by making the player the funder.
+The accepted two-mission game above is unchanged. This has been played by its
+author and by scripted crews, not by a room.
+[Design, what is built, and what play changed](../stage4/v1_policy_gaming.md).
+
+The next reversible trial is [The open ledger](../stage4/LEDGER.md), playable at
+`/ledger.html`. One crew manages six-month commitments with the existing Close
+view, field records and structure comparison. Clearing pays immediately but
+opens follow-up work. Repeated clearance damages native regrowth; successful
+shade closes the commitment. Seeds enrich an established pioneer stand, not
+bare grassland. Players can undo, review the earlier forest or continue with the
+same budget after the initial period. Independent Claude and Cursor CLI plays
+exposed misleading seed and timing cues; browser replays check their outcomes.
+These are agent playtests, not evidence that a room has found the game fun.
+
+Before entering that forest, [The paper forest](../stage4/prelude/README.md) at
+`/prelude/` teaches the same loop with the drawn map's ink and hatching. Optional
+prompts take a planting through to shade in five turns. Players can ignore the
+prompts, undo or keep playing. It imports the overnight rules unchanged, and
+practice never replaces a saved forest game. The forest's secondary controls
+are now tucked away; its point clouds and mechanics are unchanged.
+
+### Combined: independent play with both roles
+
+The accepted Cooperation and Negligence game remains the shared starting point.
+Choose Combined directly from any main stage, without completing prior missions.
+Each entry starts a fresh 12×12 board with 108 active smaller squares and 12
+credits. One player controls removal and restoration. Remove, restore and
+revisit young planting while the centred five-slot Unstable plots strip tracks
+unfinished work. Six-month turns bring weeds, growth and spreading fire.
+Opportunistic, Hold and Anchor are advice cards, not different rules. The goal
+is five new closed canopies in twelve years. Forest health and credits are
+shown separately. Close view reveals plants without spending a turn; a crew
+visit costs one credit even if it finds no invasives. No Skip button is shown.
+Refresh resumes the private run. Re-entering from the main selector resets it.
+
+The direct build is [Combined](http://100.82.28.38:8033/strategy.html#fresh=1).
+The current 8024 shared server links to it without losing open rooms; a freshly
+started server can serve both stages together. See [Combined notes](../stage4/STRATEGY.md)
+for model limits, tests and rollback, and the
+[integration chronology](../chronology/2026-09-21-stage4-combined.md).

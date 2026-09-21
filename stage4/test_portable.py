@@ -158,6 +158,13 @@ class PortablePlay(unittest.TestCase):
                     qa = Path('/mnt/seagate/models/pyrocene/stage4/qa')
                     qa.mkdir(parents=True,exist_ok=True)
                     page.screenshot(path=str(qa/'16-extracted-portable.png'))
+                    page.goto(base+'/prelude/')
+                    for key in ['Middle','Middle','Neck','Middle','East']:
+                        page.get_by_role('button',name='Inspect '+key,exact=True).click()
+                        page.locator('#work').click()
+                    expect(page.locator('#closed')).to_have_text('1 / 3')
+                    expect(page.locator('#credits')).to_have_text('13')
+                    page.screenshot(path=str(qa/'17-extracted-prelude.png'))
                     self.assertEqual(errors, [])
                     self.assertEqual(external, [])
                     browser.close()

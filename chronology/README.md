@@ -64,6 +64,15 @@ Read in filename order.
 | [2026-09-18T0940](2026-09-18T0940-stage4-seeds-and-scar.md) | Reversible seed-study tabs and a broader, height-informed surface-fire scar |
 | [2026-09-18T1105](2026-09-18T1105-stage4-shared-record-and-close-transition.md) | Shared field records throughout the game and overlapping, cancellable Close view |
 | [2026-09-18T2134](2026-09-18T2134-stage4-push-readiness.md) | Media and credential ignore rules, secret scan and origin push readiness |
+| [2026-09-19](2026-09-19-stage4-open-ledger.md) | Independent CLI playtests, open commitments, dynamic seed evidence and reversible exploration |
+| [2026-09-19](2026-09-19-stage4-prelude-checkpoint.md) | Freeze the unreviewed overnight mechanics before presentation changes |
+| [2026-09-19](2026-09-19-stage4-paper-prelude.md) | A playable paper-map prelude and simpler forest controls, using the same rules |
+| [2026-09-19](2026-09-19-stage4-vigilance-checkpoint.md) | Freeze the accepted game before isolated sensor and protection experiments |
+| [2026-09-19](2026-09-19-stage4-vigilance-lab.md) | Paid information, temporary care, seeded risks and audited CLI players in a disposable lab |
+| [2026-09-20](2026-09-20-stage4-ledger-previews-seed-panels.md) | Three thin ledger-strip previews and shared dispersal / germination panels with research limits |
+| [2026-09-20](2026-09-20-stage4-compact-round-panels.md) | Canopy fill chosen; compact accepted-game panels, care health and immersive species comparisons |
+| [2026-09-21](2026-09-21-stage4-before-strategy.md) | Freeze the accepted shared game before a separate single-player Strategy stage |
+| [2026-09-21](2026-09-21-stage4-strategy.md) | Private Strategy stage, canopy ledger, recurring fire and audited strategy trials |
 
 The largest caveat, stated once here and repeated where it matters: **no room
 has played stage 2 yet.** Every balance number comes from a scripted model, and
@@ -72,3 +81,7 @@ a laptop.
 
 Entries are appended, not rewritten. Where a later entry corrects an earlier
 one, both stay and the later one says what changed.
+
+- [2026-09-21: Unstable plots and connected fire](2026-09-21-stage4-unstable-plots.md): readable map IDs, compact controls, free plot selection, forest health and canopy-dependent fire penetration in Strategy only.
+- [2026-09-21: Smaller plots and uncertain removal returns](2026-09-21-stage4-small-plots.md): finer work squares, paid empty visits, free inspection, a compact strip and fire-killed planting that must be replanted or lost.
+- [2026-09-21: Combined enters the main game](2026-09-21-stage4-combined.md): centred Unstable plots, fewer controls and fresh independent entry from every main stage, without changing the shared missions.

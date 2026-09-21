@@ -29,6 +29,7 @@ class DeliveryTest(unittest.TestCase):
         self.assets.mkdir()
         self.vendor.mkdir()
         for name in serve.APP_FILES:
+            (self.app / name).parent.mkdir(parents=True, exist_ok=True)
             (self.app / name).write_text(f"fixture {name}\n", encoding="utf-8")
         (self.vendor / "three.min.js").write_text("/* three fixture */\n", encoding="utf-8")
         (self.vendor / "THREE-LICENSE.txt").write_text("license fixture\n", encoding="utf-8")
@@ -143,6 +144,7 @@ class DeliveryTest(unittest.TestCase):
         fixture_engine = self.root / "engine"
         shutil.copytree(source_engine, fixture_engine, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         for name in package.APP_FILES:
+            (source / name).parent.mkdir(parents=True, exist_ok=True)
             (source / name).write_text(f"fixture {name}\n", encoding="utf-8")
         (source / 'shared_round.py').write_text('# shared-round fixture\n', encoding='utf-8')
         (source / "DESIGN_BRIEF.md").write_text("assets at /mnt/seagate/models/pyrocene/stage4/\n", encoding="utf-8")
