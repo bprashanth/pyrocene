@@ -22,7 +22,7 @@ export class StructureLab{
   if(this.focus==='species:-1')this.focus='all';
   this.mode='compare';this.angle=.10;this.elevation=.10;this.zoom=1;this.slice=0;this.conditions=true;this.draws=0;
   this.lastSectionFocus=null;
-  const centre={x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
+  const centre=plot.centre||{x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
   this.models=[true,false].map(reference=>buildStructure(this.forest.detailPositions,this.forest.detailKinds,centre,plot,this.species,{reference}));
   this.summaries=this.models.map(structureSummary);
   this.forest.examinationPaused=true;this.build();this.dialog.showModal();this.schedule();
@@ -79,7 +79,7 @@ export class StructureLab{
   const selected=this.focus.startsWith('species:')?this.species[Number(this.focus.slice(8))]:null;
   this.finding.textContent=selected?selected.name+' - modelled growth form, with the surrounding forest retained.':messages[this.focus];
   if(this.mode==='slice')this.finding.textContent=tracksPlant(this.focus)?'Follow the highlighted plant through the section. Nearby stems are not confirmed connections.':'Move the bright section through the forest. The rest stays dim.';
-  const record=fieldRecord(this.plot.id);
+  const record=fieldRecord(this.plot.parentId??this.plot.id);
   this.panels[0].caption.textContent='60 m wide. Damp litter and sheltered air.';
   this.panels[1].caption.textContent=record.climate.text+' '+record.climate.wind;
   if(this.plot.succession){const f=this.plot.succession;this.panels[1].panel.querySelector('h2').textContent=`Selected patch - ${f.year}y - ${f.maintained?'with removal':'without removal'}`;this.panels[1].caption.textContent=forecastText(f)+' '+(this.models[1].profile.moisture>.7?'Damp litter.':this.models[1].profile.moisture<.3?'Dry litter.':'Mixed litter.')+' Modelled.';
@@ -88,7 +88,7 @@ export class StructureLab{
   this.schedule();
  }
  updateForecast(plot){
-  if(!this.models||!this.dialog.open)return;this.plot=plot;const centre={x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
+  if(!this.models||!this.dialog.open)return;this.plot=plot;const centre=plot.centre||{x:(plot.id%6)*150-375,z:Math.floor(plot.id/6)*150-375};
   this.models[1]=buildStructure(this.forest.detailPositions,this.forest.detailKinds,centre,plot,this.species);this.summaries=this.models.map(structureSummary);this.sync();
  }
  schedule(){if(this.frame||!this.models)return;this.frame=requestAnimationFrame(()=>{this.frame=null;if(this.dialog.open&&this.models){this.draws++;this.canvases.forEach((c,i)=>this.draw(c,this.models[i]));}});}

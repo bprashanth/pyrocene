@@ -1,9 +1,8 @@
 // Scripted balance evidence for Strategy. These are intentionally public-
 // information policies, not hidden difficulty settings or claims about fun.
-import { newGame, act, observe, quote, metrics } from './strategy-model.mjs';
+import { newGame, act, observe, quote, metrics, inspect, CONFIG } from './strategy-model.mjs';
 
-const INITIAL_CLOSED = 19;
-const rankBy = (a, b) => (b.shelter - a.shelter) || (b.returns - a.returns) || (a.id - b.id);
+const rankBy = (a, b) => (b.shelter - a.shelter) || (b.grass - a.grass) || (a.id - b.id);
 
 function legal(g, verb, id) {
   const q = quote(g, verb, id);
@@ -16,13 +15,13 @@ function rush(g) {
   if (restore) return legal(g, 'restore', restore.id);
   // Rush spends its attention on opening and planting the next job. It does
   // not use a hidden care bonus; neglected young plots can be lost.
-  const remove = ps.filter(p => p.state === 'invaded' && p.affordable).sort((a, b) => (b.returns - a.returns) || (a.id - b.id))[0];
+  const remove = ps.filter(p => p.state === 'invaded' && p.affordable).sort((a, b) => (b.grass - a.grass) || (a.id - b.id))[0];
   return remove ? legal(g, 'remove', remove.id) : legal(g, 'wait');
 }
 
 function oneAtATime(g, focus) {
   const ps = observe(g).plots;
-  let p = focus && ps.find(item => item.id === focus && ['invaded', 'cleared', 'young'].includes(item.state));
+  let p = focus != null && ps.find(item => item.id === focus && ['invaded', 'cleared', 'young'].includes(item.state));
   if (!p) p = ps.filter(item => item.state === 'invaded' && item.affordable).sort((a, b) => a.id - b.id)[0];
   if (!p) return { action: legal(g, 'wait'), focus: null };
   if (p.state === 'invaded') return { action: legal(g, 'remove', p.id), focus: p.id };
@@ -53,6 +52,9 @@ function anchor(g, focus) {
 
 export function simulate(strategy, seed, foundation = null) {
   const g = newGame(seed, foundation);
+  // These original policy probes inspect every square first. Blind policies
+  // are tested separately in strategy-risk-trials.mjs.
+  for(const p of Object.values(g.plots))inspect(g,p.id);
   let focus = null;
   const moves = [];
   while (g.status === 'playing') {
@@ -73,7 +75,7 @@ export function simulate(strategy, seed, foundation = null) {
   }
   const canopyOutcomes = g.ledgerHistory.filter(entry => entry.outcome === 'canopy').length;
   const m = metrics(g);
-  return { strategy, seed, moves, ...m, canopyOutcomes, success: m.restoredCanopies >= 3, failureReason: m.restoredCanopies >= 3 ? null : g.status === 'broke' ? 'broke' : 'fewer than three restored canopies' };
+  return { strategy, seed, moves, ...m, canopyOutcomes, success: m.restoredCanopies >= CONFIG.goal, failureReason: m.restoredCanopies >= CONFIG.goal ? null : g.status === 'broke' ? 'broke' : `fewer than ${CONFIG.goal} restored canopies` };
 }
 
 export function evaluate({ count = 100, start = 1, foundation = null } = {}) {

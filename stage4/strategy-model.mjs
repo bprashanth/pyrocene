@@ -7,28 +7,38 @@
  * Random-looking outcomes are counter based: an inspection, undo, or replay
  * never consumes a random stream or changes a future result.
  */
-import { WORLD, coordinate } from './world.mjs';
+import { WORLD as PARENTS } from './world.mjs';
+import { INVASIVE_IDS } from './forest-flora.mjs';
 
-export const VERSION = 'strategy-2';
+// Strategy only: four 75 m work squares inside each shared-game square.
+export const GRID=12, CELL=900/GRID;
+export const coordinate=id=>`${String.fromCharCode(65+Math.floor(id/GRID))}${id%GRID+1}`;
+export const centre=id=>({x:(id%GRID+.5)*CELL-450,z:(Math.floor(id/GRID)+.5)*CELL-450});
+export const childOf=id=>Math.floor(id/6)*2*GRID+(id%6)*2;
+export const WORLD=Array.from({length:GRID*GRID},(_,id)=>{
+ const parentId=Math.floor(Math.floor(id/GRID)/2)*6+Math.floor(id%GRID/2);
+ return {...PARENTS[parentId],id,parentId,centre:centre(id),coordinate:coordinate(id)};
+});
+
+export const VERSION = 'strategy-3';
 export const ACTION_MONTHS = 6;
-// WORLD is a 900 m / 6-column declared grid: each active sector is 150 m
+// Strategy is a 900 m / 12-column declared grid: each work square is 75 m
 // square. UI copy should prefer the count because this remains a teaching
 // footprint, not a surveyed burned-area estimate.
-export const PLOT_AREA_M2 = 22500;
+export const PLOT_AREA_M2 = CELL*CELL;
 
 export const CONFIG = Object.freeze({
   turns: 24,
+  goal: 5,
   startingCredits: 12,
   commitmentCap: 5,
   removeCost: 1,
-  restoreCost: 5,
+  restoreCost: 6,
   weedCost: 1,
-  firstClearReturn: 5,
-  repeatClearReturn: 2,
   initialSaplingCover: 0.12,
   closureCover: 1,
-  growth: 0.18,
-  grassLoss: 0.88,
+  growth: 0.16,
+  grassLoss: 0.78,
 });
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -67,13 +77,13 @@ const asId = value => {
 };
 
 const neighbourIds = id => {
-  const row = Math.floor(id / 6), col = id % 6;
+  const row = Math.floor(id / GRID), col = id % GRID;
   const ids = [];
   for (let dr = -1; dr <= 1; dr += 1) for (let dc = -1; dc <= 1; dc += 1) {
     if (!dr && !dc) continue;
     const r = row + dr, c = col + dc;
-    if (r < 0 || c < 0 || c >= 6) continue;
-    const candidate = r * 6 + c;
+    if (r < 0 || c < 0 || c >= GRID) continue;
+    const candidate = r * GRID + c;
     if (activeIds.has(candidate)) ids.push(candidate);
   }
   return ids;
@@ -120,10 +130,14 @@ function plotWeather(g, id) {
 }
 
 function newPlot(source, seed = 113) {
-  const invasive = !!source.invasive;
+  const invasive = noise(seed,'invasive-presence',source.id)<(source.invasive?.68:.1);
   const forest = !invasive;
+  const nativeSpecies=(source.speciesIds||[]).filter(id=>!INVASIVE_IDS.has(id));
+  const invasiveSpecies=(source.speciesIds||[]).filter(id=>INVASIVE_IDS.has(id));
   return {
     id: source.id,
+    parentId: source.parentId,
+    centre: source.centre,
     coordinate: coordinate(source.id),
     name: source.name || coordinate(source.id),
     state: forest ? 'closed' : 'invaded',
@@ -134,14 +148,18 @@ function newPlot(source, seed = 113) {
     moisture: source.moisture,
     exposure: source.exposure,
     fuel: source.fuel,
-    speciesIds: [...(source.speciesIds || [])],
+    speciesIds: [...new Set([...nativeSpecies,...(invasive?(invasiveSpecies.length?invasiveSpecies:['urochloa_brizantha','urochloa_decumbens']):[])])],
     disturbance: source.disturbance || null,
-    grass: invasive ? round(clamp(0.72 + 0.22 * noise(seed, 'initial-grass', source.id))) : round(clamp(0.06 + 0.08 * noise(seed, 'forest-litter', source.id))),
+    grass: invasive ? round(.25+.7*noise(seed,'initial-grass',source.id)) : 0.025,
     canopy: forest ? 1 : 0,
     nativeLoss: 0,
     clearings: 0,
     burned: 0,
     burnScar: 0,
+    inspected: false,
+    visited: false,
+    failedPlanting: false,
+    receipt: null,
     last: forest ? 'Standing native forest shelters nearby recovery.' : 'Invasive fuel is available for removal.',
     history: [],
     weeds: 0,
@@ -157,7 +175,11 @@ function foundationIds(foundation) {
   if (!foundation || typeof foundation !== 'object') return out;
   for (const key of ['restored', 'cleared', 'previousCleared']) {
     if (foundation[key] == null) continue;
-    const id = asId(foundation[key]);
+    // Handoffs still identify the shared 6x6 parent square. They become one
+    // representative work square, without multiplying credits or commitments.
+    const raw=foundation[key];
+    const parent=typeof raw==='string'&&/^[A-F][1-6]$/i.test(raw)?(raw.toUpperCase().charCodeAt(0)-65)*6+Number(raw[1])-1:raw;
+    const id = Number.isInteger(parent)&&parent>=0&&parent<36?childOf(parent):null;
     if (id == null || !activeIds.has(id)) throw Error(`Foundation ${key} must identify an active WORLD plot.`);
     out[key] = id;
   }
@@ -189,7 +211,7 @@ export function newGame(seed = 113, foundation = null) {
   const foundationCleared = [...new Set([ids.previousCleared, ids.cleared].filter(id => id != null))];
   for (const clearedId of foundationCleared) {
     const p = g.plots[clearedId];
-    p.state = 'cleared'; p.invasive = false; p.native = true; p.grass = 0.06; p.canopy = 0; p.clearings = 1;
+    p.state = 'cleared'; p.invasive = false; p.native = true; p.grass = 0.06; p.canopy = 0; p.clearings = 1;p.visited=true;
     openCommitment(g, p.id, 'foundation');
     p.last = 'Cleared ground from the starting foundation; restore before grass returns.';
   }
@@ -206,6 +228,7 @@ export function newGame(seed = 113, foundation = null) {
       p.last = foundation?.cared ? 'Young trees from the foundation are being cared for.' : 'Young trees from the foundation need care.';
     }
     p.foundationCared = !!foundation?.cared;
+    p.visited=true;
   }
   syncPlotAliases(g);
   return g;
@@ -241,15 +264,16 @@ export function quote(g, verb, id = null) {
   if (normalized === 'remove' && p.state === 'invaded') {
     const open = g.commitments.filter(c => c.state === 'open').length;
     if (open >= CONFIG.commitmentCap) return { valid: false, verb: normalized, id: actual, cost: CONFIG.removeCost, returns: 0, reason: `Five open commitments already exist. Restore or wait for one to resolve.` };
-    const returns = p.clearings ? CONFIG.repeatClearReturn : CONFIG.firstClearReturn + Math.round(noise(g.seed, 'return', actual) * 2);
-    const affordable = g.credits - CONFIG.removeCost + returns >= 0;
+    const returns = p.clearings ? 1 : Math.round(p.grass*8+noise(g.seed,'yield',actual));
+    const affordable = g.credits >= CONFIG.removeCost;
     return { valid: affordable, verb: normalized, id: actual, cost: CONFIG.removeCost, returns, productive: true, reason: affordable ? null : 'Clearance needs more credits.' };
   }
   if (normalized === 'remove' && p.state === 'young') {
     return { valid: g.credits >= CONFIG.weedCost, verb: normalized, id: actual, cost: CONFIG.weedCost, returns: 0, productive: true, reason: g.credits >= CONFIG.weedCost ? null : 'Care needs one credit.' };
   }
+  if(normalized==='remove') return {valid:g.credits>=1,verb:normalized,id:actual,cost:1,returns:0,productive:true,reason:g.credits>=1?null:'The crew needs one credit before it can go.'};
   if (normalized === 'restore' && p.state === 'cleared') {
-    return { valid: g.credits >= CONFIG.restoreCost, verb: normalized, id: actual, cost: CONFIG.restoreCost, returns: 0, productive: true, reason: g.credits >= CONFIG.restoreCost ? null : 'Restoration needs five credits.' };
+    return { valid: g.credits >= CONFIG.restoreCost, verb: normalized, id: actual, cost: CONFIG.restoreCost, returns: 0, productive: true, reason: g.credits >= CONFIG.restoreCost ? null : `Restoration needs ${CONFIG.restoreCost} credits.` };
   }
   return { valid: false, verb: normalized, id: actual, cost: 0, returns: 0, productive: false, reason: normalized === 'remove' ? 'REMOVE weeds only around young trees or clears invaded fuel.' : 'RESTORE only plants a cleared plot.' };
 }
@@ -260,6 +284,7 @@ function addHistory(g, event) {
 
 function work(g, verb, id, events) {
   const p = id == null ? null : g.plots[id];
+  if(p){p.visited=true;const q=quote(g,verb,id);p.receipt={verb,cost:q.cost,returns:q.returns};}
   if (verb === 'remove' && p.state === 'invaded') {
     const q = quote(g, verb, id);
     g.credits += q.returns - q.cost;
@@ -275,7 +300,7 @@ function work(g, verb, id, events) {
   }
   if (verb === 'restore' && p.state === 'cleared') {
     g.credits -= CONFIG.restoreCost;
-    p.state = 'young'; p.invasive = false; p.native = true; p.grass = 0.035; p.canopy = CONFIG.initialSaplingCover;
+    p.state = 'young'; p.invasive = false; p.native = true; p.grass = 0.035; p.canopy = CONFIG.initialSaplingCover;p.failedPlanting=false;
     p.last = 'Young native trees planted. Grass removal is careful and costs one credit.';
     if (!g.commitments.some(c => c.id === id && c.state === 'open')) openCommitment(g, id, 'restore');
     events.unshift({ type: 'work', verb, plot: id, cost: CONFIG.restoreCost, returns: 0, text: `Restored ${p.name}. Young canopy now needs time and careful weeding.` });
@@ -285,6 +310,13 @@ function work(g, verb, id, events) {
     g.credits -= CONFIG.weedCost;
     p.grass = round(clamp(p.grass * 0.18)); p.last = 'Careful weeds removed around the young trees. No clearance income.';
     events.unshift({ type: 'work', verb, plot: id, cost: CONFIG.weedCost, returns: 0, care: true, text: `Removed weeds carefully at ${p.name}. It costs ${CONFIG.weedCost} and earns no clearance return.` });
+    return;
+  }
+  if(verb==='remove'){
+    g.credits-=1;
+    if(p.state==='cleared')p.grass=round(p.grass*.18);
+    p.last=p.state==='cleared'?'The crew weeded the open ground. There is no harvest return and the patch still needs planting.':'The crew found no harvestable invasives. The visit still cost one credit.';
+    events.unshift({type:'work',verb,plot:id,cost:1,returns:0,text:p.last});
   }
 }
 
@@ -306,7 +338,7 @@ function advanceEcology(g, actionId, events) {
     const sourceGrass = neighbourIds(source.id).reduce((sum, n) => sum + (prior[n]?.grass || 0) * (prior[n]?.invasive ? 1 : 0.35), 0);
     const neighbourPressure = sourceGrass / Math.max(1, neighbourIds(source.id).length);
     const shelterValue = shelter(g, source.id);
-    const grassGrowth = (local + neighbourPressure * 0.15) * (0.9 + w.dryness * 0.7) * (1 - shelterValue * 0.55);
+    const grassGrowth = (local + neighbourPressure * 0.15) * (0.9 + w.dryness * 0.7) * (1 - shelterValue * 0.35);
     // Use the action journal, not event history: resolving a different plot's
     // ledger earlier in this phase must not change the current removal plot's
     // deterministic no-regrowth turn.
@@ -361,8 +393,9 @@ export function fireTransmission(p){
 }
 export function forestHealth(g){
   const plots=Object.values(g.plots);
-  return round(100*plots.reduce((sum,p)=>sum+(.2+.8*p.canopy)*(1-.65*p.grass)*(1-.65*p.burnScar)*(1-.25*p.nativeLoss),0)/plots.length);
+  return round(plots.reduce((sum,p)=>sum+plotHealth(p),0)/plots.length);
 }
+export function plotHealth(p){return p.failedPlanting?0:round(100*(.2+.8*p.canopy)*(1-.65*p.grass)*(1-.65*p.burnScar)*(1-.25*p.nativeLoss));}
 export function spreadFire(g, requestedOrigins, events=[]){
   const origins=[...new Set(requestedOrigins)].filter(id=>g.plots[id]&&g.plots[id].state!=='closed');
   if(!origins.length)return null;
@@ -401,12 +434,13 @@ export function spreadFire(g, requestedOrigins, events=[]){
     p.burnScar=round(clamp(p.burnScar+coverage[id]*.9));
     p.last = p.state === 'young' ? 'Fire burned the young trees and reduced canopy.' : p.state === 'closed' ? 'Fire from dense invasives scorched this forest edge.' : 'Fire crossed this fuel patch.';
     if (p.state === 'young') {
-      const loss = round((.65 + plotWeather(g,id).dryness*.35)*coverage[id]);
-      const applied = round(Math.min(p.canopy, loss));
-      p.canopy = round(Math.max(0, p.canopy - applied));
+      // Entry into a vulnerable work square kills its planting in this
+      // scenario. Canopy protects through lower entry/spread probability.
+      const applied=p.canopy;
+      p.canopy=0;p.failedPlanting=true;p.native=false;
       damage[id] = applied;
       events.push({ type: 'fireDamage', plot: id, damage: applied, reason: 'vulnerable saplings burned' , text: `${p.name}: fire damaged vulnerable saplings (${Math.round(applied * 100)} canopy points).` });
-      if (p.canopy <= 0.02) { p.state = 'cleared'; p.invasive = false; p.grass = 0.12; }
+      p.state='cleared';p.invasive=false;p.grass=.12;p.last='Fire killed the planting. Replant before invasives return.';
     } else if (p.state === 'closed') {
       damage[id] = round(Math.min(p.canopy-.35,coverage[id]*.55));
       p.canopy = round(p.canopy-damage[id]);
@@ -486,12 +520,13 @@ function shortState(p) {
 export function observe(g) {
   const m = metrics(g);
   const plots = Object.values(g.plots).map(p => {
+    if(!p.inspected&&!p.visited)return{id:p.id,coordinate:p.coordinate,name:p.coordinate,state:'unseen',line:`${p.coordinate}: not inspected. Crew cost 1; return unknown.`,job:'remove',cost:1,returns:null,affordable:quote(g,'remove',p.id).valid,shelter:null,grass:null,weeds:null,canopy:null,burned:p.burned};
     const job = jobFor(p);
     const q = job ? quote(g, job, p.id) : { valid: false, cost: 0, returns: 0, reason: 'No productive action.' };
-    return { id: p.id, coordinate: p.coordinate, name: p.name, state: p.state, line: `${p.coordinate} ${p.name}: ${shortState(p)}. ${p.last}`, job, cost: q.cost, returns: q.returns, affordable: q.valid, shelter: round(shelter(g, p.id)), grass: round(p.grass), weeds: round(p.grass), canopy: round(p.canopy * 100), burned: p.burned };
+    return { id: p.id, coordinate: p.coordinate, name: p.name, state: p.state, line: `${p.coordinate} ${p.name}: ${shortState(p)}. ${p.last}`, job, cost: q.cost, returns: p.visited?q.returns:null, affordable: q.valid, shelter: round(shelter(g, p.id)), grass: round(p.grass), weeds: round(p.grass), canopy: round(p.canopy * 100), burned: p.burned };
   });
   const lines = [`${m.months} months elapsed; ${m.credits} credits; ${m.restoredCanopies} restored canopies (${m.closedCanopy} including shelter forest); ${m.burnedPlots} burned plots.`, `${m.openCommitments} open commitment${m.openCommitments === 1 ? '' : 's'} (cap ${CONFIG.commitmentCap}).`, ...plots.filter(p => p.job || p.burned).map(p => p.line)];
-  return { version: VERSION, seed: g.seed, turn: g.turn, limit: g.limit, season: weather(g).label, status: g.status, metrics: m, credits: g.credits, lines, plots, ledger: ledger(g), ledgerHistory: cloneValue(g.ledgerHistory), latest: cloneValue(g.lastEvents), goal: 'Restore three canopies while learning how grass, shelter and fire interact.', note: 'Each REMOVE or RESTORE action advances six months. Looking is free.' };
+  return { version: VERSION, seed: g.seed, turn: g.turn, limit: g.limit, season: weather(g).label, status: g.status, metrics: m, credits: g.credits, lines, plots, ledger: ledger(g), ledgerHistory: cloneValue(g.ledgerHistory), latest: cloneValue(g.lastEvents), goal: `Restore ${CONFIG.goal} canopies while learning how grass, shelter and fire interact.`, note: 'Each REMOVE or RESTORE action advances six months. Looking is free.' };
 }
 
 export function studyPlot(g, id) {
@@ -512,8 +547,11 @@ export function studyPlot(g, id) {
     moisture: round(effectiveMoisture(p)),
     exposure: round(effectiveExposure(p)),
   };
-  return { id: actual, active: true, coordinate: coordinate(actual), name: p.name, state: p.state, weather: w, grass: round(p.grass), canopy: round(p.canopy), weeds: round(p.grass), shelter: localShelter, succession, nativeLoss: p.nativeLoss, burned: p.burned, moisture: round(effectiveMoisture(p)), exposure: round(effectiveExposure(p)), fuel: p.fuel, invasive: p.invasive, habitat: p.habitat, people: p.people, speciesIds: [...(world.speciesIds || [])], disturbance: world.disturbance || null, neighbours, fieldNote: p.state === 'young' ? 'Young trees are vulnerable to grass, dry weather and fire.' : p.state === 'cleared' ? 'The commitment remains open until restoration or returning grass resolves it.' : p.state === 'closed' ? 'Closed native canopy is shelter, not a guarantee against fire.' : 'Invasive fuel can return after removal if the opening stays unplanted.' };
+  return { id: actual,parentId:p.parentId,centre:p.centre, active: true, coordinate: coordinate(actual), name: p.name, state: p.state, weather: w, grass: round(p.grass), canopy: round(p.canopy), weeds: round(p.grass), shelter: localShelter, succession, nativeLoss: p.nativeLoss, burned: p.burned, moisture: round(effectiveMoisture(p)), exposure: round(effectiveExposure(p)), fuel: p.fuel, invasive: p.invasive, habitat: p.habitat, people: p.people, speciesIds: [...p.speciesIds], disturbance: world.disturbance || null, neighbours, fieldNote: p.state === 'young' ? 'Young trees are vulnerable to grass, dry weather and fire.' : p.state === 'cleared' ? 'The commitment remains open until restoration or returning grass resolves it.' : p.state === 'closed' ? 'Closed native canopy is shelter, not a guarantee against fire.' : 'Invasive fuel can return after removal if the opening stays unplanted.' };
 }
+
+// Free observation has no ecological bonus and consumes no random draw.
+export function inspect(g,id){const actual=asId(id);if(actual==null||!g.plots[actual])throw Error('Choose a plot.');g.plots[actual].inspected=true;return studyPlot(g,actual);}
 
 function parseMove(move) {
   if (typeof move === 'string') {

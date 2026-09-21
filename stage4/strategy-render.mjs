@@ -1,23 +1,24 @@
 import { ExpeditionForest } from './expedition-render.mjs';
-import { WORLD } from './world.mjs';
+import { WORLD, GRID, CELL, coordinate, centre as plotCentre } from './strategy-model.mjs';
+import {specimenAnchors,segmentsForPaths} from './forest-structure.mjs';
 
 const T = globalThis.THREE;
 const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, Number.isFinite(v) ? v : lo));
-const centre = id => [(id % 6) * 150 - 375, Math.floor(id / 6) * 150 - 375];
+const centre = id => {const c=plotCentre(id);return[c.x,c.z];};
 const hash = n => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
 const idOf = value => Number.isInteger(value) ? value : Number.isInteger(value?.id) ? value.id : null;
 
 // The colour / height transform is deliberately a local teaching display.  It
 // reuses the measured returns; it is not a calibrated biomass or fire model.
 const stateGLSL = `uniform sampler2D strategyState;
-vec4 strategySample(vec3 p){return texture2D(strategyState,(floor((p.xz+450.)/150.)+.5)/6.);}
+vec4 strategySample(vec3 p){return texture2D(strategyState,(floor((p.xz+450.)/75.)+.5)/12.);}
 void strategyHeight(inout vec3 p){
  vec4 s=strategySample(p);if(s.a>.5&&p.y>3.)p.y*=mix(.13,1.,s.g);
 }
 void strategyAppearance(vec3 p,inout vec3 c,inout float a){
- vec2 uv=(floor((p.xz+450.)/150.)+.5)/6.; vec4 s=texture2D(strategyState,uv);
+ vec2 uv=(floor((p.xz+450.)/75.)+.5)/12.; vec4 s=texture2D(strategyState,uv);
  if(s.a<.5||p.y>3.||s.b<.5)return;
- c=mix(c,vec3(.91,.25,.53),s.r*.84);a*=.28+.72*s.r;
+ c=mix(vec3(.22,.47,.36),vec3(.91,.25,.53),clamp((s.r-.06)*1.5,0.,1.));a*=.28+.72*s.r;
 }`;
 
 const fireGLSL = `uniform sampler2D fire;uniform float hasFire,fireTime;`;
@@ -32,9 +33,9 @@ export class StrategyForest extends ExpeditionForest {
     super(host, options);
     this.world = options.world || WORLD;
     this.worldById = new Map(this.world.map(p => [p.id, p]));
-    this.stateData = new Uint8Array(36 * 4);
-    this.stateGoal = new Float32Array(36 * 4);
-    this.stateShown = new Float32Array(36 * 4);
+    this.stateData = new Uint8Array(GRID*GRID*4);
+    this.stateGoal = new Float32Array(GRID*GRID*4);
+    this.stateShown = new Float32Array(GRID*GRID*4);
     this.pinList = [];
     this.fireEvent = null;
     this.fireCells = 0;
@@ -51,7 +52,7 @@ export class StrategyForest extends ExpeditionForest {
       this.hover.hidden = this.tlsActive || !!this.drag || id === null || id === this.plotId;
       if(this.hover.hidden) return;
       const box = host.getBoundingClientRect();
-      this.hover.textContent = `${String.fromCharCode(65+Math.floor(id/6))}${id%6+1}`;
+      this.hover.textContent = coordinate(id);
       this.hover.style.transform = `translate(${e.clientX-box.left+14}px,${e.clientY-box.top+12}px)`;
     });
     surface.addEventListener('pointerleave', () => { this.hover.hidden = true; });
@@ -62,20 +63,40 @@ export class StrategyForest extends ExpeditionForest {
     this.ray.setFromCamera(new T.Vector2((event.clientX-box.left)/box.width*2-1,-(event.clientY-box.top)/box.height*2+1),this.camera);
     const p=new T.Vector3();
     if(!this.ray.ray.intersectPlane(this.plane,p)||p.x< -450||p.x>=450||p.z< -450||p.z>=450)return null;
-    const id=Math.floor((p.z+450)/150)*6+Math.floor((p.x+450)/150);
+    const id=Math.floor((p.z+450)/CELL)*GRID+Math.floor((p.x+450)/CELL);
     return this.worldById.get(id)?.active?id:null;
   }
 
   pick(event) { this.hover.hidden=true;const id=this.plotAt(event);if(id!==null)this.select(id); }
 
+  selectPlot(id){
+    if(!this.worldById?.get(id)?.active)return false;
+    this.plotId=id;this.selected=id;this.tlsFieldVisited=this.fieldVisitedPlots.has(id);
+    if(this.uniforms)this.uniforms.selected.value=-1;
+    const [x,z]=centre(id);
+    if(this.selectionMesh){this.selectionMesh.scale.set(.5,1,.5);this.selectionMesh.position.set(x,0,z);this.selectionMesh.visible=true;}
+    this.pointer.hidden=true;this._renderLabels();this._cachedPlot(id).catch(()=>{});return true;
+  }
+
+  _move(kind){
+    const motion=super._move(kind);
+    if(kind==='ground'){
+      const [x,z]=centre(this.plotId);this.goal.target.set(x,9,z);this.goal.distance=170/Math.min(1,this.camera.aspect);
+      if(this.cameraMotion)this.cameraMotion.to={...this.goal,target:this.goal.target.clone()};
+      if(this.reducedMotion){this.target.copy(this.goal.target);this.distance=this.goal.distance;}
+    }
+    return motion;
+  }
+
   async load() {
     const meta = await super.load();
     if (!this.fallback && this.cloud) {
-      this.stateTexture = this.texture(this.stateData, 6, 6);
+      this.stateTexture = this.texture(this.stateData, GRID, GRID);
       this.strategyUniforms = { strategyState: { value: this.stateTexture } };
       const m = this.cloud.material;
       Object.assign(m.uniforms, this.strategyUniforms);
       m.vertexShader = `varying float strategySurface;` + stateGLSL + m.vertexShader
+        .replace('if(sector==detailSector)', 'if(floor((p.z+450.)/75.)*12.+floor((p.x+450.)/75.)==detailSector)')
         .replace('void main(){ float h=position.y;', 'void main(){strategySurface=position.y; float h=position.y;')
         .replace('vec4 mv=modelViewMatrix*vec4(p,1.);', 'strategyHeight(p);strategyAppearance(p,colour,opacity);vec4 mv=modelViewMatrix*vec4(p,1.);');
       // The base shader's fire is useful, but make its surface front and scar
@@ -114,7 +135,7 @@ export class StrategyForest extends ExpeditionForest {
       this.stateGoal[o + 1] = canopy;
       // Initial invasive plots retain their measured native returns.  Pink
       // low growth is reserved for a managed opening or documented return.
-      this.stateGoal[o + 2] = state === 'cleared' || state === 'open' || state === 'young' || (state === 'invaded' && (raw.clearings > 0 || raw.reinvaded)) ? 1 : 0;
+      this.stateGoal[o + 2] = active;
       this.stateGoal[o + 3] = active;
       if (instant || !this.hasState) for (let n = 0; n < 4; n++) this.stateShown[o + n] = this.stateGoal[o + n];
     }
@@ -151,7 +172,7 @@ export class StrategyForest extends ExpeditionForest {
     if (!this.strategyUniforms) return line;
     line.material.uniforms.strategyState = this.strategyUniforms.strategyState;
     line.material.vertexShader = `uniform sampler2D strategyState;` + line.material.vertexShader
-      .replace('p.y*=blend;', 'p.y*=blend;vec4 ss=texture2D(strategyState,(floor((p.xz+450.)/150.)+.5)/6.);if(ss.a>.5)p.y*=mix(.13,1.,ss.g);');
+      .replace('p.y*=blend;', 'p.y*=blend;vec4 ss=texture2D(strategyState,(floor((p.xz+450.)/75.)+.5)/12.);if(ss.a>.5)p.y*=mix(.13,1.,ss.g);');
     line.material.needsUpdate = true;
     return line;
   }
@@ -194,15 +215,15 @@ export class StrategyForest extends ExpeditionForest {
     for (const id of burned) {
       const base = Number(arrivalByPlot[id] ?? arrivalByPlot[String(id)] ?? start) - start;
       const parent=event.entering?.[id];
-      const entryX=Number.isInteger(parent)?4.5+Math.sign(parent%6-id%6)*4.5:4.5;
-      const entryZ=Number.isInteger(parent)?4.5+Math.sign(Math.floor(parent/6)-Math.floor(id/6))*4.5:4.5;
+      const entryX=Number.isInteger(parent)?2+Math.sign(parent%GRID-id%GRID)*2:2;
+      const entryZ=Number.isInteger(parent)?2+Math.sign(Math.floor(parent/GRID)-Math.floor(id/GRID))*2:2;
       const patchCells=[];
-      for(let row=0;row<10;row++)for(let col=0;col<10;col++) {
-        const n=(Math.floor(id/6)*10+row)*60+id%6*10+col;
+      for(let row=0;row<5;row++)for(let col=0;col<5;col++) {
+        const n=(Math.floor(id/GRID)*5+row)*60+id%GRID*5+col;
         patchCells.push({n,d:Math.hypot(col-entryX,row-entryZ)+hash(n*11+id*17)*1.4});
       }
       patchCells.sort((a,b)=>a.d-b.d);
-      const count=Math.max(1,Math.round(clamp(event.coverage?.[id]??1)*100));
+      const count=Math.max(1,Math.round(clamp(event.coverage?.[id]??1)*25));
       for (const {n,d} of patchCells.slice(0,count)) {
         arrival[n] = Math.max(0, base + d/14*.8);
         cells++;
@@ -218,7 +239,24 @@ export class StrategyForest extends ExpeditionForest {
   setFireTime(fraction = 0) { super.setFireTime(fraction); this.emberTime.value = clamp(fraction) * 240; this.cpuKey = null; }
 
   _enterTLS(cached) {
-    super._enterTLS(cached);
+    const id=this.plotId,parent=this.worldById.get(id).parentId,inventory=this.plotInventory[parent];
+    this.plotInventory[parent]=this.plotInventory[id];this.plotId=parent;
+    try{super._enterTLS(cached);}finally{this.plotId=id;this.plotInventory[parent]=inventory;}
+    this.detailSector=id;this.sectorUniform.value=id;
+    const c=plotCentre(id),ps=[],wood=[];
+    for(let n=0;n<this.detailPositions.length;n+=3){
+      const p=this.detailPositions;
+      if(Math.abs(p[n]-c.x)<CELL/2&&Math.abs(p[n+2]-c.z)<CELL/2){ps.push(p[n],p[n+1],p[n+2]);wood.push(this.detailKinds[n/3]);}
+    }
+    this.detailPositions=new Float32Array(ps);this.detailKinds=new Float32Array(wood);
+    this.detailPaths=this.detailPaths.filter(path=>path.every(p=>Math.abs(p[0]-c.x)<CELL/2&&Math.abs(p[2]-c.z)<CELL/2));
+    this.stemSegments=segmentsForPaths(this.detailPaths);
+    if(this.stemCloud){this.tlsGroup.remove(this.stemCloud);this.stemCloud.geometry.dispose();this.stemCloud.material.dispose();this.stemCloud=this._lineCloud(this.stemSegments,.12,'#a6d5bb');this.tlsGroup.add(this.stemCloud);}
+    const species=(this.plotInventory[id]?.speciesIds||[]).map(id=>this.flora.get(id)).filter(Boolean);
+    this.anchorMap=specimenAnchors(this.detailPositions,species,c);this.tlsAnchors=[...this.anchorMap.values()].map(a=>a.position);
+    this.detailCloud.geometry.setIndex(null);
+    this.detailCloud.geometry.setAttribute('position',new T.BufferAttribute(this.detailPositions,3));
+    this.detailCloud.geometry.setAttribute('wood',new T.BufferAttribute(this.detailKinds,1));
     if (!this.detailCloud || !this.strategyUniforms) return;
     const m = this.detailCloud.material; Object.assign(m.uniforms, this.strategyUniforms, { fire: { value: this.arrivalTexture }, hasFire: { value: this.fire ? 1 : 0 }, fireTime: { value: this.fireTime * 240 } });
     m.vertexShader = `varying float strategySurface;` + stateGLSL + m.vertexShader
@@ -256,10 +294,10 @@ export class StrategyForest extends ExpeditionForest {
     const ctx = this.fallbackCanvas.getContext('2d'), v = new T.Vector3(), w = this.width, h = this.height;
     ctx.clearRect(0, 0, w, h);
     const draw = (x, y, z, wood = false) => {
-      const id = Math.floor((z + 450) / 150) * 6 + Math.floor((x + 450) / 150), o = id * 4, canopy = this.stateShown[o + 1] || 0, weeds = this.stateShown[o] || 0, managed = this.stateShown[o + 2] > .5;
+      const id = Math.floor((z + 450) / CELL) * GRID + Math.floor((x + 450) / CELL), o = id * 4, canopy = this.stateShown[o + 1] || 0, weeds = this.stateShown[o] || 0, managed = this.stateShown[o + 2] > .5;
       let alpha = wood ? .9 : .62, colour = wood ? '#b4dcca' : y < 2 ? '#d54787' : y < 10 ? '#317b69' : '#9bd2b4';
       if (y > 3) y *= .13 + .87 * canopy;
-      else if (managed) { colour = weeds > .18 ? '#d44788' : colour; alpha *= .28 + .72 * weeds; }
+      else if (managed) { colour = weeds > .18 ? '#d44788' : '#38785b'; alpha *= .28 + .72 * weeds; }
       const cell = Math.floor((z + 450) / 15) * 60 + Math.floor((x + 450) / 15), at = this.fire?.[cell];
       if (Number.isFinite(at) && this.fireTime * this.duration >= at) { const age = (this.fireTime * this.duration - at) / this.duration * 240; colour = age < 60 ? '#ff6821' : '#7a4328'; alpha *= .86; }
       v.set(x, y * (this.tlsActive ? this.detailBlend : 1), z).project(this.camera); if (Math.abs(v.x) > 1 || Math.abs(v.y) > 1 || v.z > 1 || v.z < -1) return;
@@ -288,7 +326,9 @@ export class StrategyForest extends ExpeditionForest {
   diagnostics() {
     const active = this.world.filter(p => p.active).map(p => p.id);
     const plotScreens=active.map(id=>{const [x,z]=centre(id),v=new T.Vector3(x,0,z).project(this.camera);return{id,x:(v.x*.5+.5)*this.width,y:(-v.y*.5+.5)*this.height};});
-    return { plotScreens, extents: { x: [-450, 450], z: [-450, 450], grid: [6, 6], worldIds: active }, fireCells: this.fireCells, airbornePoints: (this.airborneSource?.length || this.geometry?.attributes.position?.count * 4 || 0) / 4, detailPoints: (this.detailPositions?.length || 0) / 3, fallback: !!this.fallback, selected: this.plotId };
+    const detailBounds=this.detailPositions?{x:[Infinity,-Infinity],z:[Infinity,-Infinity]}:null;
+    if(detailBounds)for(let n=0;n<this.detailPositions.length;n+=3){const p=this.detailPositions;detailBounds.x[0]=Math.min(detailBounds.x[0],p[n]);detailBounds.x[1]=Math.max(detailBounds.x[1],p[n]);detailBounds.z[0]=Math.min(detailBounds.z[0],p[n+2]);detailBounds.z[1]=Math.max(detailBounds.z[1],p[n+2]);}
+    return { plotScreens,detailBounds, extents: { x: [-450, 450], z: [-450, 450], grid: [GRID, GRID], worldIds: active }, fireCells: this.fireCells, airbornePoints: (this.airborneSource?.length || this.geometry?.attributes.position?.count * 4 || 0) / 4, detailPoints: (this.detailPositions?.length || 0) / 3, fallback: !!this.fallback, selected: this.plotId };
   }
 
   performance() { return { ...super.performance(), strategy: this.diagnostics(), fireCells: this.fireCells, pins: this.pinList.length }; }

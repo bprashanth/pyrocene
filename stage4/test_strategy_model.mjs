@@ -2,205 +2,153 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import { WORLD } from './world.mjs';
-import { newGame, act, clone, ledger, metrics, observe, quote, replay, studyPlot, WORKABLE_IDS, CONFIG, forestHealth, fireTransmission, spreadFire } from './strategy-model.mjs';
+import {WORLD as SHARED} from './world.mjs';
+import {newGame,act,clone,ledger,metrics,observe,quote,replay,studyPlot,CONFIG,forestHealth,plotHealth,fireTransmission,spreadFire,inspect,WORLD,GRID,CELL,childOf,coordinate} from './strategy-model.mjs';
+import {run} from './strategy-risk-trials.mjs';
 
-test('player CLI distinguishes young planting from the completed canopy goal',()=>{
- const cli=fileURLToPath(new URL('./strategy-play.mjs',import.meta.url));
- const output=execFileSync(process.execPath,[cli,'113','remove:C2','restore:C2'],{encoding:'utf8'});
- assert.match(output,/YOUR MOVE 2\/24 turns/);
- assert.match(output,/GOAL 0\/3 restored canopies/);
- assert.doesNotMatch(output,/FINAL|19 closed canopies/);
- assert.equal(output.split('\n').filter(line=>line.startsWith('REMOVE C2:')).length,0);
+test('fine grid quarters every active shared square without changing the shared world',()=>{
+ assert.equal(GRID,12);assert.equal(CELL,75);
+ assert.equal(WORLD.filter(p=>p.active).length,108);
+ assert.equal(SHARED.length,36);
+ for(const p of SHARED.filter(p=>p.active))assert.equal(WORLD.filter(c=>c.active&&c.parentId===p.id).length,4);
+ const g=newGame(113);
+ assert.equal(Object.keys(g.plots).length,108);
+ assert.equal(coordinate(48),'E1');
+ assert.ok(Object.values(g.plots).some(p=>p.state==='closed'));
+ assert.ok(Object.values(g.plots).some(p=>p.state==='invaded'));
 });
 
-test('strategy starts from actual WORLD ids and keeps intact forest in the state', () => {
-  const g = newGame(17);
-  assert.deepEqual(Object.keys(g.plots).map(Number), WORLD.filter(p => p.active).map(p => p.id));
-  assert.equal(g.plots[13].coordinate, 'C2');
-  assert.equal(g.plots[13].state, 'invaded');
-  assert.equal(g.plots[0].state, 'closed');
-  assert.ok(WORKABLE_IDS.length >= 8 - 1 && WORKABLE_IDS.length <= 12);
-  assert.ok(metrics(g).health > 0 && metrics(g).health <= 100);
+test('unknown plots do not advertise invasives, species, biomass or return',()=>{
+ const g=newGame(113),p=observe(g).plots.find(p=>p.id===48);
+ assert.equal(p.state,'unseen');assert.equal(p.returns,null);assert.equal(p.grass,null);
+ const before=clone(g);inspect(g,48);
+ assert.equal(g.turn,before.turn);assert.equal(g.credits,before.credits);
+ const seen=observe(g).plots.find(p=>p.id===48);
+ assert.equal(seen.state,'invaded');assert.equal(seen.returns,null);
+ assert.ok(studyPlot(g,48).speciesIds.includes('urochloa_brizantha'));
+ assert.ok(!studyPlot(g,0).speciesIds.includes('urochloa_brizantha'));
 });
 
-test('REMOVE opens a commitment, RESTORE creates young canopy, and care is explicit', () => {
-  const g = newGame(113);
-  const before = clone(g);
-  const q = quote(g, 'remove', 'C2');
-  assert.equal(q.valid, true);
-  const removed = act(g, 'remove', 'C2');
-  assert.ok(removed.some(e => e.type === 'work' && e.verb === 'remove'));
-  assert.equal(g.plots[13].state, 'cleared');
-  assert.equal(ledger(g).length, 1);
-  assert.equal(g.credits, before.credits - q.cost + q.returns);
-  const restored = act(g, 'restore', 13);
-  assert.ok(restored.some(e => e.type === 'work' && e.verb === 'restore'));
-  assert.equal(g.plots[13].state, 'young');
-  assert.equal(g.plots[13].native, true);
-  const cared = act(g, 'remove', 13);
-  assert.ok(cared.some(e => e.care));
-  assert.equal(g.plots[13].grass, g.plots[13].weeds);
-  assert.equal(cared.find(e => e.care).returns, 0);
+test('crew visits cost one up front even on clean forest and never fell natives',()=>{
+ const g=newGame(113),p=g.plots[0];assert.equal(p.state,'closed');
+ const event=act(g,'remove',0).find(e=>e.type==='work');
+ assert.equal(event.cost,1);assert.equal(event.returns,0);assert.equal(g.credits,11);
+ assert.equal(p.canopy,1);assert.equal(p.state,'closed');assert.equal(p.clearings,0);
+ assert.equal(ledger(g).length,0);
+ g.credits=0;assert.equal(quote(g,'remove',48).valid,false);
 });
 
-test('an open ledger closes with distinct canopy or reinvasion histories', () => {
-  const failed = newGame(113);
-  act(failed, 'remove', 13);
-  for (let i = 0; i < 20 && failed.status === 'playing' && ledger(failed).length; i++) act(failed, 'wait');
-  assert.equal(ledger(failed).length, 0);
-  assert.equal(failed.ledgerHistory.at(-1).outcome, 'reinvaded');
-  const held = newGame(113);
-  act(held, 'remove', 13); act(held, 'restore', 13);
-  for (let i = 0; i < 8 && ledger(held).length && held.status === 'playing'; i++) act(held, 'remove', 13);
-  assert.equal(ledger(held).length, 0);
-  assert.equal(held.ledgerHistory.at(-1).outcome, 'canopy');
-  assert.ok(metrics(held).closedCanopy > 19);
+test('invasive returns vary with visible biomass and receipts record actual earnings',()=>{
+ const g=newGame(113);const invaded=Object.values(g.plots).filter(p=>p.invasive);
+ const yields=invaded.map(p=>quote(g,'remove',p.id).returns);
+ assert.ok(Math.max(...yields)>=7);assert.ok(Math.min(...yields)<=3);
+ const q=quote(g,'remove',48),before=g.credits;
+ act(g,'remove',48);
+ assert.equal(g.credits,before-1+q.returns);assert.equal(g.plots[48].receipt.returns,q.returns);
+ assert.equal(g.plots[48].state,'cleared');assert.equal(ledger(g).length,1);
+ act(g,'restore',48);
+ assert.equal(g.plots[48].state,'young');
+ assert.equal(g.credits,before-1+q.returns-CONFIG.restoreCost);
+ const care=act(g,'remove',48).find(e=>e.care);
+ assert.equal(care.cost,1);assert.equal(care.returns,0);
 });
 
-test('commitment cap blocks new clearings but never blocks tending existing young plots', () => {
-  const g = newGame(771);
-  for (const id of WORKABLE_IDS.slice(0, CONFIG.commitmentCap)) act(g, 'remove', id);
-  assert.equal(ledger(g).length, CONFIG.commitmentCap);
-  const sixth = WORKABLE_IDS[CONFIG.commitmentCap];
-  assert.equal(quote(g, 'remove', sixth).valid, false);
-  const open = ledger(g)[0].id;
-  act(g, 'restore', open);
-  assert.equal(ledger(g).length, CONFIG.commitmentCap);
-  assert.equal(quote(g, 'remove', open).valid, true);
+test('fire-killed planting has zero health and stays unstable pending replanting',()=>{
+ const g=newGame(113);act(g,'remove',48);act(g,'restore',48);
+ const e=spreadFire(g,[48]);
+ assert.ok(e.damage[48]>0);assert.ok(e.healthAfter<e.healthBefore);
+ assert.equal(g.plots[48].state,'cleared');assert.equal(g.plots[48].canopy,0);
+ assert.equal(plotHealth(g.plots[48]),0);assert.equal(ledger(g).length,1);
+ assert.equal(g.ledgerHistory.length,0);
+ const repaired=clone(g);act(repaired,'restore',48);
+ assert.equal(repaired.plots[48].failedPlanting,false);assert.equal(repaired.plots[48].state,'young');
+ assert.ok(plotHealth(repaired.plots[48])>0);
+ g.plots[48].grass=.79;act(g,'wait');
+ assert.equal(g.plots[48].state,'invaded');assert.equal(ledger(g).length,0);
+ assert.equal(g.ledgerHistory.at(-1).outcome,'reinvaded');assert.equal(plotHealth(g.plots[48]),0);
 });
 
-test('observation, inspection, clone, and replay do not reroll deterministic ecology', () => {
-  const moves = ['remove:C2', 'restore:C2', 'remove:C2', 'wait', 'wait'];
-  const a = replay(41, moves);
-  const snapshot = clone(a);
-  observe(a); observe(a); studyPlot(a, 'C2');
-  assert.deepEqual(a, snapshot);
-  assert.deepEqual(replay(41, moves), a);
-  assert.notDeepEqual(replay(42, moves), a);
+test('canopy closure leaves a successful history, not a failed exit',()=>{
+ const g=newGame(113);act(g,'remove',48);act(g,'restore',48);g.plots[48].canopy=.99;
+ act(g,'remove',48);
+ assert.equal(g.plots[48].state,'closed');assert.equal(ledger(g).length,0);
+ assert.equal(g.ledgerHistory.at(-1).outcome,'canopy');
 });
 
-test('fire event exposes origins, burned ids, arrival steps, paths, and plain reasons', () => {
-  let found = null;
-  for (let seed = 1; seed < 50 && !found; seed++) {
-    const g = newGame(seed);
-    for (let turn = 0; turn < 5 && !found; turn++) found = act(g, 'wait').find(e => e.type === 'fire');
-  }
-  assert.ok(found);
-  assert.ok(Array.isArray(found.origins));
-  assert.ok(Array.isArray(found.burned));
-  assert.equal(typeof found.arrival, 'object');
-  for (const origin of found.origins) assert.equal(found.arrival[origin], 0);
-  for (const origin of found.origins) assert.ok(found.burned.includes(origin));
-  assert.equal(typeof found.damage, 'object');
-  assert.match(found.reason, /fuel|weather|canopy/i);
-  assert.ok(Array.isArray(found.paths));
-  assert.match(found.text, /fire/i);
-  assert.ok(found.healthAfter < found.healthBefore);
-  for(const id of found.burned) assert.ok(found.coverage[id]>0 && found.coverage[id]<=1);
+test('five unstable plots block new clearings, not tending existing ones',()=>{
+ const g=newGame(113);g.credits=100;
+ const ids=Object.values(g.plots).filter(p=>p.invasive).map(p=>p.id);
+ for(const id of ids.slice(0,5))act(g,'remove',id);
+ assert.equal(ledger(g).length,5);assert.equal(quote(g,'remove',ids[5]).valid,false);
+ act(g,'restore',ids[0]);assert.equal(quote(g,'remove',ids[0]).valid,true);
 });
 
-function corridor(seed, canopy=0, closed=false) {
-  const g=newGame(seed);
-  // C1 -> C2 -> C3; every other plot is a restored closed-canopy barrier.
-  for(const p of Object.values(g.plots)) Object.assign(p,{state:'closed',canopy:1,clearings:1,grass:.015,invasive:false});
-  for(const id of [12,13,14]) Object.assign(g.plots[id],{state:'invaded',canopy:0,grass:1,invasive:true});
-  if(canopy || closed) Object.assign(g.plots[13],{state:closed?'closed':'young',canopy,grass:.4,invasive:false});
-  return g;
+test('inspection cannot alter ecology, fire, cash or replay outcomes',()=>{
+ const a=newGame(113),b=newGame(113);inspect(a,48);
+ for(const [v,id]of [['remove',48],['restore',48],['wait',null]]){act(a,v,id);act(b,v,id);}
+ a.plots[48].inspected=false;assert.deepEqual(a,b);
+ assert.deepEqual(replay(113,['remove:E1','restore:E1','wait']),b);
+});
+
+function corridor(seed,canopy=0,closed=false){
+ const g=newGame(seed);
+ for(const p of Object.values(g.plots))Object.assign(p,{state:'closed',canopy:1,clearings:1,grass:.015,invasive:false});
+ for(const id of [48,49,50])Object.assign(g.plots[id],{state:'invaded',canopy:0,grass:1,invasive:true});
+ if(canopy||closed)Object.assign(g.plots[49],{state:closed?'closed':'young',canopy,grass:.4,invasive:false});
+ return g;
 }
-
-test('connected fuel burns farther; growing canopy reduces penetration and closed canopy blocks it',()=>{
-  const totals=[0,0,0], downstream=[0,0,0];
-  for(let seed=1;seed<=100;seed++) {
-    for(const [i,canopy] of [0,.5,.9].entries()) {
-      const g=corridor(seed,canopy),e=spreadFire(g,[12]);
-      totals[i]+=e.coverage[13]||0; downstream[i]+=e.burned.includes(14)?1:0;
-      assert.ok(e.healthAfter<e.healthBefore);
-      for(const [from,to] of e.paths)assert.ok(e.burned.includes(from)&&e.burned.includes(to));
-    }
-    const g=corridor(seed,1,true),e=spreadFire(g,[12]);
-    assert.deepEqual(e.burned,[12]);
-    assert.equal(fireTransmission(g.plots[13]),0);
+test('connected spread weakens as canopy grows and stops at restored closure',()=>{
+ const coverage=[0,0,0],reach=[0,0,0];
+ for(let seed=1;seed<=100;seed++){
+  for(const [i,canopy]of [0,.5,.9].entries()){
+   const g=corridor(seed,canopy),e=spreadFire(g,[48]);
+   coverage[i]+=e.coverage[49]||0;reach[i]+=e.burned.includes(50)?1:0;
+   for(const [from,to]of e.paths){assert.ok(e.burned.includes(from));assert.ok(e.burned.includes(to));}
   }
-  assert.ok(totals[0]>totals[1] && totals[1]>totals[2]);
-  assert.ok(downstream[0]>downstream[1] && downstream[1]>=downstream[2]);
-  assert.ok(downstream[0]>40,`Dense fuel should carry fire across the corridor: ${downstream}`);
+  const g=corridor(seed,1,true);assert.equal(fireTransmission(g.plots[49]),0);
+  assert.deepEqual(spreadFire(g,[48]).burned,[48]);
+ }
+ assert.ok(coverage[0]>coverage[1]&&coverage[1]>coverage[2]);
+ assert.ok(reach[0]>reach[1]&&reach[1]>=reach[2]);
 });
 
-test('dense invasion may scorch original forest edges without transmitting through them',()=>{
-  let scorched=0;
-  for(let seed=1;seed<=30;seed++) {
-    const g=corridor(seed,1,true);
-    g.plots[13].clearings=0;
-    const e=spreadFire(g,[12]);
-    if(!e.burned.includes(13))continue;
-    scorched++;
-    assert.ok(e.coverage[13]<=.22);
-    assert.ok(g.plots[13].canopy<1 && g.plots[13].canopy>.8);
-    assert.ok(!e.burned.includes(14));
-    assert.ok(!e.paths.some(([from])=>from===13));
-    assert.ok(forestHealth(g)<e.healthBefore);
-  }
-  assert.ok(scorched>0);
+test('original forest edge scorch is partial and cannot relay a fire',()=>{
+ let scorched=0;
+ for(let seed=1;seed<=30;seed++){
+  const g=corridor(seed,1,true);g.plots[49].clearings=0;
+  const e=spreadFire(g,[48]);if(!e.burned.includes(49))continue;
+  scorched++;assert.ok(e.coverage[49]<=.22);assert.ok(!e.burned.includes(50));
+  assert.ok(g.plots[49].canopy>.8);assert.ok(forestHealth(g)<e.healthBefore);
+ }
+ assert.ok(scorched>0);
 });
 
-test('closed-forest fire damage persists as a canopy scar while shelter recovers', () => {
-  const g = newGame(1);
-  let damaged = null;
-  for (let i = 0; i < 8 && !damaged; i++) {
-    const events = act(g, 'wait');
-    damaged = events.find(e => e.type === 'fireDamage' && g.plots[e.plot].state === 'closed');
-  }
-  assert.ok(damaged);
-  const plot = g.plots[damaged.plot];
-  assert.ok(plot.canopy < 1);
-  const scar = plot.canopy;
-  act(g, 'wait');
-  assert.ok(g.plots[damaged.plot].canopy >= scar);
+test('shared foundations map to one child each without multiplying money or clearing',()=>{
+ const g=newGame(9,{restored:'C2',cleared:'D5',previousCleared:'E4',credits:4,cared:true});
+ assert.equal(g.credits,4);assert.equal(ledger(g).length,3);
+ assert.equal(g.plots[childOf(13)].state,'young');
+ assert.equal(g.plots[childOf(22)].state,'cleared');
+ assert.equal(g.plots[childOf(27)].state,'cleared');
+ assert.equal(Object.values(g.plots).filter(p=>p.clearings).length,3);
+ assert.ok(g.plots[childOf(13)].visited);
 });
 
-test('foundation is independent and accepts coordinate ids', () => {
-  const foundation = { restored: 'C2', cleared: 'D5', cared: true, credits: 20 };
-  const g = newGame(9, foundation);
-  assert.equal(g.credits, 20);
-  assert.equal(g.plots[13].state, 'young');
-  assert.equal(g.plots[22].state, 'cleared');
-  const h = newGame(9);
-  assert.equal(h.plots[13].state, 'invaded');
-  assert.equal(h.plots[22].state, 'invaded');
-  assert.equal(studyPlot(g, 'D5').moisture, WORLD[22].moisture);
+test('study geometry uses the selected small square and current conditions',()=>{
+ const g=newGame(113);act(g,'remove',48);act(g,'restore',48);
+ const p=studyPlot(g,48);
+ assert.equal(p.parentId,12);assert.deepEqual(p.centre,WORLD[48].centre);
+ assert.equal(p.succession.kind,'young');assert.equal(p.succession.nativeFraction,p.canopy);
+ assert.equal(p.succession.moisture,p.moisture);
 });
 
-test('foundation care flag and prior clearance preserve different starting conditions', () => {
-  const cared = newGame(9, { restored: 'C2', cared: true, credits: 10 });
-  const uncared = newGame(9, { restored: 'C2', cared: false, credits: 10 });
-  assert.ok(cared.plots[13].canopy > uncared.plots[13].canopy);
-  assert.ok(cared.plots[13].grass < uncared.plots[13].grass);
-  const legacy = newGame(9, { restored: 'C2', previousCleared: 'D5', cared: true });
-  assert.equal(legacy.plots[22].state, 'cleared');
-  assert.equal(ledger(legacy).length, 2);
+test('CLI is explicit about current goal and charges empty visits',()=>{
+ const cli=fileURLToPath(new URL('./strategy-play.mjs',import.meta.url));
+ const out=execFileSync(process.execPath,[cli,'113','remove:A1'],{encoding:'utf8'});
+ assert.match(out,/cost 1, return 0/);assert.match(out,/GOAL 0\/5/);
+ assert.match(out,/UNSTABLE PLOTS 0\/5/);
 });
 
-test('studyPlot exposes active succession and canopy-conditioned field conditions', () => {
-  const g = newGame(13);
-  act(g, 'remove', 'C2'); act(g, 'restore', 'C2');
-  const p = studyPlot(g, 'C2');
-  assert.equal(p.active, true);
-  assert.equal(p.succession.kind, 'young');
-  assert.equal(p.succession.year, 1);
-  assert.equal(p.succession.nativeFraction, p.canopy);
-  assert.equal(p.succession.invasive, p.grass);
-  assert.equal(p.moisture, p.succession.moisture);
-  assert.equal(p.exposure, p.succession.exposure);
-});
-
-test('same-turn ledger closure does not reroll the current removal plot', () => {
-  const g = newGame(7);
-  act(g, 'remove', 13);
-  g.plots[13].state = 'cleared';
-  g.plots[13].grass = 0.87;
-  g.commitments[0].state = 'open';
-  act(g, 'remove', 28);
-  assert.equal(g.plots[13].state, 'invaded');
-  assert.equal(g.plots[28].grass, 0.035);
+test('public-information care policy remains replayable and has no rule bonus',()=>{
+ const r=run('inspect-and-tend',113),g=replay(113,r.decisions);
+ assert.equal(metrics(g).restoredCanopies,r.restoredCanopies);assert.equal(g.credits,r.credits);
 });

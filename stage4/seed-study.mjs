@@ -29,7 +29,8 @@ export class SeedStudy{
     copy.textContent='Green squares record this species. More nearby green suggests more seed supply. Some seeds fall close to the parent. Birds and other dispersers may be elsewhere.';
     if(species==='cecropia_obtusa')copy.textContent+=' Fruit bats carry these seeds.';
     if(species==='carapa_guianensis')copy.textContent+=' Rodents can move and bury these seeds.';
-    this.map(occurrenceStudy(species,plot).cells.map(v=>v?{strength:v.present?1:0}:null),plot,'Species locations');
+    if(context?.grid){const grid=context.grid;this.map(grid.cells.map(v=>v?{strength:v.speciesIds.includes(species)?1:0}:null),context.plot.id,'Species locations',grid.columns);}
+    else this.map(occurrenceStudy(species,plot).cells.map(v=>v?{strength:v.present?1:0}:null),plot,'Species locations');
    }
    clue.textContent='';
   }else if(germ){
@@ -55,11 +56,13 @@ export class SeedStudy{
   const habitatRefs=this.immersive?[{title:'Grass growth under shade: Dias-Filho 2000',url:'https://www.scielo.br/j/pab/a/9X4SnqRd8mJdPYRMJG8HB5g/?lang=en'},{title:'Amazon secondary forest recovery and disturbance',url:'https://www.nature.com/articles/s41467-021-22050-1'}]:[];
   for(const {title,url}of [...refs,...habitatRefs]){const p=el('p'),a=el('a',title);a.href=url;a.target='_blank';a.rel='noopener';p.append(a);links.append(p);}
  }
- map(values,plot,title){
+ map(values,plot,title,columns=6){
   const canvas=this.host.querySelector('canvas'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,336,336);ctx.fillStyle='#071711';ctx.fillRect(0,0,336,336);ctx.font='12px monospace';ctx.textAlign='center';
-  for(let j=0;j<6;j++){ctx.fillStyle='#8da799';ctx.fillText(j+1,53+j*48,19);ctx.fillText(String.fromCharCode(65+j),14,57+j*48);}
-  values.forEach((v,id)=>{const x=29+id%6*48,y=29+Math.floor(id/6)*48;for(let a=0;a<8;a++)for(let b=0;b<8;b++){ctx.fillStyle=v?.strength?`rgba(123,224,166,${.12+.75*v.strength})`:'#23372e';ctx.fillRect(x+4+a*5,y+4+b*5,2.5,2.5);}if(id===plot){ctx.strokeStyle='#e3c879';ctx.lineWidth=1.5;ctx.strokeRect(x,y,46,46);}});
-  canvas.setAttribute('aria-label',`${title}. Yellow border: ${coordinate(plot)}. Green: present or higher supply. Dark: no source recorded. The inventory is simulated.`);
+  const step=288/columns;
+  for(let j=0;j<columns;j++){ctx.fillStyle='#8da799';ctx.fillText(j+1,29+step/2+j*step,19);ctx.fillText(String.fromCharCode(65+j),14,33+step/2+j*step);}
+  values.forEach((v,id)=>{const x=29+id%columns*step,y=29+Math.floor(id/columns)*step;for(let a=0;a<8;a++)for(let b=0;b<8;b++){ctx.fillStyle=v?.strength?`rgba(123,224,166,${.12+.75*v.strength})`:'#23372e';ctx.fillRect(x+step/12+a*step/9.6,y+step/12+b*step/9.6,step/19.2,step/19.2);}if(id===plot){ctx.strokeStyle='#e3c879';ctx.lineWidth=1.5;ctx.strokeRect(x,y,step-2,step-2);}});
+  const label=columns===6?coordinate(plot):`${String.fromCharCode(65+Math.floor(plot/columns))}${plot%columns+1}`;
+  canvas.setAttribute('aria-label',`${title}. Yellow border: ${label}. Green: present or higher supply. Dark: no source recorded. The inventory is simulated.`);
  }
  readings(readings,evidence){
   const host=this.host.querySelector('.seed-readings');host.replaceChildren();if(!readings){host.append(el('p','No patch readings available.'));return;}
