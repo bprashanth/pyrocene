@@ -81,3 +81,5 @@ a laptop.
 
 Entries are appended, not rewritten. Where a later entry corrects an earlier
 one, both stay and the later one says what changed.
+
+- [2026-09-21: Unstable plots and connected fire](2026-09-21-stage4-unstable-plots.md): readable map IDs, compact controls, free plot selection, forest health and canopy-dependent fire penetration in Strategy only.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import { WORLD } from './world.mjs';
-import { newGame, act, clone, ledger, metrics, observe, quote, replay, studyPlot, WORKABLE_IDS, CONFIG } from './strategy-model.mjs';
+import { newGame, act, clone, ledger, metrics, observe, quote, replay, studyPlot, WORKABLE_IDS, CONFIG, forestHealth, fireTransmission, spreadFire } from './strategy-model.mjs';
 
 test('player CLI distinguishes young planting from the completed canopy goal',()=>{
  const cli=fileURLToPath(new URL('./strategy-play.mjs',import.meta.url));
@@ -21,7 +21,7 @@ test('strategy starts from actual WORLD ids and keeps intact forest in the state
   assert.equal(g.plots[13].state, 'invaded');
   assert.equal(g.plots[0].state, 'closed');
   assert.ok(WORKABLE_IDS.length >= 8 - 1 && WORKABLE_IDS.length <= 12);
-  assert.equal('health' in metrics(g), false);
+  assert.ok(metrics(g).health > 0 && metrics(g).health <= 100);
 });
 
 test('REMOVE opens a commitment, RESTORE creates young canopy, and care is explicit', () => {
@@ -96,6 +96,52 @@ test('fire event exposes origins, burned ids, arrival steps, paths, and plain re
   assert.match(found.reason, /fuel|weather|canopy/i);
   assert.ok(Array.isArray(found.paths));
   assert.match(found.text, /fire/i);
+  assert.ok(found.healthAfter < found.healthBefore);
+  for(const id of found.burned) assert.ok(found.coverage[id]>0 && found.coverage[id]<=1);
+});
+
+function corridor(seed, canopy=0, closed=false) {
+  const g=newGame(seed);
+  // C1 -> C2 -> C3; every other plot is a restored closed-canopy barrier.
+  for(const p of Object.values(g.plots)) Object.assign(p,{state:'closed',canopy:1,clearings:1,grass:.015,invasive:false});
+  for(const id of [12,13,14]) Object.assign(g.plots[id],{state:'invaded',canopy:0,grass:1,invasive:true});
+  if(canopy || closed) Object.assign(g.plots[13],{state:closed?'closed':'young',canopy,grass:.4,invasive:false});
+  return g;
+}
+
+test('connected fuel burns farther; growing canopy reduces penetration and closed canopy blocks it',()=>{
+  const totals=[0,0,0], downstream=[0,0,0];
+  for(let seed=1;seed<=100;seed++) {
+    for(const [i,canopy] of [0,.5,.9].entries()) {
+      const g=corridor(seed,canopy),e=spreadFire(g,[12]);
+      totals[i]+=e.coverage[13]||0; downstream[i]+=e.burned.includes(14)?1:0;
+      assert.ok(e.healthAfter<e.healthBefore);
+      for(const [from,to] of e.paths)assert.ok(e.burned.includes(from)&&e.burned.includes(to));
+    }
+    const g=corridor(seed,1,true),e=spreadFire(g,[12]);
+    assert.deepEqual(e.burned,[12]);
+    assert.equal(fireTransmission(g.plots[13]),0);
+  }
+  assert.ok(totals[0]>totals[1] && totals[1]>totals[2]);
+  assert.ok(downstream[0]>downstream[1] && downstream[1]>=downstream[2]);
+  assert.ok(downstream[0]>40,`Dense fuel should carry fire across the corridor: ${downstream}`);
+});
+
+test('dense invasion may scorch original forest edges without transmitting through them',()=>{
+  let scorched=0;
+  for(let seed=1;seed<=30;seed++) {
+    const g=corridor(seed,1,true);
+    g.plots[13].clearings=0;
+    const e=spreadFire(g,[12]);
+    if(!e.burned.includes(13))continue;
+    scorched++;
+    assert.ok(e.coverage[13]<=.22);
+    assert.ok(g.plots[13].canopy<1 && g.plots[13].canopy>.8);
+    assert.ok(!e.burned.includes(14));
+    assert.ok(!e.paths.some(([from])=>from===13));
+    assert.ok(forestHealth(g)<e.healthBefore);
+  }
+  assert.ok(scorched>0);
 });
 
 test('closed-forest fire damage persists as a canopy scar while shelter recovers', () => {

@@ -32,7 +32,6 @@ export class StrategyForest extends ExpeditionForest {
     super(host, options);
     this.world = options.world || WORLD;
     this.worldById = new Map(this.world.map(p => [p.id, p]));
-    this.playable = new Set((options.playable || []).map(idOf).filter(Number.isInteger));
     this.stateData = new Uint8Array(36 * 4);
     this.stateGoal = new Float32Array(36 * 4);
     this.stateShown = new Float32Array(36 * 4);
@@ -43,7 +42,31 @@ export class StrategyForest extends ExpeditionForest {
     this.pins = document.createElement('div');
     this.pins.className = 'strategy-pins';
     this.overlay.append(this.pins);
+    this.hover = document.createElement('span');
+    this.hover.className = 'strategy-hover'; this.hover.hidden = true;
+    this.overlay.append(this.hover);
+    const surface = this.renderer?.domElement || this.fallbackCanvas;
+    surface.addEventListener('pointermove', e => {
+      const id = this.plotAt(e);
+      this.hover.hidden = this.tlsActive || !!this.drag || id === null || id === this.plotId;
+      if(this.hover.hidden) return;
+      const box = host.getBoundingClientRect();
+      this.hover.textContent = `${String.fromCharCode(65+Math.floor(id/6))}${id%6+1}`;
+      this.hover.style.transform = `translate(${e.clientX-box.left+14}px,${e.clientY-box.top+12}px)`;
+    });
+    surface.addEventListener('pointerleave', () => { this.hover.hidden = true; });
   }
+
+  plotAt(event) {
+    const box=this.host.getBoundingClientRect();
+    this.ray.setFromCamera(new T.Vector2((event.clientX-box.left)/box.width*2-1,-(event.clientY-box.top)/box.height*2+1),this.camera);
+    const p=new T.Vector3();
+    if(!this.ray.ray.intersectPlane(this.plane,p)||p.x< -450||p.x>=450||p.z< -450||p.z>=450)return null;
+    const id=Math.floor((p.z+450)/150)*6+Math.floor((p.x+450)/150);
+    return this.worldById.get(id)?.active?id:null;
+  }
+
+  pick(event) { this.hover.hidden=true;const id=this.plotAt(event);if(id!==null)this.select(id); }
 
   async load() {
     const meta = await super.load();
@@ -161,8 +184,7 @@ export class StrategyForest extends ExpeditionForest {
   setFireEvent(event = null) {
     this.fireEvent = event || null;
     if (!event) { this.setFire(null, 1); if (this.embers) this.embers.visible = false; this.fireCells = 0; this.cpuKey = null; return; }
-    // Some World cells are read-only surrounding native scenery. They can be
-    // declared burned by the engine even though they never receive a pin.
+    // Original forest can be edge-scorched. Only the declared fraction burns.
     const burned = new Set((event.burned || []).map(idOf).filter(id => this.worldById.has(id)));
     const arrivalByPlot = event.arrival || {};
     const declared = [...burned].map((id, i) => Number(arrivalByPlot[id] ?? arrivalByPlot[String(id)] ?? i)).filter(Number.isFinite);
@@ -171,11 +193,18 @@ export class StrategyForest extends ExpeditionForest {
     const arrival = Array(3600).fill(null); let cells = 0;
     for (const id of burned) {
       const base = Number(arrivalByPlot[id] ?? arrivalByPlot[String(id)] ?? start) - start;
-      for (let row = Math.floor(id / 6) * 10; row < Math.floor(id / 6) * 10 + 10; row++) for (let col = id % 6 * 10; col < id % 6 * 10 + 10; col++) {
-        const n = row * 60 + col, wobble = hash(n * 11 + id * 17);
-        // A fine, irregular front inside a declared patch only; it is labelled
-        // illustrative by the app, while the ledger counts burned plots.
-        arrival[n] = Math.max(0, base + (Math.hypot(col % 10 - 4.5, row % 10 - 4.5) + wobble * 2) / 8 * duration * .16);
+      const parent=event.entering?.[id];
+      const entryX=Number.isInteger(parent)?4.5+Math.sign(parent%6-id%6)*4.5:4.5;
+      const entryZ=Number.isInteger(parent)?4.5+Math.sign(Math.floor(parent/6)-Math.floor(id/6))*4.5:4.5;
+      const patchCells=[];
+      for(let row=0;row<10;row++)for(let col=0;col<10;col++) {
+        const n=(Math.floor(id/6)*10+row)*60+id%6*10+col;
+        patchCells.push({n,d:Math.hypot(col-entryX,row-entryZ)+hash(n*11+id*17)*1.4});
+      }
+      patchCells.sort((a,b)=>a.d-b.d);
+      const count=Math.max(1,Math.round(clamp(event.coverage?.[id]??1)*100));
+      for (const {n,d} of patchCells.slice(0,count)) {
+        arrival[n] = Math.max(0, base + d/14*.8);
         cells++;
       }
     }
@@ -258,7 +287,8 @@ export class StrategyForest extends ExpeditionForest {
 
   diagnostics() {
     const active = this.world.filter(p => p.active).map(p => p.id);
-    return { extents: { x: [-450, 450], z: [-450, 450], grid: [6, 6], worldIds: active }, fireCells: this.fireCells, airbornePoints: (this.airborneSource?.length || this.geometry?.attributes.position?.count * 4 || 0) / 4, detailPoints: (this.detailPositions?.length || 0) / 3, fallback: !!this.fallback, selected: this.plotId };
+    const plotScreens=active.map(id=>{const [x,z]=centre(id),v=new T.Vector3(x,0,z).project(this.camera);return{id,x:(v.x*.5+.5)*this.width,y:(-v.y*.5+.5)*this.height};});
+    return { plotScreens, extents: { x: [-450, 450], z: [-450, 450], grid: [6, 6], worldIds: active }, fireCells: this.fireCells, airbornePoints: (this.airborneSource?.length || this.geometry?.attributes.position?.count * 4 || 0) / 4, detailPoints: (this.detailPositions?.length || 0) / 3, fallback: !!this.fallback, selected: this.plotId };
   }
 
   performance() { return { ...super.performance(), strategy: this.diagnostics(), fireCells: this.fireCells, pins: this.pinList.length }; }

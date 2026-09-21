@@ -22,14 +22,20 @@ state in memory. Its dropdown detects whether it can serve Strategy and uses
 
 Choose a patch. Remove or restore. Six months pass, weeds return, trees grow
 and a fire may spread. Looking around or opening a field record takes no time.
-**Let six months pass** allows waiting without spending credits, but does not
+**Skip** allows waiting without spending credits, but does not
 pause those risks.
 
-Removal opens a ledger entry. Restoring plants young trees. Remove on a young
+Removal enters the **Unstable plots** strip. Restoring plants young trees. Remove on a young
 planting means careful weeding, not another profitable harvest. Five open
 entries prevent starting another clearing, not caring for an existing one.
 An entry ends with canopy closure or reinvasion; these are recorded separately.
-The fill in each ledger block means canopy progress, not remaining time.
+The fill in each block means canopy progress, not remaining time. Its rightmost
+panel shows forest health above credits. Costs and returns sit below the action
+buttons. Only YOUR MOVE or SYSTEM appears in the small turn indicator.
+
+Click any active map square, including native forest, to inspect it. Worked
+plots keep status labels. Hover reveals coordinates elsewhere. Intact forest
+has no removal or planting job; selecting it does not authorise native clearance.
 
 The three advice cards change no rules or random probabilities:
 
@@ -38,10 +44,25 @@ The three advice cards change no rules or random probabilities:
 - Anchor uses neighbouring forest to shelter planting and then spreads.
 
 The experimental target is three restored canopies in 24 six-month actions.
-The result also records burned plots and credits. There is no combined health
-score and no claim that a closed canopy is fireproof. Replaying the same seed
+The result also records burned plots and credits. Forest health is a separate
+0–100 game score, not money or a validated ecological index. It combines native
+canopy, invasive cover, fire scars and losses from repeated clearance. Fires
+reduce it; growth and scar recovery improve it. Replaying the same seed
 keeps the same underlying weather and random draws. Changed vegetation can
 change which fires catch and where they spread.
+
+In version `strategy-2`, a fire begins at one weighted origin and spreads to
+adjacent plots. Dense invasive fuel carries it farther. Young canopy reduces
+both the fraction burned and onward transmission. Restored closed canopy is
+a barrier. Dense invasives may scorch the edge of original forest, but that
+edge does not transmit the fire. This is an explicit game rule, not a claim
+that real rainforest is fireproof. Health loss follows the partial coverage;
+the renderer draws the advancing front from the entry edge of each patch.
+
+Version 2 starts a fresh private Strategy run on refresh. Version 1 browser
+traces are left under their old storage key, not silently replayed with new
+rules. The pre-change checkpoint is `stage4-before-unstable-plots` / `c618789`.
+Shared Cooperation and Negligence room state is unchanged.
 
 ## Boundaries and evidence
 

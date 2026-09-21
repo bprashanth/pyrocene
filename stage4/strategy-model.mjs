@@ -9,7 +9,7 @@
  */
 import { WORLD, coordinate } from './world.mjs';
 
-export const VERSION = 'strategy-1';
+export const VERSION = 'strategy-2';
 export const ACTION_MONTHS = 6;
 // WORLD is a 900 m / 6-column declared grid: each active sector is 150 m
 // square. UI copy should prefer the count because this remains a teaching
@@ -29,8 +29,6 @@ export const CONFIG = Object.freeze({
   closureCover: 1,
   growth: 0.18,
   grassLoss: 0.88,
-  fireYoungVulnerability: 4,
-  fireReinvadedVulnerability: 1.15,
 });
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -143,6 +141,7 @@ function newPlot(source, seed = 113) {
     nativeLoss: 0,
     clearings: 0,
     burned: 0,
+    burnScar: 0,
     last: forest ? 'Standing native forest shelters nearby recovery.' : 'Invasive fuel is available for removal.',
     history: [],
     weeds: 0,
@@ -293,10 +292,11 @@ function advanceEcology(g, actionId, events) {
   const prior = cloneValue(g.plots);
   for (const source of activeWorld) {
     const p = g.plots[source.id];
+    p.burnScar = round(Math.max(0, p.burnScar - .025));
     const w = plotWeather(g, source.id);
     if (p.state === 'closed') {
       p.canopy = round(clamp(p.canopy + 0.025));
-      // Standing native forest is shelter, not immunity: a dry fire can still burn it.
+      // Original forest may recover from edge scorch. Restored closure blocks spread.
       p.grass = round(clamp(p.grass * 0.85 + 0.015));
       continue;
     }
@@ -343,64 +343,82 @@ function advanceEcology(g, actionId, events) {
 }
 
 function fire(g, events) {
-  const weatherNow = weather(g);
-  const origins = [];
-  for (const source of activeWorld.filter(p => p.people && p.exposure >= 0.6)) {
-    const state = g.plots[source.id];
-    const fuel = fuelFor(state);
-    // 33 is the declared ignition-side plot; other people-use edge plots are
-    // smaller possibilities.  Reinvaded fuel raises risk rather than forcing it.
-    const weight = source.id === 33 ? 1.55 : 0.45;
-    const reinvaded = state.invasive && state.clearings > 0;
-    const chance = clamp((0.012 + weatherNow.dryness * 0.12) * weight * (0.35 + fuel) * (state.invasive ? 1.28 : 1) * (reinvaded ? 1.35 : 1));
-    if (noise(g.seed, 'ignite', g.turn, source.id) < chance) origins.push(source.id);
-  }
-  if (!origins.length) return null;
+  const candidates=Object.values(g.plots).filter(p=>p.state!=='closed').map(p=>({id:p.id,
+    weight:(.15+fuelFor(p))*(p.people?1.6:1)*(p.clearings>0&&p.invasive?1.5:1)*Math.pow(1-p.canopy,1.3)}));
+  const total=candidates.reduce((s,p)=>s+p.weight,0);
+  if(!total||noise(g.seed,'ignite-season',g.turn)>(.10+Math.min(12,total)*.018)*(.7+weather(g).dryness*.5))return null;
+  let draw=noise(g.seed,'ignite-place',g.turn)*total,origin=candidates.at(-1).id;
+  for(const p of candidates){draw-=p.weight;if(draw<=0){origin=p.id;break;}}
+  return spreadFire(g,[origin],events);
+}
+
+// Scenario rule, not a claim of fireproof real forest. Restored closed plots
+// block fire. Original forest may suffer an edge scorch from dense invasion,
+// but that edge does not become a new transmitting fire source this season.
+export function fireTransmission(p){
+  if(p.state==='closed')return 0;
+  return clamp((.3+.7*fuelFor(p))*Math.pow(1-p.canopy,1.5));
+}
+export function forestHealth(g){
+  const plots=Object.values(g.plots);
+  return round(100*plots.reduce((sum,p)=>sum+(.2+.8*p.canopy)*(1-.65*p.grass)*(1-.65*p.burnScar)*(1-.25*p.nativeLoss),0)/plots.length);
+}
+export function spreadFire(g, requestedOrigins, events=[]){
+  const origins=[...new Set(requestedOrigins)].filter(id=>g.plots[id]&&g.plots[id].state!=='closed');
+  if(!origins.length)return null;
+  const healthBefore=forestHealth(g);
   const burned = new Set(origins);
   const arrival = Object.fromEntries(origins.map(id => [id, 0]));
+  const coverage=Object.fromEntries(origins.map(id=>[id,round(Math.max(.05,fireTransmission(g.plots[id])))]));
+  const entering={};
   const damage = {};
   const paths = [];
-  const queue = origins.map(id => ({ id, step: 0 }));
+  const queue = origins.map(id => ({ id, step: 0, intensity:coverage[id] }));
   const seen = new Set(origins);
   while (queue.length) {
     const current = queue.shift();
     for (const next of neighbourIds(current.id)) {
       if (seen.has(next)) continue;
       const p = g.plots[next];
+      const from=g.plots[current.id];
+      const fringe=p.state==='closed'&&p.clearings===0&&from.state==='invaded'&&from.grass>.7;
+      if(p.state==='closed'&&!fringe)continue;
       const localDryness = plotWeather(g, next).dryness;
-      const shelterValue = shelter(g, next);
-      const vulnerability = p.state === 'young' ? CONFIG.fireYoungVulnerability : p.invasive && p.clearings > 0 ? CONFIG.fireReinvadedVulnerability : 1;
-      const chance = clamp((0.08 + fuelFor(p) * 0.47) * (0.4 + localDryness * 0.85) * (0.82 + effectiveExposure(p) * 0.35) * vulnerability * (1 - shelterValue * 0.28));
+      const transmission=fringe?.22:fireTransmission(p);
+      const chance=clamp((fringe?.6:.94)*current.intensity*(fringe?1:Math.sqrt(transmission))*(.8+localDryness*.35));
       if (noise(g.seed, 'spread', g.turn, current.id, next) < chance) {
         const step = current.step + 1;
-        seen.add(next); queue.push({ id: next, step }); burned.add(next); arrival[next] = step; paths.push([current.id, next]);
+        const intensity=round(current.intensity*transmission);
+        seen.add(next);burned.add(next);arrival[next]=step;paths.push([current.id,next]);entering[next]=current.id;
+        coverage[next]=round(Math.max(.025,intensity));
+        if(!fringe)queue.push({id:next,step,intensity});
       }
     }
   }
   for (const id of burned) {
     const p = g.plots[id];
     p.burned += 1;
-    p.last = p.state === 'young' ? 'Fire burned the young trees and reduced canopy.' : p.state === 'closed' ? 'Fire burned standing forest; closure reduces but does not remove risk.' : 'Fire crossed this fuel patch.';
+    p.burnScar=round(clamp(p.burnScar+coverage[id]*.9));
+    p.last = p.state === 'young' ? 'Fire burned the young trees and reduced canopy.' : p.state === 'closed' ? 'Fire from dense invasives scorched this forest edge.' : 'Fire crossed this fuel patch.';
     if (p.state === 'young') {
-      const loss = round(0.3 + plotWeather(g, id).dryness * 0.6);
+      const loss = round((.65 + plotWeather(g,id).dryness*.35)*coverage[id]);
       const applied = round(Math.min(p.canopy, loss));
       p.canopy = round(Math.max(0, p.canopy - applied));
       damage[id] = applied;
       events.push({ type: 'fireDamage', plot: id, damage: applied, reason: 'vulnerable saplings burned' , text: `${p.name}: fire damaged vulnerable saplings (${Math.round(applied * 100)} canopy points).` });
       if (p.canopy <= 0.02) { p.state = 'cleared'; p.invasive = false; p.grass = 0.12; }
     } else if (p.state === 'closed') {
-      damage[id] = 0.1;
-      p.canopy = round(Math.max(0.55, p.canopy - damage[id]));
-      events.push({ type: 'fireDamage', plot: id, damage: 0.1, reason: 'standing canopy burned', text: `${p.name}: standing forest burned; closed canopy reduced but did not eliminate the risk.` });
+      damage[id] = round(Math.min(p.canopy-.35,coverage[id]*.55));
+      p.canopy = round(p.canopy-damage[id]);
+      events.push({type:'fireDamage',plot:id,damage:damage[id],reason:'forest edge scorched',text:`Fire scorched the forest edge at ${p.name}.`});
     } else damage[id] = 0;
   }
   const fresh = [...burned].filter(id => !g.burned.includes(id));
   for (const id of fresh) g.burned.push(id);
-  const record = { turn: g.turn, origins, burned: [...burned], arrival, paths };
+  const record = { turn: g.turn, origins, burned: [...burned], arrival, paths, coverage, entering };
   g.burnedRecords.push(record);
-  const reinvadedOrigins = origins.filter(id => g.plots[id].invasive && g.plots[id].clearings > 0);
-  const reason = reinvadedOrigins.length ? 'Dry weather and connected fuel allowed an ignition; reinvaded fuel raised the risk at ' + reinvadedOrigins.map(coordinate).join(', ') + '. Closed canopy reduced but did not remove spread.' : 'Dry weather and connected fuel allowed an ignition to spread; closed canopy reduced risk but did not make it zero.';
-  const event = { type: 'fire', origins, burned: [...burned], arrival, paths, damage, reason, text: burned.size ? `Fire from ${origins.map(coordinate).join(', ')} reached ${burned.size} plot${burned.size === 1 ? '' : 's'} including its ignition plot.` : `Fire ignited at ${origins.map(coordinate).join(', ')} but did not cross into a neighbouring plot.` };
+  const reason='Connected invasive fuel carries fire. Growing canopy reduces penetration and onward spread; restored closed canopy stops it.';
+  const event = { type: 'fire', origins, burned: [...burned], arrival, paths, coverage, entering, damage, healthBefore, healthAfter:forestHealth(g), reason, text:`Fire from ${origins.map(coordinate).join(', ')} reached ${burned.size} plots.` };
   events.push(event); return event;
 }
 
@@ -445,6 +463,7 @@ export function metrics(g) {
     turn: g.turn,
     months: g.seasonMonths,
     credits: g.credits,
+    health: forestHealth(g),
     closedCanopy: closed,
     restoredCanopies: restoredClosed,
     newCanopies: restoredClosed,

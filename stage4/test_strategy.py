@@ -36,6 +36,54 @@ class StrategyPlay(unittest.TestCase):
   self.page.locator('#patch-actions button').nth(index).click(); self.ready()
   expect(self.page.locator('#toast')).to_be_hidden()
  def shot(self, name): self.page.screenshot(path=str(QA/(name+'.png')))
+ def select_map(self, plot_id):
+  # Overhead returns before the orbit easing completes. Click the stable
+  # rendered coordinate, not a point from an earlier camera frame.
+  self.page.wait_for_function("""()=>{
+   const p=strategyDiagnostics().forest.plotScreens.find(p=>p.id===14);
+   const prev=window.lastPickCamera; window.lastPickCamera=p;
+   return prev && Math.abs(p.x-prev.x)+Math.abs(p.y-prev.y)<.05;
+  }""",polling=100)
+  point=self.page.evaluate('(id)=>strategyDiagnostics().forest.plotScreens.find(p=>p.id===id)',plot_id)
+  box=self.page.locator('#landscape').bounding_box()
+  self.page.mouse.click(box['x']+point['x'],box['y']+point['y']); self.ready()
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().selected'),plot_id)
+ def test_minimal_controls_free_selection_and_contrast(self):
+  self.start()
+  expect(self.page.locator('#patch-actions button').nth(0)).to_have_text('Remove')
+  expect(self.page.locator('#patch-actions button').nth(1)).to_have_text('Restore')
+  expect(self.page.locator('.action-cost').first).to_contain_text('Cost: 1')
+  expect(self.page.locator('#forest-totals')).to_contain_text('Forest health')
+  expect(self.page.locator('#forest-totals')).to_contain_text('Credits 12')
+  self.assertEqual(self.page.locator('#round-panel #funds').count(),0)
+  expect(self.page.locator('#season-report')).to_have_text('YOUR MOVE')
+  expect(self.page.locator('#wait')).to_have_text('Skip')
+  self.assertEqual(self.page.locator('.strategy-pins button').count(),1)
+  self.page.get_by_role('button',name='Overhead',exact=True).click(); self.ready()
+  # C3 is unmarked native/blue forest, not one of the initial invasive sites.
+  self.select_map(14)
+  expect(self.page.locator('#patch-title')).to_contain_text('C3')
+  colours=self.page.locator('.strategy-pins .chosen.closed').evaluate('(el)=>{const s=getComputedStyle(el);return [s.color,s.backgroundColor,s.opacity]}')
+  self.assertEqual(colours,['rgb(16, 35, 24)','rgb(227, 200, 121)','1'])
+  self.shot('strategy-unstable-native-selection')
+  self.page.get_by_role('button',name='Close view',exact=True).click(); self.ready()
+  self.assertGreater(self.page.evaluate('strategyDiagnostics().forest.detailPoints'),10000)
+  self.shot('strategy-unstable-native-close')
+  self.page.get_by_role('button',name='Forest',exact=True).click(); self.ready()
+  # A single connected event must lower health and render partial edge burns.
+  for _ in range(8):
+   self.page.locator('#wait').click(); self.ready()
+   event=self.page.evaluate("strategyDiagnostics().game.lastEvents.find(e=>e.type==='fire')")
+   if event: break
+  self.assertIsNotNone(event)
+  self.assertLess(event['healthAfter'],event['healthBefore'])
+  cells=self.page.evaluate('strategyDiagnostics().forest.fireCells')
+  self.assertGreater(cells,100)
+  self.assertLess(cells,len(event['burned'])*100)
+  expected_cells=sum(max(1,int(v*100+.5)) for v in event['coverage'].values())
+  self.assertEqual(cells,expected_cells)
+  self.assertGreater(len(event['paths']),1)
+  self.shot('strategy-unstable-connected-fire')
  def test_actions_field_guide_structure_replay_and_fire(self):
   self.start(); self.shot('strategy-tested-map')
   self.action(0); self.assertEqual(self.page.locator('.ledger-block').count(),1)
@@ -70,6 +118,9 @@ class StrategyPlay(unittest.TestCase):
    self.page=browser.new_page(viewport={'width':1280,'height':900},reduced_motion='reduce')
    self.page.on('pageerror',lambda e:self.errors.append(str(e)))
    self.start(); self.assertTrue(self.page.evaluate('strategyDiagnostics().forest.fallback'))
+   self.page.get_by_role('button',name='Overhead',exact=True).click(); self.ready()
+   self.select_map(14); self.shot('strategy-unstable-cpu-selection')
+   self.select_map(12)
    self.action(0); self.action(1)
    self.page.get_by_role('button',name='Close view',exact=True).click(); self.ready()
    self.assertGreater(self.page.evaluate('strategyDiagnostics().forest.detailPoints'),10000)

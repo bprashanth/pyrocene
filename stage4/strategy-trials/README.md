@@ -1,5 +1,11 @@
 # Strategy calibration evidence
 
+These campaigns and the table below describe **strategy-1**, checkpoint
+`c618789`. They are retained as historical evidence. The subsequent
+[Unstable plots / connected-fire revision](../../chronology/2026-09-21-stage4-unstable-plots.md)
+uses `strategy-2` and records a fresh scripted comparison. Do not attribute
+the old campaign results to the changed fire rules.
+
 The subsequent [complete lower-model campaigns](report-complete.md) include
 all three profiles with Claude Haiku and Cursor mini-low, verified by replay.
 The earlier [unfinished attempts](report-final-adaptive.md) exposed a CLI goal
@@ -16,7 +22,7 @@ node stage4/strategy-evaluate.mjs 100 1
 ```
 
 On 100 seeds starting at 1 (the seed range is part of the evidence), the
-current parameterization produced:
+strategy-1 parameterization produced:
 
 | Scripted advice label | Runs with >=3 restored canopies | Failure rate | Mean burned plots | Mean credits |
 | --- | ---: | ---: | ---: | ---: |
