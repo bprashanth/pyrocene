@@ -1,6 +1,5 @@
 import {StrategyForest} from './strategy-render.mjs';
 import {newGame,clone,act,quote,ledger,metrics,studyPlot,replay,WORKABLE_IDS,VERSION,CONFIG,WORLD,coordinate,childOf,inspect,plotHealth,GRID} from './strategy-model.mjs';
-import {WORLD as SHARED_WORLD} from './world.mjs';
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {speciesRecord} from './species-record.mjs';
 import {StructureLab} from './structure-lab.mjs';
@@ -11,14 +10,16 @@ const strategies=[
  {name:'Anchor',line:'Start beside standing forest and grow outward.',weak:'Caveat: planting still costs money and young trees can burn, even with shelter nearby.'}
 ];
 const params=new URLSearchParams(location.hash.slice(1));
-let foundation=null,seed=Number(params.get('seed'))||113;
-try{const f=JSON.parse(params.get('foundation')||'null'),valid=id=>Number.isInteger(id)&&SHARED_WORLD[id]?.active;if(f&&valid(f.restored)&&valid(f.cleared)&&Number.isFinite(f.credits))foundation={restored:f.restored,cleared:f.cleared,...(valid(f.previousCleared)?{previousCleared:f.previousCleared}:{}),cared:!!f.cared,credits:Math.max(0,Math.min(100,f.credits))};}catch{}
+const foundation=null;
+let seed=Number(params.get('seed'))||113;
+const fresh=params.has('fresh');
+if(fresh){params.delete('fresh');history.replaceState(null,'',location.pathname+'#'+params);}
 let returnURL=new URL('round.html',location.href);
 try{const u=new URL(params.get('return'));if(['http:','https:'].includes(u.protocol)&&u.hostname===location.hostname&&/\/(round|expedition)\.html$/.test(u.pathname))returnURL=u;}catch{}
-const saveKey='pyrocene-strategy:'+VERSION+':'+JSON.stringify(foundation);
+const saveKey='pyrocene-combined:'+VERSION;
 let game=newGame(seed,foundation),moves=[],approach=0,selected=foundation?childOf(foundation.restored):WORKABLE_IDS[0],view='forest',busy=true,catalogue=[],photos={},pins=[];
 let restoredSave=false;
-try{const saved=JSON.parse(sessionStorage.getItem(saveKey)||'null');if(saved&&saved.seed===seed&&Array.isArray(saved.moves)&&saved.moves.length<=24){game=replay(seed,saved.moves,foundation);for(const id of saved.inspected||[])if(game.plots[id])inspect(game,id);moves=saved.moves;approach=Math.max(0,Math.min(2,saved.approach||0));selected=game.plots[saved.selected]?saved.selected:selected;restoredSave=true;}}catch{}
+try{const saved=JSON.parse(sessionStorage.getItem(saveKey)||'null');if(!fresh&&saved&&saved.seed===seed&&Array.isArray(saved.moves)&&saved.moves.length<=24){game=replay(seed,saved.moves,foundation);for(const id of saved.inspected||[])if(game.plots[id])inspect(game,id);moves=saved.moves;approach=Math.max(0,Math.min(2,saved.approach||0));selected=game.plots[saved.selected]?saved.selected:selected;restoredSave=true;}}catch{}
 const forest=new StrategyForest($('landscape'),{select:id=>choose(id),specimen:meet});
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 class StrategyStructureLab extends StructureLab{
@@ -46,7 +47,7 @@ function render(){
  for(const verb of ['remove','restore']){const q=quote(game,verb,selected),b=button(verb==='remove'?'Remove':'Restore',()=>take(verb),'primary'),choice=document.createElement('div'),cost=document.createElement('div');choice.className='action-choice';cost.className='action-cost';
   if(verb==='remove'||q.productive){for(const line of [`Cost: ${q.cost}`,verb==='remove'&&p.receipt?.verb==='remove'?`Last return: ${p.receipt.returns}`:`Return: ${verb==='remove'&&(!p.visited||p.state==='invaded')?'?':q.returns}`]){const row=document.createElement('span');row.textContent=line;cost.append(row);}}else cost.textContent=known&&p.state==='closed'?'Canopy intact':known&&p.state==='young'?'Already planted':'Clear first';
   b.disabled=busy||game.status!=='playing'||!q.valid;b.title=q.reason||'';choice.append(b,cost);$('patch-actions').append(choice);}
- $('wait').disabled=busy||game.status!=='playing';$('structure').disabled=busy;$('plot-plants').disabled=busy||!known;$('plot-plants').closest('label').hidden=!known;
+ $('plot-plants').disabled=busy||!known;$('plot-plants').closest('label').hidden=!known;
  const lost=game.ledgerHistory.filter(e=>e.outcome==='reinvaded').length;
  $('progress').textContent=`${newCanopies()}/${CONFIG.goal} canopies closed - ${m.burnedPlots} plots burned${lost?' - '+lost+' reinvasions':''}`;
  $('ledger-count').textContent=`${open.length} / 5`;$('ledger-blocks').replaceChildren();
@@ -55,13 +56,13 @@ function render(){
  const pinIds=Object.values(game.plots).filter(p=>p.visited||p.id===selected).map(p=>p.id);
  if(pins.map(p=>p.id).join(',')!==pinIds.join(',')){pins=pinIds.map(id=>({id,el:button(coordinate(id),()=>choose(id))}));forest.setPins(pins);}
  for(const {id,el} of pins){const p=game.plots[id],known=p.inspected||p.visited;el.classList.toggle('chosen',id===selected);el.classList.toggle('closed',known&&p.state==='closed');el.classList.toggle('burned',p.burned>0);el.disabled=busy;el.title=coordinate(id)+(known?' - '+p.state:'');}
- $('phase-label').textContent=busy?'SYSTEM':game.status==='playing'?'YOUR MOVE':'FINISHED';
+ $('phase-label').textContent=busy?'SYSTEM':game.status!=='playing'?'FINISHED':game.credits<1?'OUT OF CREDITS':'YOUR MOVE';
  document.querySelectorAll('[data-view]').forEach(b=>{b.disabled=busy;b.classList.toggle('active',b.dataset.view===view);});
  const picker=$('plot-plants'),ids=livePlot().speciesIds,key=selected+':'+ids.join(',');if(picker.dataset.key!==key){picker.dataset.key=key;picker.replaceChildren(new Option('Choose a plant',''));for(const id of ids){const s=catalogue.find(s=>s.id===id);if(s)picker.append(new Option(s.name,id));}}
 }
 async function choose(id){if(busy||!game.plots[id])return;selected=id;closeRecord();forest.selectPlot(id);save();if(view==='close')await changeView('close');else render();}
 async function changeView(next){if(busy)return;busy=true;view=next;closeRecord();render();try{await forest.setView(view,selected);if(view==='close'){inspect(game,selected);specimens();save();}else forest.setSpecimens([]);}catch(e){toast(e.message);}finally{busy=false;render();}}
-function meet(id){if(busy)return;const s=catalogue.find(s=>s.id===id);if(!s)return;const p=livePlot();$('guide-content').replaceChildren(speciesRecord({species:s,photo:photos[s.photoAssetId||s.id],plot:p,condition:p.moisture>.6?'The ground is damp here.':'The opening lets the ground dry.',seedContext:{plot:p,grid:{columns:GRID,cells:WORLD.map(w=>game.plots[w.id]?{...game.plots[w.id],active:true}:null)}},immersive:true,onStructure:()=>openStructure(id)}));$('plant-guide').hidden=false;}
+function meet(id){if(busy)return;const s=catalogue.find(s=>s.id===id);if(!s)return;const p=livePlot();$('guide-content').replaceChildren(speciesRecord({species:s,photo:photos[s.photoAssetId||s.id],plot:p,condition:p.moisture>.6?'The ground is damp here.':'The opening lets the ground dry.',seedContext:{plot:p,grid:{columns:GRID,cells:WORLD.map(w=>game.plots[w.id]?{...game.plots[w.id],active:true}:null)}},immersive:true}));$('plant-guide').hidden=false;}
 async function openStructure(id=null){closeRecord();if(view!=='close')await changeView('close');if(!busy)lab.open(livePlot(),id);}
 async function take(verb){
  if(busy)return;closeRecord();busy=true;render();
@@ -71,14 +72,14 @@ async function take(verb){
   await new Promise(resolve=>{const duration=forest.reducedMotion?150:fire?4200:600,start=performance.now();function frame(now){forest.animateFire(Math.min(1,(now-start)/duration));if(now-start>=duration)resolve();else requestAnimationFrame(frame);}requestAnimationFrame(frame);});
   if(view==='close')specimens();
  }catch(e){toast(e.message);}finally{busy=false;render();}
- if(game.status!=='playing')showReplay();
+ if(game.status!=='playing'||game.credits<1)showReplay();
 }
-function showIntro(){const cards=$('strategy-cards');cards.replaceChildren();strategies.forEach((s,i)=>{const b=button('',()=>{approach=i;save();showCards();});const title=document.createElement('strong');title.textContent=(i+1)+'. '+s.name;const line=document.createElement('span');line.textContent=s.line;const weak=document.createElement('em');weak.textContent=s.weak;b.append(title,line,weak);b.dataset.strategy=i;cards.append(b);});showCards();$('starting-grant').textContent=foundation?`You carry forward ${newGame(seed,foundation).credits} credits from the shared game.`:'You are given a starting grant of 12 credits.';$('foundation-note').hidden=!foundation;$('foundation-note').textContent=foundation?`Your shared planting at ${coordinate(childOf(foundation.restored))} carries forward. From here, your decisions are private.`:'';$('strategy-intro').showModal();}
+function showIntro(){const cards=$('strategy-cards');cards.replaceChildren();strategies.forEach((s,i)=>{const b=button('',()=>{approach=i;save();showCards();});const title=document.createElement('strong');title.textContent=(i+1)+'. '+s.name;const line=document.createElement('span');line.textContent=s.line;const weak=document.createElement('em');weak.textContent=s.weak;b.append(title,line,weak);b.dataset.strategy=i;cards.append(b);});showCards();$('strategy-intro').showModal();}
 function showCards(){document.querySelectorAll('[data-strategy]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.strategy)===approach)));render();}
 function showReplay(){$('run-summary').textContent=`${game.seasonMonths/12} years: ${newCanopies()} new canopies, ${metrics(game).burnedPlots} plots burned and ${ledger(game).length} plots still vulnerable. ${game.credits} credits remain.`;$('replay-dialog').showModal();}
 function restart(newWeather){if(busy)return;if(newWeather)seed=crypto.getRandomValues(new Uint32Array(1))[0];game=newGame(seed,foundation);moves=[];forest.setState(game,true);forest.setInventory(catalogue,WORLD.map(w=>game.plots[w.id]||w));forest.setFireEvent(null);save();const p=new URLSearchParams(location.hash.slice(1));p.set('seed',seed);history.replaceState(null,'',location.pathname+'#'+p);$('replay-dialog').close();render();showIntro();}
-$('begin').onclick=$('intro-back').onclick=()=>$('strategy-intro').close();$('replay-open').onclick=showReplay;$('replay-back').onclick=()=>$('replay-dialog').close();$('retry').onclick=()=>restart(false);$('new-weather').onclick=()=>restart(true);$('wait').onclick=()=>take('wait');$('structure').onclick=()=>openStructure();$('record-close').onclick=closeRecord;$('plot-plants').onchange=()=>meet($('plot-plants').value);
+$('begin').onclick=$('intro-back').onclick=()=>$('strategy-intro').close();$('replay-open').onclick=showReplay;$('replay-back').onclick=()=>$('replay-dialog').close();$('retry').onclick=()=>restart(false);$('new-weather').onclick=()=>restart(true);$('record-close').onclick=closeRecord;$('plot-plants').onchange=()=>meet($('plot-plants').value);
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>changeView(b.dataset.view));$('stage').onchange=()=>{if($('stage').value==='shared')location.assign(returnURL);};document.querySelector('.wordmark').onclick=e=>{e.preventDefault();location.assign(returnURL);};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecord();});
 globalThis.strategyDiagnostics=()=>({game,selected,view,busy,approach,moves,forest:forest.diagnostics(),lab:lab.diagnostics()});
-try{const [_,data,oldPhotos,newPhotos]=await Promise.all([forest.load(),fetch('field-catalogue.json').then(r=>r.json()),fetch('plant-images.json').then(r=>r.json()),fetch('field-photos.json').then(r=>r.json())]);catalogue=[...data.species,...ADDITIONAL_SPECIES];photos={...oldPhotos.images,...newPhotos.photos};forest.setInventory(catalogue,WORLD.map(w=>game.plots[w.id]||w));forest.setSettlement(false);forest.setState(game,true);forest.pins.classList.add('round-labels');forest.selectPlot(selected);busy=false;$('loading').hidden=true;render();if(!restoredSave)showIntro();}catch(e){$('loading').textContent='Could not open Strategy: '+e.message;$('loading').append(button('Retry',()=>location.reload()));console.error(e);}
+try{const [_,data,oldPhotos,newPhotos]=await Promise.all([forest.load(),fetch('field-catalogue.json').then(r=>r.json()),fetch('plant-images.json').then(r=>r.json()),fetch('field-photos.json').then(r=>r.json())]);catalogue=[...data.species,...ADDITIONAL_SPECIES];photos={...oldPhotos.images,...newPhotos.photos};forest.setInventory(catalogue,WORLD.map(w=>game.plots[w.id]||w));forest.setSettlement(false);forest.setState(game,true);forest.pins.classList.add('round-labels');forest.selectPlot(selected);busy=false;$('loading').hidden=true;render();if(!restoredSave){save();showIntro();}}catch(e){$('loading').textContent='Could not open Combined: '+e.message;$('loading').append(button('Retry',()=>location.reload()));console.error(e);}

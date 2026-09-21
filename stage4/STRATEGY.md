@@ -1,4 +1,4 @@
-# Strategy: private practice after the shared game
+# Combined: independent play inside the main game
 
 The accepted Cooperation / Negligence baseline is tagged
 `stage4-before-strategy` (`f9b7511`). The pre-change record is
@@ -7,27 +7,34 @@ The shared round engine and its costs have not been replaced.
 
 ## Open it
 
-Finish and commit Negligence, then select **Strategy** in the stage dropdown.
-The planting, crew choice and remaining credits seed a private experiment.
-Its actions never write back to the shared room. **Back to shared game** returns
-to that room. Each browser tab keeps its own replay trace for refresh recovery.
+Select **Combined** from Expedition, Cooperation or Negligence. There are no
+prerequisites. Each entry starts an untouched small-grid board with 12 credits,
+and one player controls both removal and restoration. Shared money and planting
+are not imported, including from old foundation links. Actions never write back
+to the shared room. **Back to shared game** returns to the page you came from.
+Each browser tab keeps its own replay trace for refresh recovery. Re-entering
+from the main selector starts fresh; refreshing Combined resumes the current run.
 
-For a fresh independent trial, open `strategy.html` on the Stage 4 server.
+The implementation keeps the compatible `strategy.html` filename and model names.
+For direct entry, open `strategy.html#fresh=1` on the Stage 4 server.
 The development instance is <http://100.82.28.38:8033/strategy.html>.
 The existing 8024 process is deliberately not restarted: it holds live room
-state in memory. Its dropdown detects whether it can serve Strategy and uses
+state in memory. Its dropdown detects whether it can serve Combined and uses
 8033 if necessary. A newly started or portable server serves both on one port.
 
 ## The small loop
 
 Choose a patch. Remove or restore. Six months pass, weeds return, trees grow
 and a fire may spread. Looking around or opening a field record takes no time.
-**Skip** allows waiting without spending credits, but does not
-pause those risks.
+The only work buttons are **Remove** and **Restore**. Close view reveals the
+plants and their structure. The UI has no Skip or separate Structure button.
+When credits run out, the replay dialog opens; it does not advance free turns.
+The model retains `wait` for experiments and deterministic historical replays.
 
-Strategy now uses 108 active 75 m work squares on a 12×12 grid, quartering the
+Combined uses 108 active 75 m work squares on a 12×12 grid, quartering the
 shared game's active 150 m squares. Shared-game coordinates and mechanics are
-unchanged. Handoffs map each prior site to one representative child square.
+unchanged. The model's legacy foundation mapping remains for old experiments,
+but the Combined interface does not use it.
 
 A removal visit costs one credit up front, including an empty visit. Returns
 depend on local invasive cover, range from zero to nine, and are only reported

@@ -3,7 +3,7 @@ import {StructureLab} from './structure-lab.mjs';
 import {WORLD} from './world.mjs';
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {CONFIG,PATCHES,patch,atSector,studyPlot,review,cooperationPreview} from './round-model.mjs';
-import {navigation,flowParams,roleFrom,flowURL} from './play-flow.mjs';
+import {navigation,flowParams,roleFrom,flowURL,enterCombined} from './play-flow.mjs';
 import {BRIEFINGS} from './play-briefing.mjs';
 import {speciesRecord} from './species-record.mjs';
 import {habitatReadings} from './seed-model.mjs';
@@ -58,7 +58,6 @@ function accept(next){
  $('role').disabled=state.role!=='room';if(state.role!=='room')role=state.role;$('role').value=role;
  if(!previous||previous.round!==state.round){mode='survey';clock=0;years=isNeglect()?.5:10;result=null;renderedPlan='';fireCache.clear();forest.setFire(null,CONFIG.duration);forest.setPlan(null);forest.setSuccession(null);selected=isNeglect()?state.previous.ecology:null;carePreview=true;rebuildCandidates();refreshPlants();if(isNeglect()){forest.selectPlot(patch(selected).id);updateOutcome();}}
  $('game-mode').value=isNeglect()?'negligence':'play';$('game-mode').querySelector('[value=negligence]').disabled=!isNeglect()&&state.phase!=='committed';$('game-mode').querySelector('[value=play]').disabled=false;
- $('game-mode').querySelector('[value=strategy]').disabled=!isNeglect()||state.phase!=='committed';
  document.title=(isNeglect()?'Negligence':'Cooperation')+' - Pyrocene';
  if(state.phase!=='survey'){
   const key=state.proposals.removal+state.proposals.ecology;
@@ -242,15 +241,7 @@ async function advance(){const priorRole=role;role='removal';$('role').value=rol
 for(const b of document.querySelectorAll('[data-close]'))b.onclick=()=>$(b.dataset.close).close();
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>camera(b.dataset.view);
 $('role').onchange=async()=>{role=$('role').value;history.replaceState(null,'',flowURL('round.html',credentials,role));render();if(view==='close'&&role!=='room'&&state.phase!=='committed'&&!teamVisits().includes(selected))await act('visit',{patch:selected});briefing();};
-async function enterStrategy(){
- if(!isNeglect()||state.phase!=='committed')return;
- const target=new URL('strategy.html',location.href),foundation={restored:patch(state.previous.ecology).id,cleared:patch(state.committed.removal).id,previousCleared:patch(state.previous.removal).id,cared:state.committed.care,credits:state.committed.left};
- // The running event server keeps rooms in memory. A separate experimental
- // server avoids restarting it. New/portable servers serve this on one port.
- try{const r=await fetch(target,{method:'HEAD'});if(!r.ok)target.port='8033';}catch{target.port='8033';}
- target.hash=new URLSearchParams({seed:'113',foundation:JSON.stringify(foundation),return:location.href}).toString();location.assign(target);
-}
-$('teams-open').onclick=()=>state&&teams();$('game-mode').onchange=()=>{if($('game-mode').value==='strategy')enterStrategy();else if($('game-mode').value==='expedition')leavePlay();else if($('game-mode').value==='negligence'&&!isNeglect())advance();else if($('game-mode').value==='play'&&isNeglect())act('replay');};
+$('teams-open').onclick=()=>state&&teams();$('game-mode').onchange=()=>{if($('game-mode').value==='combined')enterCombined();else if($('game-mode').value==='expedition')leavePlay();else if($('game-mode').value==='negligence'&&!isNeglect())advance();else if($('game-mode').value==='play'&&isNeglect())act('replay');};
 document.querySelector('.wordmark').onclick=e=>{if(state){e.preventDefault();leavePlay();}};
 $('briefing-begin').onclick=()=>{clearInterval(typing);$('briefing').close();};$('briefing').onclose=()=>clearInterval(typing);
 $('recovery').oninput=()=>{years=Number($('recovery').value);showPlan=true;updateOutcome();};$('fire-time').oninput=()=>{clock=Number($('fire-time').value)/CONFIG.duration;updateOutcome();};

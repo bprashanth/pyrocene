@@ -1,4 +1,4 @@
-"""Visible Strategy play, private handoff, CPU rendering and replay checks."""
+"""Combined play, direct entry, shared-room isolation and CPU rendering."""
 import json
 import threading
 import unittest
@@ -45,20 +45,20 @@ class StrategyPlay(unittest.TestCase):
   expect(intro).to_contain_text('where the canopy hasn\'t closed')
   expect(intro).to_contain_text('Each turn is a 6 month cycle')
   expect(self.page.locator('#starting-grant')).to_have_text('You are given a starting grant of 12 credits.')
-  expect(self.page.locator('#foundation-note')).to_be_hidden()
+  self.assertEqual(self.page.locator('#foundation-note').count(),0)
   expect(self.page.locator('#strategy-cards strong')).to_have_text(['1. Opportunistic','2. Hold','3. Anchor'])
   for caveat in self.page.locator('#strategy-cards em').all_text_contents(): self.assertTrue(caveat.startswith('Caveat:'))
   self.shot('strategy-opening-opportunistic-hold-anchor')
   self.page.locator('[data-strategy="1"]').click(); self.page.locator('#begin').click(); self.ready()
   self.assertEqual(self.page.locator('#approach-open').count(),0)
   self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
-  # A shared handoff keeps its actual balance, not an extra 12-credit grant.
+  # Old foundation links cannot import shared money or plantings.
   foundation={'restored':13,'cleared':22,'credits':4,'cared':True}
   self.page.goto(self.base+'/strategy.html#'+urlencode({'foundation':json.dumps(foundation)}))
   self.page.reload()
   self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
-  expect(self.page.locator('#starting-grant')).to_have_text('You carry forward 4 credits from the shared game.')
-  expect(self.page.locator('#foundation-note')).to_be_visible()
+  expect(self.page.locator('#starting-grant')).to_have_text('You are given a starting grant of 12 credits.')
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.credits'),12)
  def select_map(self, plot_id):
   # Overhead returns before the orbit easing completes. Click the stable
   # rendered coordinate, not a point from an earlier camera frame.
@@ -80,7 +80,11 @@ class StrategyPlay(unittest.TestCase):
   expect(self.page.locator('#forest-totals')).to_contain_text('Credits 12')
   self.assertEqual(self.page.locator('#round-panel #funds').count(),0)
   expect(self.page.locator('#season-report')).to_have_text('YOUR MOVE')
-  expect(self.page.locator('#wait')).to_have_text('Skip')
+  self.assertEqual(self.page.locator('#wait, #structure').count(),0)
+  strip=self.page.locator('#ledger-strip').bounding_box()
+  self.assertAlmostEqual(strip['x']+strip['width']/2,720,delta=1)
+  expect(self.page.locator('#stage')).to_have_value('combined')
+  expect(self.page).to_have_title('Combined - Pyrocene')
   self.assertEqual(self.page.locator('.strategy-pins button').count(),1)
   self.page.get_by_role('button',name='Overhead',exact=True).click(); self.ready()
   # B3 is unmarked native forest in the finer grid.
@@ -99,7 +103,7 @@ class StrategyPlay(unittest.TestCase):
   self.page.get_by_role('button',name='Forest',exact=True).click(); self.ready()
   # A single connected event must lower health and render partial edge burns.
   for _ in range(8):
-   self.page.locator('#wait').click(); self.ready()
+   self.action(0)
    event=self.page.evaluate("strategyDiagnostics().game.lastEvents.find(e=>e.type==='fire')")
    if event: break
   self.assertIsNotNone(event)
@@ -121,21 +125,11 @@ class StrategyPlay(unittest.TestCase):
   self.page.get_by_role('tab',name='Dispersal',exact=True).click(); self.shot('strategy-tested-dispersal')
   expect(self.page.locator('#record-seed canvas')).to_have_attribute('aria-label',__import__('re').compile('E1'))
   self.page.get_by_role('tab',name='Germination',exact=True).click(); self.shot('strategy-tested-germination')
-  self.page.locator('#record-close').click(); self.page.locator('#structure').click()
-  self.page.wait_for_function('strategyDiagnostics().lab.draws>0'); self.shot('strategy-tested-structure')
-  self.page.locator('#structure-lab').get_by_role('button',name='Back',exact=True).click()
+  self.page.locator('#record-close').click()
   self.page.get_by_role('button',name='Forest',exact=True).click(); self.ready()
   before=self.page.evaluate('strategyDiagnostics().game'); self.page.reload(); self.ready()
   self.assertEqual(self.page.evaluate('strategyDiagnostics().game'),before)
-  # A neglected planting is left through twelve years. The visible result
-  # must match the deterministic model, including the fire footprint.
-  while self.page.evaluate('strategyDiagnostics().game.status')=='playing':
-   self.page.locator('#wait').click(); self.ready()
-  final=self.page.evaluate('strategyDiagnostics().game')
-  self.assertEqual(final['turn'],24)
-  self.assertTrue(final['burnedRecords'])
-  self.assertTrue(any(e['outcome']=='reinvaded' for e in final['ledgerHistory']))
-  self.shot('strategy-tested-neglected-end')
+  self.page.locator('#replay-open').click()
   self.page.locator('#retry').click(); self.page.locator('#begin').click(); self.ready()
   self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
   self.action(0); self.action(1)
@@ -166,11 +160,25 @@ class StrategyPlay(unittest.TestCase):
    self.assertGreater(self.page.evaluate('strategyDiagnostics().forest.detailPoints'),10000)
    self.shot('strategy-tested-cpu-close')
   finally: browser.close()
+ def test_no_skip_and_no_money_offers_replay(self):
+  self.start()
+  self.page.get_by_role('button',name='Overhead',exact=True).click();self.ready()
+  self.select_map(14)
+  for _ in range(12):self.action(0)
+  expect(self.page.locator('#funds')).to_have_text('0')
+  expect(self.page.locator('#phase-label')).to_have_text('OUT OF CREDITS')
+  expect(self.page.locator('#replay-dialog')).to_be_visible()
+  self.page.locator('#retry').click();self.page.locator('#begin').click();self.ready()
+  expect(self.page.locator('#funds')).to_have_text('12')
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
  def test_burned_planting_stays_unstable_then_can_be_replanted_or_lost(self):
   self.start('#seed=5')
   def burn_planting():
    self.action(0);self.action(1)
-   for _ in range(2):self.page.locator('#wait').click();self.ready()
+   self.page.get_by_role('button',name='Overhead',exact=True).click();self.ready()
+   self.select_map(14)
+   for _ in range(2):self.action(0)
+   self.select_map(48)
    self.assertTrue(self.page.evaluate('strategyDiagnostics().game.plots[48].failedPlanting'))
    expect(self.page.locator('#finding')).to_contain_text('Health: 0')
    expect(self.page.locator('.ledger-block.failed')).to_contain_text('Burned - replant')
@@ -180,8 +188,10 @@ class StrategyPlay(unittest.TestCase):
   expect(self.page.locator('#patch-title')).to_contain_text('young planting')
   self.page.locator('#replay-open').click();self.page.locator('#retry').click();self.page.locator('#begin').click();self.ready()
   burn_planting()
+  self.select_map(14)
   while self.page.locator('.ledger-block').count():
-   self.page.locator('#wait').click();self.ready()
+   self.action(0)
+  self.select_map(48)
   self.assertEqual(self.page.evaluate('strategyDiagnostics().game.ledgerHistory.at(-1).outcome'),'reinvaded')
   expect(self.page.locator('#finding')).to_contain_text('Health: 0')
   self.shot('strategy-small-burned-reinvaded')
@@ -194,24 +204,35 @@ class StrategyPlay(unittest.TestCase):
    nonlocal s
    r=request.post(self.base+'/api/round/'+action,data={**credentials,'revision':s['revision'],'round':s['round'],**extra})
    self.assertTrue(r.ok,r.text()); s=r.json(); return s
-  for team in ['removal','ecology']:
-   post('visit',team=team,patch='C'); post('propose',team=team,patch='C')
-  post('reveal'); post('commit'); post('advance')
-  for team in ['removal','ecology']:
-   post('visit',team=team,patch='C'); post('propose',team=team,patch='C')
-  post('reveal'); post('commit'); snapshot=json.loads(json.dumps(s))
+  snapshot=json.loads(json.dumps(s))
   url=self.base+'/round.html#'+urlencode({**credentials,'role':'room'})
   self.page.goto(url); self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
   if self.page.locator('#briefing[open]').count(): self.page.locator('#briefing-begin').click()
-  self.page.locator('#game-mode').select_option('strategy'); self.page.wait_for_url('**/strategy.html#*')
+  self.page.locator('#game-mode').select_option('combined'); self.page.wait_for_url('**/strategy.html#*')
   self.page.locator('#loading').wait_for(state='hidden',timeout=60000); self.page.locator('#begin').click(); self.ready()
-  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.foundation.restored'),27)
-  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.credits'),snapshot['committed']['left'])
+  self.assertIsNone(self.page.evaluate('strategyDiagnostics().game.foundation'))
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.credits'),12)
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
   self.action(0)
   actual=request.post(self.base+'/api/round/state',data=credentials).json()
   self.assertEqual(actual,snapshot)
   self.page.locator('#stage').select_option('shared'); self.page.wait_for_url('**/round.html#*')
   self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
   self.assertEqual(self.page.evaluate('roundDiagnostics().state.committed'),snapshot['committed'])
+  self.page.locator('#game-mode').select_option('combined')
+  self.page.wait_for_url('**/strategy.html#*')
+  self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+  self.page.locator('#begin').click(); self.ready()
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
+  expect(self.page.locator('#funds')).to_have_text('12')
+ def test_expedition_can_enter_combined_without_a_room(self):
+  self.page.goto(self.base+'/expedition.html')
+  self.page.locator('#game-mode').select_option('combined')
+  self.page.wait_for_url('**/strategy.html#*')
+  self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+  self.page.locator('#begin').click(); self.ready()
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game.turn'),0)
+  expect(self.page.locator('#funds')).to_have_text('12')
+  self.shot('combined-direct-entry')
 
 if __name__=='__main__': unittest.main()

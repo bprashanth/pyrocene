@@ -23,7 +23,7 @@
 @media(max-width:800px){.ledger-title{width:61px}#ledger-strip{gap:6px}#forest-totals{min-width:132px;font-size:10px;padding:5px}#forest-totals div{gap:5px}}
 
 /* Compact strip: small work windows, not a second dashboard. */
-#ledger-strip{height:51px;padding:5px 9px;gap:8px;right:auto;width:min(830px,calc(100vw - 56px))}
+#ledger-strip{height:51px;padding:5px 9px;gap:8px;left:50%;transform:translateX(-50%);right:auto;width:min(830px,calc(100vw - 56px))}
 .ledger-title{font-size:9px;line-height:1.35;width:74px}
 #ledger-blocks{gap:5px}.ledger-block{padding:4px 7px;font-size:11px}.ledger-block span{margin-top:3px;font-size:9px}
 #forest-totals{font-size:11px;min-width:200px;padding:4px 8px;gap:5px}#forest-totals div{white-space:nowrap}
