@@ -21,4 +21,22 @@
 .buffer-outlines polygon{fill:none;stroke:#e3c879;stroke-width:1;stroke-dasharray:4 5;opacity:.6}
 .buffer-outlines polygon.managed{stroke:#89cbb5;stroke-width:2;stroke-dasharray:none;opacity:.85}
 .buffer-outlines polygon.damaged{stroke:#e38e63;stroke-dasharray:3 3}
+#community-prelude{padding:0;width:min(1160px,96vw);max-width:96vw;max-height:94dvh;overflow:auto;border:1px solid #9a905b;border-radius:0;background:#081b14;color:#cfdfd2}
+#community-prelude[open]{display:grid;grid-template-columns:190px minmax(280px,1fr) minmax(350px,1.2fr)}
+#community-prelude::backdrop{background:#010906eb;backdrop-filter:blur(5px)}
+#community-prelude .facilitator-photo{background:#0c231a;justify-content:center}
+.prelude-copy{padding:30px 24px;display:flex;flex-direction:column}
+.prelude-copy small{font:10px monospace;letter-spacing:1.4px;color:#acba99}
+.prelude-copy h1{font:28px/1.18 Georgia,serif;color:#e2cc84;margin:18px 0}
+#prelude-text{font:15px/1.6 Arial;min-height:285px}
+#prelude-text p{margin:0 0 18px;position:relative}.prelude-reveal{position:absolute;inset:0}
+.prelude-nav{display:flex;justify-content:flex-end;gap:12px;margin-top:auto}
+.prelude-nav button{border-radius:0;padding:10px 22px;border:1px solid #8b8556;font-size:13px}
+.prelude-nav button.primary{background:#e2cc84;color:#0e2119}
+.prelude-sources{margin-top:16px;font:11px/1.5 Arial;color:#91a799}
+.prelude-sources summary{cursor:pointer}.prelude-sources a{color:#dec980}
+#community-prelude figure{margin:0;padding:26px 18px 18px 0;align-self:center}
+#prelude-caption{font:11px monospace;color:#b6c8b9;margin-bottom:12px}
+#prelude-map{width:100%;height:auto;display:block;background:#071710;border:1px solid #294434}
+@media(max-width:900px){#community-prelude[open]{grid-template-columns:110px 1fr}#community-prelude figure{grid-column:1/-1;padding:0 20px 20px;width:min(460px,100%);justify-self:center}.prelude-copy{padding:22px}#prelude-text{min-height:200px}.prelude-copy h1{font-size:24px}}
 @media(max-width:800px){#enterprise-name{display:none}.community-game header nav a{font-size:10px;padding:3px}.community-game #round-panel{width:218px;max-height:calc(100dvh - 320px)}.community-game #season-report{bottom:72px;max-width:calc(100vw - 24px)}#enterprise-cards{grid-template-columns:1fr}.community-game #season-note{max-width:280px}}

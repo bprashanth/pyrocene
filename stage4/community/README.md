@@ -10,6 +10,12 @@ page is deferred. Nothing is imported from or written into a saved Combined run.
 
 ## Play
 
+Community now opens with a two-screen Hazel prelude. It contrasts Combined's
+local outbreaks with Cooperation's connected fire scar, then asks who will care
+for the edge after the grant ends. Continue opens the unchanged enterprise
+choice below. Add `#prelude=1` to revisit the explanation. Editable narration and
+map presentation live in `prelude.mjs`; neither screen advances a game turn.
+
 Choose Shade crops or Seed nursery, then Begin. The dashed outlines mark two
 already-cleared buffer gaps. You can start a partnership there, plant native
 forest instead, or spend the grant elsewhere. Keep the two young native plots
