@@ -1,3 +1,20 @@
 header .game-navigation{margin-left:0;gap:10px}header .game-navigation select{background:#0d211a;border:1px solid #355442;border-radius:4px;padding:8px;color:#cbe0ce;max-width:135px}header>.chapter{margin-left:auto}header>nav:not(.game-navigation){margin-left:0}
 #expedition-teams{width:min(560px,94vw);padding:25px;background:#0b1c16;border:1px solid #587661;border-radius:6px}#expedition-teams p{line-height:1.5}.team-links label{display:block;margin:15px 0}.team-links input{display:block;width:100%;background:#06120d;color:#bcd7c3;border:1px solid #45614c;padding:9px;font:12px monospace}
 @media(max-width:700px){header{padding:0 12px;gap:10px}header .wordmark{font-size:10px;letter-spacing:2px}header .game-navigation{gap:5px}header .game-navigation select{padding:6px 3px;font-size:11px;max-width:90px}header .game-navigation button{font-size:11px}header>.chapter{display:none}header>nav:not(.game-navigation){gap:8px}header>nav:not(.game-navigation) button{font-size:10px}}
+#community-prelude{padding:0;width:min(1160px,96vw);max-width:96vw;max-height:94dvh;overflow:auto;border:1px solid #9a905b;border-radius:0;background:#081b14;color:#cfdfd2}
+#community-prelude[open]{display:grid;grid-template-columns:minmax(340px,1.05fr) minmax(350px,1fr)}
+#community-prelude::backdrop{background:#010906eb;backdrop-filter:blur(5px)}
+.prelude-copy{padding:30px;display:flex;flex-direction:column}
+.prelude-copy small{font:10px monospace;letter-spacing:1.4px;color:#acba99}
+.prelude-copy h1{font:28px/1.18 Georgia,serif;color:#e2cc84;margin:18px 0}
+#prelude-text{font:15px/1.6 Arial;min-height:285px}#community-prelude #prelude-text p{font-size:15px;line-height:1.6}
+#prelude-text p{margin:0 0 18px;position:relative}.prelude-reveal{position:absolute;inset:0}
+.prelude-nav{display:flex;justify-content:flex-end;gap:12px;margin-top:auto}
+.prelude-nav button{border-radius:0;padding:10px 22px;border:1px solid #8b8556;font-size:13px}
+.prelude-nav button.primary{background:#e2cc84;color:#0e2119}
+.prelude-sources{margin-top:16px;font:11px/1.5 Arial;color:#91a799}
+.prelude-sources summary{cursor:pointer}.prelude-sources a{color:#dec980}
+#community-prelude figure{margin:0;padding:26px 18px 18px 0;align-self:center}
+#prelude-caption{font:11px monospace;color:#b6c8b9;margin-bottom:12px}
+#prelude-map{width:100%;height:auto;display:block;background:#071710;border:1px solid #294434}
+@media(max-width:900px){#community-prelude[open]{grid-template-columns:1fr}#community-prelude figure{padding:0 20px 20px;width:min(460px,100%);justify-self:center}.prelude-copy{padding:22px}#prelude-text{min-height:200px}.prelude-copy h1{font-size:24px}}

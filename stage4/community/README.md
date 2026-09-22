@@ -14,7 +14,9 @@ mission is deferred. Nothing is imported from or written into a saved Combined r
 The normal entry now opens a three-page Recap without a portrait: local fires,
 fuel connectivity, and Forest Stewards. Finish returns to Combined rather than
 opening a new mission. The existing prototype is parked behind `#prototype=1`.
-Editable narration, per-page sources and map presentation live in `prelude.mjs`.
+Recap is also available directly from each main game's stage dropdown, where
+Finish closes it on the same map. Canonical narration, sources and drawing now
+live in `../play-briefing.mjs`; `prelude.mjs` is a compatibility re-export.
 Reading the recap neither advances turns nor writes the prototype save.
 
 Choose Shade crops or Seed nursery, then Begin. The dashed outlines mark two

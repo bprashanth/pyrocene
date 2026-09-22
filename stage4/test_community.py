@@ -144,5 +144,20 @@ class CommunityPlay(unittest.TestCase):
   self.page.reload()
   self.page.locator('#loading').wait_for(state='hidden',timeout=60000);self.ready()
   self.assertEqual(self.page.evaluate('communityDiagnostics().game'),before)
+ def test_main_combined_recap_returns_to_same_map_and_state(self):
+  self.page.goto(self.base+'/strategy.html#fresh=1')
+  self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+  self.page.locator('#begin').click();self.page.wait_for_function('!strategyDiagnostics().busy')
+  before=self.page.evaluate('strategyDiagnostics().game');url=self.page.url
+  self.page.locator('#stage').select_option('recap')
+  for _ in range(2):self.page.locator('#prelude-next').click()
+  expect(self.page.locator('#prelude-text')).to_contain_text('IDESAM and WeForest')
+  expect(self.page.locator('#prelude-map')).to_have_attribute('aria-label',__import__('re').compile('.*forest edge.*'))
+  self.shot('main-recap-stewards')
+  self.page.locator('#prelude-next').click()
+  expect(self.page.locator('#community-prelude')).not_to_be_visible()
+  self.assertEqual(self.page.url,url)
+  self.assertEqual(self.page.evaluate('strategyDiagnostics().game'),before)
+  expect(self.page.locator('#stage')).to_have_value('combined')
 
 if __name__=='__main__':unittest.main()

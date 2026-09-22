@@ -3,6 +3,7 @@ import {newGame,clone,act,quote,ledger,metrics,studyPlot,replay,WORKABLE_IDS,VER
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {speciesRecord} from './species-record.mjs';
 import {StructureLab} from './structure-lab.mjs';
+import {bindRecap} from './play-flow.mjs';
 const $=id=>document.getElementById(id);
 const strategies=[
  {name:'Opportunistic',line:'Remove and restore where the returns are highest.',weak:'Caveat: old work can fill with weeds while you move on.'},
@@ -21,6 +22,7 @@ let game=newGame(seed,foundation),moves=[],approach=0,selected=foundation?childO
 let restoredSave=false;
 try{const saved=JSON.parse(sessionStorage.getItem(saveKey)||'null');if(!fresh&&saved&&saved.seed===seed&&Array.isArray(saved.moves)&&saved.moves.length<=24){game=replay(seed,saved.moves,foundation);for(const id of saved.inspected||[])if(game.plots[id])inspect(game,id);moves=saved.moves;approach=Math.max(0,Math.min(2,saved.approach||0));selected=game.plots[saved.selected]?saved.selected:selected;restoredSave=true;}}catch{}
 const forest=new StrategyForest($('landscape'),{select:id=>choose(id),specimen:meet});
+bindRecap(forest,$('stage'),()=> 'combined');
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 class StrategyStructureLab extends StructureLab{
  sync(){super.sync();if(!this.models||!this.plot?.strategy)return;const p=this.plot;this.dialog.querySelector('h1').textContent='Inside the forest - '+coordinate(p.id);this.panels[1].panel.querySelector('h2').textContent='Selected patch - '+coordinate(p.id);this.panels[1].caption.textContent=`${Math.round(p.canopy*100)}% canopy closure. ${Math.round(p.grass*100)}% weeds. ${p.state==='young'?'Young planting.':p.state==='cleared'?'Not planted yet.':p.state==='invaded'?'Invasive cover.':'Standing forest.'}`;}

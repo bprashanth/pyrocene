@@ -1,3 +1,17 @@
+import {createPrelude} from './play-briefing.mjs';
+// In-place recap never advances or resets the game behind it.
+export function bindRecap(forest,select,currentMode){
+ if(!select)return;
+ if(!select.querySelector('[value="recap"]'))select.append(new Option('Recap','recap'));
+ let recap;
+ select.addEventListener('change',event=>{
+  if(select.value!=='recap')return;
+  event.stopImmediatePropagation();select.value=currentMode();
+  if(!forest.geometry&&!forest.airborneSource)return;
+  if(!recap)recap=createPrelude(forest,()=>{select.value=currentMode();});
+  recap.open();
+ },true);
+}
 // Navigation carries only this game's capability and chosen role in the hash.
 export function flowParams(){return new URLSearchParams(location.hash.slice(1));}
 export function roleFrom(params=flowParams()){return ['removal','ecology','room'].includes(params.get('role'))?params.get('role'):'removal';}

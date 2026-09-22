@@ -751,3 +751,28 @@ The current 8024 shared server links to it without losing open rooms; a freshly
 started server can serve both stages together. See [Combined notes](../stage4/STRATEGY.md)
 for model limits, tests and rollback, and the
 [integration chronology](../chronology/2026-09-21-stage4-combined.md).
+
+### Recap: from fire corridors to forest stewards
+
+Recap is available in the main stage dropdown in Expedition, Cooperation,
+Negligence and Combined. It opens over the current map. Finish closes the recap
+and returns to exactly that map without advancing time, resetting the game or
+changing a proposal. No portrait is shown.
+
+The three pages revisit local livelihood-related ignitions, connected invasive
+fuel and fire lines, then Forest Stewards. The last map marks the exposed forest
+edge. Shade-grown coffee in the Nilgiris (Aadhimalai and Keystone) and coffee
+agroforestry in Apuí, Amazonia (IDESAM and WeForest) illustrate the common need
+for reliable livelihoods and continuing land care, rather than promoting one
+organisation. Each page has its own sources and ecological qualifications.
+
+**The final playable stewardship stage is deferred.** Later it can follow the
+recap, but for now Finish only returns to the map. The separate Community
+experiment remains parked at `/community/#prototype=1`; do not silently merge
+its fixed starting plots, economics or boundary-fire rules into the main game.
+Its earlier buffer trials are learning material, not an accepted final mission.
+
+Canonical recap copy and drawing: `stage4/play-briefing.mjs`; integration:
+`stage4/play-flow.mjs`; styling: `stage4/play-flow.css`. See the
+[main-game integration chronology](../chronology/2026-09-22-stage4-recap-main-game.md)
+and the [Stage 4 handoff](../.prompt/stage4_handoff.md).

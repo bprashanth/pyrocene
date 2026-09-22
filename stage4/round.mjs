@@ -3,7 +3,7 @@ import {StructureLab} from './structure-lab.mjs';
 import {WORLD} from './world.mjs';
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {CONFIG,PATCHES,patch,atSector,studyPlot,review,cooperationPreview} from './round-model.mjs';
-import {navigation,flowParams,roleFrom,flowURL,enterCombined} from './play-flow.mjs';
+import {navigation,flowParams,roleFrom,flowURL,enterCombined,bindRecap} from './play-flow.mjs';
 import {BRIEFINGS} from './play-briefing.mjs';
 import {speciesRecord} from './species-record.mjs';
 import {habitatReadings} from './seed-model.mjs';
@@ -38,6 +38,7 @@ const forecastTools=$('forecast-tools').content.cloneNode(true);$('outcomes').pr
 let specimenKey='';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const forest=new RoundForest($('landscape'),{select:async id=>{const p=candidates().find(p=>p.id===id);if(p)await choose(p.key);},specimen:meet});forest.reducedMotion=reduced;
+bindRecap(forest,$('game-mode'),()=>isNeglect()?'negligence':'play');
 const lab=new StructureLab({forest,catalogue:()=>catalogue});
 const closeRecord=()=>{$('plant-guide').hidden=true;plantPicker.value='';};
 $('record-close').onclick=closeRecord;

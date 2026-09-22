@@ -88,3 +88,4 @@ one, both stay and the later one says what changed.
 - [2026-09-21: Community buffer experiment](2026-09-21-stage4-community.md): separate shade-crop and nursery partnerships, locally financed care, damaged buffers returning to the ledger, paired browser play and reversible integration boundaries.
 - [2026-09-22: Hazel before Community](2026-09-22-stage4-community-prelude.md): two screens connecting local edge ignitions to Cooperation's connected scar, with no changes to game mechanics.
 - [2026-09-22: Recap and Forest Stewards](2026-09-22-stage4-recap-stewards.md): remove the portrait, source the livelihood examples, show fuel connectivity and end with stewardship while parking Community gameplay.
+- [2026-09-22: Recap enters the main game](2026-09-22-stage4-recap-main-game.md): in-place main-menu recap, marked forest edge, India/Amazon livelihood examples and a deferred final stage.
