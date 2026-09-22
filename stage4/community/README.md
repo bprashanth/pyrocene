@@ -1,20 +1,21 @@
 # Community: an isolated Stage 4 experiment
 
-Live prototype: **http://100.82.28.38:8035/community/#fresh=1**.
+Recap: **http://100.82.28.38:8035/community/**.
+Parked prototype: **http://100.82.28.38:8035/community/#prototype=1&fresh=1**.
 Accepted Combined game: **http://100.82.28.38:8033/strategy.html**.
 
 This asks a different question from Combined: can a locally maintained buffer
 help unfinished native restoration survive at the exposed forest edge?
-It does not change Cooperation, Negligence or Combined. Hazel's concluding
-page is deferred. Nothing is imported from or written into a saved Combined run.
+It does not change Cooperation, Negligence or Combined. The final Community
+mission is deferred. Nothing is imported from or written into a saved Combined run.
 
 ## Play
 
-Community now opens with a two-screen Hazel prelude. It contrasts Combined's
-local outbreaks with Cooperation's connected fire scar, then asks who will care
-for the edge after the grant ends. Continue opens the unchanged enterprise
-choice below. Add `#prelude=1` to revisit the explanation. Editable narration and
-map presentation live in `prelude.mjs`; neither screen advances a game turn.
+The normal entry now opens a three-page Recap without a portrait: local fires,
+fuel connectivity, and Forest Stewards. Finish returns to Combined rather than
+opening a new mission. The existing prototype is parked behind `#prototype=1`.
+Editable narration, per-page sources and map presentation live in `prelude.mjs`.
+Reading the recap neither advances turns nor writes the prototype save.
 
 Choose Shade crops or Seed nursery, then Begin. The dashed outlines mark two
 already-cleared buffer gaps. You can start a partnership there, plant native
