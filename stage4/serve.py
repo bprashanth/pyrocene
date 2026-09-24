@@ -29,10 +29,12 @@ from urllib.parse import unquote, urlsplit
 try:  # Support both `python -m stage4.serve` and `python stage4/serve.py`.
     from .ash_game import AshGame
     from .shared_round import RoundStore, RoundError
+    from .community_cooperation.store import Store as CommunityCooperationStore, RoundError as CommunityCooperationError
 except ImportError:  # pragma: no cover - exercised by portable script mode.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from ash_game import AshGame
     from shared_round import RoundStore, RoundError
+    from stage4.community_cooperation.store import Store as CommunityCooperationStore, RoundError as CommunityCooperationError
 
 
 LOG = logging.getLogger("pyrocene.stage4")
@@ -57,6 +59,7 @@ APP_FILES |= {'species-record.mjs', 'species-record.css'}
 APP_FILES |= {'strategy.html', 'strategy.css', 'strategy.mjs', 'strategy-model.mjs', 'strategy-render.mjs'}
 APP_FILES |= {'community/index.html', 'community/community.css', 'community/community.mjs', 'community/model.mjs', 'community/render.mjs'}
 APP_FILES |= {'community/prelude.mjs'}
+APP_FILES |= {'community_cooperation/index.html', 'community_cooperation/style.css', 'community_cooperation/app.mjs', 'community_cooperation/model.mjs', 'community_cooperation/render.mjs', 'community_cooperation/config.json'}
 APP_FILES = APP_FILES | {"expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs"}
 APP_FILES = APP_FILES | {"ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png"}
 REQUIRED_ASSETS = frozenset(
@@ -263,6 +266,19 @@ class Stage4Handler(BaseHTTPRequestHandler):
         return bool(host) and origin == f"http://{host}"
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        if urlsplit(self.path).path.startswith('/api/community-cooperation/'):
+            if not self._same_origin():
+                self._api_error(HTTPStatus.FORBIDDEN, 'origin does not match this server')
+                return
+            body = self._api_body()
+            if body is None:
+                return
+            try:
+                result = self.stage_server.community_cooperation.request(urlsplit(self.path).path[len('/api/community-cooperation/'):], body)
+                self._json(HTTPStatus.OK, result)
+            except (RoundError, CommunityCooperationError) as exc:
+                self._api_error(exc.status, str(exc))
+            return
         if urlsplit(self.path).path.startswith('/api/round/'):
             if not self._same_origin():
                 self._api_error(HTTPStatus.FORBIDDEN, 'origin does not match this server')
@@ -387,6 +403,8 @@ class Stage4Handler(BaseHTTPRequestHandler):
             target = _resolved_file(self.stage_server.app_root, "prelude/index.html")
         elif decoded in {"/community", "/community/"}:
             target = _resolved_file(self.stage_server.app_root, "community/index.html")
+        elif decoded in {"/community-cooperation", "/community-cooperation/"}:
+            target = _resolved_file(self.stage_server.app_root, "community_cooperation/index.html")
         elif decoded.startswith("/assets/"):
             relative = decoded[len("/assets/") :]
             if relative not in SERVED_ASSETS:
@@ -425,6 +443,7 @@ class Stage4Server(ThreadingHTTPServer):
         self._ash_lock = threading.RLock()
         self._ash_sessions: OrderedDict[str, AshGame] = OrderedDict()
         self.rounds = RoundStore()
+        self.community_cooperation = CommunityCooperationStore()
         super().__init__(address, Stage4Handler)
 
     @staticmethod

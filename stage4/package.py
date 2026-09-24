@@ -44,10 +44,12 @@ APP_FILES += ('species-record.mjs', 'species-record.css')
 APP_FILES += ('strategy.html', 'strategy.css', 'strategy.mjs', 'strategy-model.mjs', 'strategy-render.mjs')
 APP_FILES += ('community/index.html', 'community/community.css', 'community/community.mjs', 'community/model.mjs', 'community/render.mjs')
 APP_FILES += ('community/prelude.mjs',)
+APP_FILES += ('community_cooperation/index.html', 'community_cooperation/style.css', 'community_cooperation/app.mjs', 'community_cooperation/model.mjs', 'community_cooperation/render.mjs', 'community_cooperation/config.json', 'community_cooperation/store.py')
 APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs")
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
 DOC_NAMES = (
+    "community_cooperation/README.md",
     "community/README.md",
     "STRATEGY.md",
     "SEEDS_AND_SCAR.md",

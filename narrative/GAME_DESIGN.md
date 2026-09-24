@@ -776,3 +776,22 @@ Canonical recap copy and drawing: `stage4/play-briefing.mjs`; integration:
 `stage4/play-flow.mjs`; styling: `stage4/play-flow.css`. See the
 [main-game integration chronology](../chronology/2026-09-22-stage4-recap-main-game.md)
 and the [Stage 4 handoff](../.prompt/stage4_handoff.md).
+
+### Community cooperation: separate three-role prototype
+
+An isolated [Community cooperation prototype](http://100.82.28.38:8036/community-cooperation/)
+tests the same A/B/C choices with a third team. Community considers nursery
+supply for A, cupuaçu under shade in B or pasture grazing in C. Proposals are
+private until discussion. Fruit cultivation or grazing cannot also be native
+restoration on the same square; the room must resolve land use and funding.
+Community sees numeric investment and qualitative returns/health.
+
+The prototype has its own invasion field and fire comparison. C's flanks have
+no invasive grass in its plant inventory. Fuel continuity, moisture and recovery
+shape a spreading front instead of the old authored narrow ellipse. This remains
+a designed scenario, not a reconstruction of the scanned forest's actual fire.
+
+Cooperation, Negligence and Combined are unchanged. The proposal to shorten the
+main sequence is not implemented. See [prototype rules and play findings](../stage4/community_cooperation/README.md)
+and [chronology](../chronology/2026-09-24-community-cooperation-prototype.md).
+A newly started `run.sh` serves the prototype at the same path on port 8024.
