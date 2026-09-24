@@ -833,3 +833,8 @@ The graph's returns, repeated cuts and growth timings are explicit game
 assumptions, not calibrated predictions. Combined and the existing closing
 Recap remain unchanged. See [the projection checkpoint](../chronology/2026-09-24-cooperation-debt-and-projection.md)
 for assumptions, screenshots, test commands and rollback baseline `5ac5bb6`.
+
+Room editing now opens directly, with no Reveal step in main Cooperation.
+Commit opens Recap I; Revise returns to those same choices. The With/Without
+buttons are removed. Returning invasives fade through a slower continuous cycle
+rather than flashing off at a year boundary. See [the simplification checkpoint](../chronology/2026-09-24-cooperation-room-simplification.md).

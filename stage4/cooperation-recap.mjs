@@ -5,7 +5,15 @@ const same=(a,b)=>['ecology','removal','community'].every(k=>a[k]===b[k]);
 const describe=p=>`Restore ${p.ecology}, remove ${p.removal}, ${p.community==='A'?'nursery A':p.community==='B'?'coffee B':'grazing C'}.`;
 export function createCooperationRecap(){
  const dialog=document.createElement('dialog');dialog.id='cooperation-recap';dialog.setAttribute('aria-label','Recap I');
- dialog.innerHTML='<section class="prelude-copy"><small>RECAP I</small><h1>What does the group gain?</h1><p>Removal earns money, but unplanted ground fills with invasives again. Returning crews can earn again while damaging more native growth.</p><p>Restoration costs money now. Coffee can earn later if it has enough shelter. A nursery needs an order, but its payment stays within the group.</p><p>Debt lets you start a costly plan. It does not make the cost disappear.</p><p class="recap-note">Ten years, before fire. Each dot is an allowed plan. Yellow is yours.</p><div class="prelude-nav"><button class="primary" id="recap-one-back">Back to map</button></div></section><figure><svg id="earnings-health" viewBox="0 0 520 390" role="img" aria-label="Net group earnings versus change in forest health before fire"></svg><figcaption id="recap-plan"></figcaption><p id="recap-values"></p><small>Earnings exclude the starting grant and include saved feed costs. These are game estimates.</small></figure>';
+ dialog.innerHTML=`<section class="prelude-copy"><small>RECAP I</small><h1>What does the group gain?</h1>
+ <p>Removal earns money, but unplanted ground fills with invasives again.</p>
+ <ul><li>Restoration costs money now and its return is forest health.</li>
+ <li>Coffee costs money now and earns later if it has enough shelter from healthy forests.</li>
+ <li>A nursery needs buyers for seeds. These buyers are often ecologists.</li>
+ <li>Debt lets you start a plan before you have the money, but must be repaid from future earnings. Those earnings are not guaranteed if the forest degrades.</li></ul>
+ <p class="recap-note">Each dot is an allowed plan chosen at the start of the ten-year period, projected without destruction by wildfire. Yellow is yours.</p>
+ <div class="prelude-nav"><button class="primary" id="recap-one-back">Back to map</button></div></section>
+ <figure><svg id="earnings-health" viewBox="0 0 520 390" role="img" aria-label="Ten-year net group earnings versus change in forest health before fire"></svg><figcaption id="recap-plan"></figcaption><p id="recap-values"></p><small>Earnings exclude the starting grant and include saved feed costs.</small></figure>`;
  document.body.append(dialog);dialog.querySelector('#recap-one-back').onclick=()=>dialog.close();
  return {dialog,open(plan){
   const svg=dialog.querySelector('svg');svg.replaceChildren();const points=alternatives(),chosen=beforeFire(plan),xs=points.map(p=>p.earnings),ys=points.map(p=>p.healthChange);

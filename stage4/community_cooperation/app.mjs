@@ -93,7 +93,7 @@ function render(){
  const p=current(),done=state.phase==='committed',host=!fireReview&&state.role==='room',room=role==='room';
  $('round-panel').classList.toggle('is-committed',done);
  $('role').value=role;$('role').disabled=!host||done||mutating;
- $('phase').textContent=done?'SHARED PLAN':state.phase==='review'?'DISCUSS':'SURVEY';
+ $('phase').textContent=done?'SHARED PLAN':room||state.phase==='review'?'DISCUSS':'SURVEY';
  $('task').textContent=done?'Shared plan':room?'Bring the plans together':role==='community'?'Choose a livelihood':role==='ecology'?'Choose a patch to restore':'Choose a patch to remove';
  $('goal').textContent=done?'':room?'Discuss and commit the plan.':role==='community'?(p?.key==='B'?'You have 2 credits; the group can borrow more.':'You have 2 credits. Choose one opportunity.'):'Inspect A, B and C. Propose one.';
  $('patches').hidden=done||room;
@@ -104,11 +104,12 @@ function render(){
  if(room||done){
   for(const team of ['ecology','removal','community']){
    const key=state.proposals[team];
-   if(integrated&&state.phase!=='survey'){
+   if(integrated){
     const label=document.createElement('label');label.className='room-choice';label.textContent=roleName[team];
     const select=document.createElement('select');select.id='plan-'+team;select.setAttribute('aria-label',roleName[team]+' choice');
+    if(!key){const waiting=new Option('Choose','');waiting.disabled=true;select.append(waiting);}
     for(const choice of ['A','B','C'])select.append(new Option(choice+(team==='community'?' / '+(choice==='A'?'Nursery':choice==='B'?'Coffee':'Grazing'):''),choice));
-    select.value=key;select.disabled=!host||done||mutating;select.onchange=()=>action('propose',{team,patch:select.value});label.append(select);$('terms').append(label);
+    select.value=key||'';select.disabled=!host||done||mutating;select.onchange=()=>action('propose',{team,patch:select.value});label.append(select);$('terms').append(label);
    }else line($('terms'),`${roleName[team]}: ${key?key+(team==='community'?' / '+CONFIG.opportunities[key].name:''):'waiting'}`,'plan-row');
   }
   if(state.assessment){
@@ -118,7 +119,7 @@ function render(){
    $('status').textContent=a.issue||(!a.nurseryOrder&&state.proposals.community==='A'?'No restoration order for A. The nursery has no buyer.':'');
   }
   if(integrated&&done)$('finding').textContent='Simulation: choices on the map over time.';
-  if(host&&!done){const b=btn(state.phase==='survey'?'Reveal plans':'Commit plan',()=>action(state.phase==='survey'?'reveal':'commit'));b.disabled=mutating||!Object.values(state.ready).every(Boolean)||(state.phase==='review'&&!!state.assessment?.issue);$('decision').append(b);}
+  if(host&&!done){const reveal=!integrated&&state.phase==='survey';const b=btn(reveal?'Reveal plans':'Commit plan',()=>action(reveal?'reveal':'commit'));b.disabled=mutating||!Object.values(state.ready).every(Boolean)||(!reveal&&!!state.assessment?.issue);$('decision').append(b);}
   if(host&&done)$('decision').append(btn('Revise plan',()=>action('revise')));
  }else{
   if(p){
@@ -145,7 +146,7 @@ function render(){
  if(integrated){$('fire-controls').hidden=!done||state.proposals.community==='C';$('game-mode').querySelector('[value=recap-one]').disabled=!done;}
  $('recovery-label').textContent=years+'y';$('recovery').value=years;
  $('livelihood').textContent=result?.livelihood||'';
- $('with').setAttribute('aria-pressed',String(withPlan));$('without').setAttribute('aria-pressed',String(!withPlan));
+ $('with')?.setAttribute('aria-pressed',String(withPlan));$('without')?.setAttribute('aria-pressed',String(!withPlan));
  for(const b of document.querySelectorAll('[data-view]')){b.classList.toggle('active',b.dataset.view===view);b.disabled=busy;}
  renderFire();
 }
@@ -211,7 +212,7 @@ $('plot-plants').onchange=()=>{if($('plot-plants').value)meet($('plot-plants').v
 $('recovery').oninput=()=>{years=Number($('recovery').value);running=false;updateProjection();render();};
 $('fire-time').oninput=()=>{running=false;clock=Number($('fire-time').value);forest.setFireTime(clock/(integrated?FIRE_END:CONFIG.duration));renderFire();};
 if($('run-fire'))$('run-fire').onclick=()=>{if(clock>=CONFIG.duration)clock=0;running=!running;renderFire();};
-$('with').onclick=()=>{withPlan=true;updateProjection();render();};$('without').onclick=()=>{withPlan=false;updateProjection();render();};
+if($('with'))$('with').onclick=()=>{withPlan=true;updateProjection();render();};if($('without'))$('without').onclick=()=>{withPlan=false;updateProjection();render();};
 $('teams-open').onclick=()=>{
  $('teams').querySelector('h1').textContent=fireReview?'Sources':'Teams';
  $('teams').querySelector(':scope > p').hidden=fireReview;

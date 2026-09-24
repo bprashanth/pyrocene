@@ -100,8 +100,8 @@ class Store:
                 if role != 'room':
                     raise RoundError('The room host commits the shared plan.', 403)
                 a = assessment(room['proposals'])
-                if room['phase'] != 'review' or not a or a['issue']:
-                    raise RoundError(a['issue'] if a and a['issue'] else 'Discuss the three proposals first.', 409)
+                if room['phase'] not in ('survey', 'review') or not a or a['issue']:
+                    raise RoundError(a['issue'] if a and a['issue'] else 'Choose a plan for all three teams first.', 409)
                 room['phase'] = 'committed'
             elif action == 'revise':
                 if role != 'room' or room['phase'] != 'committed':

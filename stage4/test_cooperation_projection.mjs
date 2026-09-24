@@ -6,9 +6,11 @@ import {referenceWorld,snapshot} from './memory-model.mjs';
 
 test('Unplanted removal cycles, while planted plots establish',()=>{
  const plan={ecology:'C',removal:'A',community:'B'};
- for(const year of [0,3,6,9])assert.equal(projection(plan,year).removalCover,0);
- for(const year of [2,5,8])assert.ok(projection(plan,year).removalCover>.7);
- assert.ok(fineField(plan,2,true)[25*60+15].fuel>fineField(plan,3,true)[25*60+15].fuel);
+ for(const year of [0,8])assert.equal(projection(plan,year).removalCover,0);
+ assert.ok(projection(plan,4).removalCover>.8);
+ for(let y=.1;y<=10;y+=.1)assert.ok(Math.abs(projection(plan,y).removalCover-projection(plan,y-.1).removalCover)<.04);
+ assert.ok(fineField(plan,4,true)[25*60+15].fuel>fineField(plan,8,true)[25*60+15].fuel);
+ assert.equal(projection(plan,10).repeatClearings,1);
  assert.equal(projection({...plan,removal:'C'},8).removalCover,0);
  assert.equal(projection({...plan,removal:'B'},8).removalCover,0);
  assert.equal(projection(plan,10).shadeHeight,12);

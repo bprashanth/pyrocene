@@ -57,6 +57,18 @@ class Rooms(unittest.TestCase):
         with self.assertRaises(RoundError):
             self.call('propose', 'community', team='community', patch='D')
 
+    def test_direct_host_commit_requires_complete_compatible_choices(self):
+        with self.assertRaises(RoundError): self.call('commit')
+        for role, choice in [('ecology','B'),('removal','C'),('community','B')]:
+            self.call('propose', team=role, patch=choice)
+        with self.assertRaisesRegex(RoundError, 'coffee'): self.call('commit')
+        self.call('propose',team='ecology',patch='A')
+        with self.assertRaises(RoundError): self.call('commit','community')
+        result=self.call('commit')
+        self.assertEqual(result['phase'],'committed')
+        self.assertGreater(result['assessment']['debt'],0)
+        with self.assertRaises(RoundError): self.call('commit')
+
     def test_separate_rooms(self):
         self.call('propose', 'community', team='community', patch='C')
         second = self.store.request('new', {})

@@ -15,7 +15,7 @@ export const COOPERATION_BRIEFINGS={
   'Propose your choice. The other teams may want the same land, so agree on one shared plan before testing recovery and fire.'
  ]},
  room:{title:'Bring the plans together.',paragraphs:[
-  'Three teams share this landscape. Reveal their choices and ask each group to explain its proposal.',
+  'Three teams share this landscape. Ask each group to explain its proposal, then edit the choices together.',
   'Use the three choices to agree on land use. A coffee plot or pasture cannot also become native forest. The group may borrow money; negative funds are debt.',
   'Commit the plan, compare its costs and benefits, then move Projection to see the whole landscape change.'
  ]}

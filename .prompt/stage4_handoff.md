@@ -1,5 +1,17 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest refinement: direct Room editing
+
+See [room simplification](../chronology/2026-09-24-cooperation-room-simplification.md),
+baseline `506e5ac`. Room now starts with editable per-role dropdowns and Commit;
+there is no Reveal gate in main Cooperation. Backend permits host commit from
+survey when all choices are complete and compatible. Main With/Without buttons
+are gone. Recap I uses four plain-language bullets. It still plots ten-year
+outcomes for plans chosen at the start, excluding wildfire. Unplanted removal
+now fades through one slow eight-year return/clearance cycle, with matching
+fuel and completed-cut accounting. All earlier three-year-cycle notes below
+are historical. Combined and the prototype comparison controls remain unchanged.
+
 ## Latest: shared debt, Projection and Recap I
 
 Read [this checkpoint](../chronology/2026-09-24-cooperation-debt-and-projection.md)

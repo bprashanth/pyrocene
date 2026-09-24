@@ -26,7 +26,13 @@ export function surveyClue(id){
  if(!c.invasive)return 'Damp litter and little fuel; no invasive grass was found here.';
  return c.fuel>.7?'Grass occurs beneath this opening. Dry stems form a continuous layer.':'Grass occurs beneath this opening, but the fuel is scattered.';
 }
-export function removalCycle(plan,years){return plan.removal===plan.ecology||plan.community==='B'&&plan.removal==='B'?0:clamp((years%3)/2.2)*.88;}
+export const REMOVAL_CYCLE_YEARS=8;
+export function removalCycle(plan,years){
+ if(plan.removal===plan.ecology||plan.community==='B'&&plan.removal==='B')return 0;
+ // A broad, continuous cycle: returning grass, gradual clearance, then return.
+ // No reset at a year boundary that flashes an entire square off at once.
+ return .44*(1-Math.cos(2*Math.PI*years/REMOVAL_CYCLE_YEARS));
+}
 export function fineField(plan=null,years=10,cycles=false){
  const growth=clamp(years/10),r=plan&&patch(plan.removal).id,e=plan&&patch(plan.ecology).id;
  return CANOPY.cells.map(([count,height],i)=>{
@@ -76,7 +82,7 @@ export function outcome(plan,years=10){
  return {left,conflict,livelihood,health:60-b.healthLoss+b.healthGain*clamp(years/10)};
 }
 export const CLUES={
- ecology:{A:'Native stems remain among the grasses; clearing them all would damage recovery.',B:'An old opening can recover, but its southern neighbour affects shelter.',C:'Dry grass joins the southern edge to openings north; the plots on either side are damp.'},
+ ecology:{A:'This plot has healthy natives and newly arriving invasives. Clearing must be done carefully before restoration.',B:'This part of the forest has degraded into open land mixed with natives and invasives.',C:'Dry grass joins the southern edge to openings north; the plots on either side are damp.'},
  removal:{A:'The largest harvest is mixed with native stems.',B:'Dry grass covers open ground with few native stems.',C:'A smaller harvest crosses the gap between the field and the forest.'},
  community:{A:'Raise the native plants needed to restore A.',B:'Grow coffee beneath shade trees; nearby forest helps keep the ground cool and damp.',C:'Burn old pasture growth so cattle can graze the regrowth.'}
 };
