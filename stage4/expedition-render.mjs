@@ -211,16 +211,20 @@ export class ExpeditionForest extends ExplorationForest {
   _positionExploreLabels(){
     this.positionObservations?.();
     const occupied=[];
-    for(const b of this.exploreLabels.children){
+    // Prioritise the inspected species, then keep labels beside their plants.
+    // At wide zoom hide collisions instead of building a tower of long leaders.
+    const labels=[...this.exploreLabels.children].sort((a,b)=>Number(b.dataset.specimen===this.focusedSpecimen)-Number(a.dataset.specimen===this.focusedSpecimen));
+    for(const b of labels){
       const a=b._world||[0,0,0],p=new T.Vector3(a[0],a[1]*(this.tlsActive?this.detailBlend:1),a[2]).project(this.camera);
       b.hidden=this.detailBlend<.85||Math.abs(p.x)>.97||Math.abs(p.y)>.92||p.z>1;
       if(b.hidden)continue;
       const notes=!!document.querySelector('#plot-notes:not([hidden]),#plant-guide:not([hidden])');
       const w=b.offsetWidth||140,right=notes&&this.width>700?this.width-370:this.width-12;
-      const x=clamp((p.x*.5+.5)*this.width,w/2+12,right-w/2),y=(-p.y*.5+.5)*this.height;
-      let ly=clamp(y,120,this.height-(notes&&this.width<=700?350:145));
-      while(occupied.some(o=>Math.abs(o.x-x)<(o.w+w)/2+8&&Math.abs(o.y-ly)<40))ly-=42;
-      occupied.push({x,y:ly,w});b.style.setProperty('--pin-shift',`${y-ly}px`);b.style.transform=`translate(${x}px,${ly}px)`;
+      const x=(p.x*.5+.5)*this.width,y=(-p.y*.5+.5)*this.height,ly=y-30;
+      const collides=occupied.some(o=>Math.abs(o.x-x)<(o.w+w)/2+8&&Math.abs(o.y-ly)<40);
+      b.hidden=collides||x<w/2+12||x>right-w/2||ly<60||ly>this.height-(notes&&this.width<=700?350:85);
+      if(b.hidden)continue;
+      occupied.push({x,y:ly,w});b.style.setProperty('--pin-shift','30px');b.style.transform=`translate(${x}px,${ly}px)`;
     }
   }
   _cpuCamera(){

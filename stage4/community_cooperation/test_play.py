@@ -162,6 +162,58 @@ class Play(unittest.TestCase):
         expect(self.page.locator('#livelihood')).to_contain_text('No order')
         self.shot('nursery-without-order')
 
+    def test_fire_review_without_proposals(self):
+        before=self.page.evaluate('communityCooperationDiagnostics().state')
+        review=self.context.new_page();review.goto(self.base+'/community-cooperation/#fire=1');self.ready(review)
+        expect(review.locator('#task')).to_have_text('Follow the fire')
+        self.assertEqual(review.locator('#patch-actions button,#decision button').count(),0)
+        expect(review.locator('#role')).to_be_hidden()
+        review.locator('#fire-time').focus();review.locator('#fire-time').press('End')
+        base=review.evaluate('communityCooperationDiagnostics().fire')
+        review.screenshot(path=str(QA/'review-current-forest.png'))
+        review.locator('#with').click()
+        self.assertLess(review.evaluate('communityCooperationDiagnostics().fire'),base)
+        review.evaluate('() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')
+        review.screenshot(path=str(QA/'review-restored-C.png'))
+        review.locator('#review-ignition').select_option('A')
+        review.locator('#fire-time').focus();review.locator('#fire-time').press('End')
+        review.locator('#teams-open').click()
+        expect(review.locator('#teams h1')).to_have_text('Sources')
+        expect(review.locator('#teams > p')).to_be_hidden()
+        self.assertEqual(self.page.evaluate('communityCooperationDiagnostics().state'),before)
+
+    def test_community_recap_has_fire_review_link(self):
+        self.page.goto(self.base+'/community/')
+        expect(self.page.locator('#community-prelude')).to_be_visible(timeout=60000)
+        link=self.page.locator('#community-prelude').get_by_role('link',name='Review fire')
+        expect(link).to_be_visible()
+        with self.page.expect_popup() as popup:link.click()
+        review=popup.value;self.ready(review)
+        expect(review.locator('#task')).to_have_text('Follow the fire')
+
+    def test_zoom_out_keeps_labels_and_leaders_fixed(self):
+        self.page.locator('[data-patch="C"]').click()
+        self.page.get_by_role('button',name='Close view',exact=True).click();self.ready()
+        before=self.page.locator('[data-specimen]').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).fontSize)')
+        self.page.mouse.move(1050,600);self.page.mouse.wheel(0,2400)
+        self.page.wait_for_function('communityCooperationDiagnostics().forest.distance > 1200')
+        self.assertEqual(self.page.locator('[data-specimen]').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).fontSize)'),before)
+        heights=self.page.locator('[data-specimen]:visible').evaluate_all('(els)=>els.map(e=>parseFloat(getComputedStyle(e,"::after").height))')
+        self.assertTrue(heights);self.assertTrue(all(h==12 for h in heights))
+        self.shot('close-wide-no-stilts')
+
+    def test_main_expedition_zoom_out_has_no_stilts(self):
+        self.page.goto(self.base+'/expedition.html?fresh=1')
+        self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+        for name in ['More','Map','Explore E4','Close view']:
+            self.page.get_by_role('button',name=name,exact=True).click()
+        self.page.wait_for_function('pyroceneDiagnostics().detailBlend === 1')
+        self.page.mouse.move(1100,600);self.page.mouse.wheel(0,2400)
+        self.page.wait_for_function('pyroceneDiagnostics().distance > 1200')
+        heights=self.page.locator('[data-specimen]:visible').evaluate_all('(els)=>els.map(e=>parseFloat(getComputedStyle(e,"::after").height))')
+        self.assertTrue(heights);self.assertTrue(all(h==12 for h in heights))
+        self.shot('expedition-wide-no-stilts')
+
     def test_laptop_layout_and_intact_flank(self):
         self.page.set_viewport_size({'width':1280,'height':800})
         self.page.locator('[data-patch="B"]').click()

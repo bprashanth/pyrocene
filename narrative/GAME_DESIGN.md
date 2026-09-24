@@ -795,3 +795,9 @@ Cooperation, Negligence and Combined are unchanged. The proposal to shorten the
 main sequence is not implemented. See [prototype rules and play findings](../stage4/community_cooperation/README.md)
 and [chronology](../chronology/2026-09-24-community-cooperation-prototype.md).
 A newly started `run.sh` serves the prototype at the same path on port 8024.
+
+Height colours remain pink/blue/green; fuel is discovered through plant surveys,
+not a replacement LiDAR palette. Fire crosses square boundaries with a forward
+bias and limited side spill. `/community/` has a Review fire link to the separate
+`/community-cooperation/#fire=1` comparison, which needs no proposals and changes
+no room state. See the [survey/fire refinement checkpoint](../chronology/2026-09-24-community-fire-survey-and-zoom.md).

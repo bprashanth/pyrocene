@@ -1,14 +1,9 @@
 import {RoundForest} from '../round-render.mjs';
-import {fineField} from './model.mjs';
 import {patch} from '../round-model.mjs';
 const T=globalThis.THREE;
-const field=fineField();
 export class CommunityForest extends RoundForest{
  async load(){
   const result=await super.load();
-  const field=fineField(),data=new Uint8Array(60*60*4);
-  field.forEach((c,i)=>{data[i*4]=Math.round(c.invasion*255);data[i*4+3]=255;});
-  this.fuelTexture=new T.DataTexture(data,60,60,T.RGBAFormat);this.fuelTexture.needsUpdate=true;
   this.styleGround(this.cloud?.material);
   return result;
  }
@@ -16,12 +11,8 @@ export class CommunityForest extends RoundForest{
   if(!material)return;
   // Remove the accepted game's authored narrow notch in this prototype only.
   material.vertexShader=material.vertexShader.replace('a*=1.-trialGap(p)*.98;','');
-  material.uniforms.scenarioFuel={value:this.fuelTexture};
-  material.vertexShader='uniform sampler2D scenarioFuel;'+material.vertexShader;
-  material.vertexShader=material.vertexShader.replace('void treatment(inout vec3 p,inout vec3 c,inout float a){',`void treatment(inout vec3 p,inout vec3 c,inout float a){
-   float inv=texture2D(scenarioFuel,(p.xz+450.)/900.).r;
-   if(p.y<4.){c=mix(vec3(.27,.49,.38),vec3(.88,.35,.59),inv);a*=.45+.55*inv;}
-  `);
+  // Keep the original height palette. Fuel is discovered in the survey, not
+  // painted over the airborne scan or used to recolour low native vegetation.
   material.needsUpdate=true;
  }
  _enterTLS(cached){super._enterTLS(cached);this.styleGround(this.detailCloud?.material);}
@@ -43,9 +34,7 @@ export class CommunityForest extends RoundForest{
   const r=this.plan?patch(this.plan.removal):null,e=this.plan?patch(this.plan.ecology):null;
   const dot=(x,y,z,wood=false,growth=false)=>{
    const id=Math.floor((z+450)/150)*6+Math.floor((x+450)/150),index=Math.floor((z+450)/15)*60+Math.floor((x+450)/15);
-   const inv=field[index]?.invasion??0;
-   let a=wood?.85:.66,c=wood?'#b4dcca':y<4?(inv>.4?'#d15b91':'#487a5e'):y<10?'#519ebc':'#99d6aa';
-   if(y<4)a*=.45+.55*inv;
+   let a=wood?.85:.66,c=wood?'#b4dcca':y<2?'#c75085':y<10?'#519ebc':'#99d6aa';
    if(growth){y*=this.recovery;a*=this.recovery;c='#85dba8';}
    else if(this.plan){if((id===r.id||id===e.id)&&y<3)a*=.15;if(id===r.id&&y>3&&((x+450)%150)/150<r.damage/100)a*=.05;}
    const at=this.fire?.[index];

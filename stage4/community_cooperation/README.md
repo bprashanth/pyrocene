@@ -20,6 +20,13 @@ an unaffordable plan. Revise plan reopens discussion after the fire comparison.
 New room makes an independent session; it does not erase other teams' rooms.
 Rooms live in server memory, expire on restart, and are limited to 64.
 
+For fire review without proposals, open **`/community-cooperation/#fire=1`**.
+The **Review fire** link in `/community/` and in the prototype opens it in a
+separate tab. Scrub the fire slider or Run fire. Compare Current forest with
+Restored C, and choose an ignition in C or the neighbouring field. This review
+creates no server room and cannot change an existing proposal. Recovery assumes
+continued care, not an immediate fire barrier after planting.
+
 No extra livelihood menu: each of the same three squares has one community
 opportunity. Investment is numeric; return and forest health are qualitative.
 
@@ -70,7 +77,9 @@ and the fire field agree about these flanks. Other openings carry the invasion
 northward. Players can click surrounding plots, not just the A/B/C buttons.
 
 The renderer retains dense measured airborne/TLS fragments and the normal
-point-cloud navigation. Ground colours use the same invasion field as fire.
+point-cloud navigation. Original height colours are preserved: pink low, blue
+middle, green high. Fuel does not recolour the LiDAR. Close inspection, the plant
+inventory and short survey clues reveal the fuel differences instead.
 The old RoundForest narrow notch is disabled in this subclass. A small ignition
 grows into an irregular front; bright points cool to a muted scar. Both WebGL
 and software Canvas paths support exploration, close view, recovery and fire.
@@ -86,24 +95,36 @@ The recovery slider changes fuel/moisture and recomputes spread, not only visual
 The model is the existing educational Rothermel-style propagation on a new field,
 not a historical NBR scar or a predictive wildfire tool. Maturity assumes care.
 
+The revised run lasts 20 simulated minutes with a fixed northward wind. Fuel
+and treatment effects blend across plot edges; there is no hard square-shaped
+fuel cap. Damp flanks can carry a little native-litter fire without containing
+invasive grass. Forward spread dominates, with limited lateral and backward
+spread. The wind parameter is opt-in; other missions retain their old wind rule.
+
+Close-view labels now keep fixed-size text and short leaders in all inherited
+views. Crowded labels hide rather than stack into tall poles as the camera pulls
+away. The existing plant list still contains every species available to inspect.
+
 ## Findings from actual UI play
 
 1. Community C + ecology C conflicts immediately. This gives the room a concrete
    land-use decision instead of letting incompatible benefits stack.
 2. Removal A + ecology C + community B is affordable with **1 credit left**.
-   At year 10 the paired fire is **7.22 ha**, versus **35.91 ha** without work.
+   At year 10 the paired fire is **4.88 ha**, versus **20.00 ha** without work.
    At year 0 more burns: choosing restoration does not instantly create shelter.
 3. All A funds a nursery order and leaves **7 credits**, but fails to interrupt
-   the edge connection. Its year-10 fire is **32.71 ha**.
+   the edge connection. Its year-10 fire is **20.00 ha**.
 4. Ecology A + removal B + shade B is unaffordable, forcing a funding revision.
 5. Ecology B + nursery A can be affordable but produces no nursery order.
 6. Ecology/removal A + grazing C leaves **8 credits** but the fire escapes C;
-   projected burn area is **33.03 ha**. Feed savings do not protect the forest.
+   projected burn area is **17.87 ha**. Feed savings do not protect the forest.
 
 These are deterministic scenario comparisons, not effectiveness estimates or
 evidence that people find the game fun. Browser play makes the intended dilemma
 legible; a facilitated group session is still needed to judge discussion quality.
 No multi-agent player session or human workshop is claimed for this prototype.
+These figures use the revised 20-minute scenario. The original 32-minute trial
+and its previous figures remain recorded at checkpoint `fb94232`.
 
 Iterations after screen inspection/play:
 
@@ -123,6 +144,8 @@ Useful captures: `choice-B.png`, `choice-C.png`, `land-conflict.png`,
 `pasture-close.png`, `flank-survey.png`, `grazing-small-ignition.png`,
 `grazing-spread.png`, `without-work-fire.png`, `restored-connection-fire.png`,
 `software-close.png`, `software-fire.png`.
+Latest review/zoom captures: `review-current-forest.png`, `review-restored-C.png`,
+`close-wide-no-stilts.png`, `expedition-wide-no-stilts.png`.
 
 ## Verification
 
@@ -134,10 +157,12 @@ python3 -m stage4.serve --check
 python3 -m stage4.serve --host 0.0.0.0 --port 8036
 ```
 
-Implementation stays in this directory. Shared changes are only server routing,
-the independent room store instance, and portable-package inclusion. No dropdown
-entry, accepted-game model change or saved-game migration has been added. Revert
-this prototype's scoped commit to remove it; never reset unrelated user edits.
+Most implementation stays in this directory. Shared changes are server routing,
+the independent room store instance, portable-package inclusion, the optional
+wind argument and the Close-view label fix. The old Community page also links
+to fire review. No dropdown entry, accepted-game rule change or saved-game
+migration has been added. Revert scoped commits to remove this experiment;
+never reset unrelated user edits.
 
 ## Sources and limits
 

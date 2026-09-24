@@ -83,7 +83,7 @@ function fineTerrain(rates,index){
 }
 function push(heap,item){heap.push(item);let i=heap.length-1;while(i){const parent=(i-1)>>1;if(heap[parent][0]<=item[0])break;heap[i]=heap[parent];i=parent;}heap[i]=item;}
 function pop(heap){const first=heap[0],tail=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let child=i*2+1;if(child+1<heap.length&&heap[child+1][0]<heap[child][0])child++;if(heap[child][0]>=tail[0])break;heap[i]=heap[child];i=child;}heap[i]=tail;}return first;}
-function shortest(record,duration,fineField=null){
+function shortest(record,duration,fineField=null,wind=null){
   const n=FINE_SIZE*FINE_SIZE,dist=Array(n).fill(Infinity),done=Uint8Array.from({length:n}),sourceSector=WORLD.find(c=>c.ignition)?.id??SCENARIO.ignition;
   const sx=(sourceSector%6)*10+5,sy=Math.floor(sourceSector/6)*10+5,source=sy*FINE_SIZE+sx;
   const rates=fineField?fineField.map(terrainRate):cachedRates(record),cell=index=>fineField?rates[index]:fineTerrain(rates,index),sourceTerrain=cell(source);if(!sourceTerrain.active||sourceTerrain.rate<=0)return dist;dist[source]=0;const heap=[[0,source]];
@@ -94,15 +94,19 @@ function shortest(record,duration,fineField=null){
       const ny=y+dy,nx=x+dx;if(ny<0||ny>=FINE_SIZE||nx<0||nx>=FINE_SIZE)continue;
       const v=ny*FINE_SIZE+nx;if(done[v])continue;const t=cell(v);if(!t.active||t.rate<=0)continue;
       if(dx&&dy){const horizontal=cell(y*FINE_SIZE+nx),vertical=cell(ny*FINE_SIZE+x);if(!horizontal.active||!vertical.active||horizontal.rate<=0||vertical.rate<=0)continue;}
-      const directional=1+.35*((dx-dy)/Math.SQRT2),next=best+15*(dx&&dy?Math.SQRT2:1)/(t.rate*directional)/60;
+      // Optional elliptical directional spread for the isolated community
+      // experiment. Existing missions retain their exact original wind rule.
+      const cosine=wind?(dx*wind.x+dy*wind.y)/(dx&&dy?Math.SQRT2:1):0;
+      const directional=wind?(1-wind.strength*wind.strength)/(1-wind.strength*cosine):1+.35*((dx-dy)/Math.SQRT2),next=best+15*(dx&&dy?Math.SQRT2:1)/(t.rate*directional)/60;
       if(next<dist[v]){dist[v]=next;push(heap,[next,v]);}
     }
   }return dist;
 }
-export function simulate(record=null,{duration=DURATION_MINUTES,fineField=null}={}){
+export function simulate(record=null,{duration=DURATION_MINUTES,fineField=null,wind=null}={}){
+  if(wind&&(!Number.isFinite(wind.x)||!Number.isFinite(wind.y)||!Number.isFinite(wind.strength)||wind.strength<0||wind.strength>.9||Math.abs(Math.hypot(wind.x,wind.y)-1)>.001))throw Error('Wind needs a unit direction and strength from 0 to .9.');
   if(fineField!==null){if(!Array.isArray(fineField)||fineField.length!==3600)throw Error('A fine fuel field needs 3600 cells.');for(const c of fineField){if(!c||typeof c.active!=='boolean')throw Error('Invalid fine fuel cell.');for(const k of ['fuel','moisture','exposure'])finiteUnit(c[k],k);}}
-  if(record!==null)validateRecord(record);const raw=shortest(record,duration,fineField),arrival=raw.map(t=>Number.isFinite(t)&&t<=duration?Math.round(t*10)/10:null),coarse=SECTORS.map(s=>{let min=Infinity;for(let y=s.r*10;y<s.r*10+10;y++)for(let x=s.c*10;x<s.c*10+10;x++)min=Math.min(min,raw[y*FINE_SIZE+x]);return min;});
-  return {arrival,coarse,duration,ignition:WORLD.find(c=>c.ignition)?.id??SCENARIO.ignition,weather:SCENARIO.weather};
+  if(record!==null)validateRecord(record);const raw=shortest(record,duration,fineField,wind),arrival=raw.map(t=>Number.isFinite(t)&&t<=duration?Math.round(t*10)/10:null),coarse=SECTORS.map(s=>{let min=Infinity;for(let y=s.r*10;y<s.r*10+10;y++)for(let x=s.c*10;x<s.c*10+10;x++)min=Math.min(min,raw[y*FINE_SIZE+x]);return min;});
+  return {arrival,coarse,duration,ignition:WORLD.find(c=>c.ignition)?.id??SCENARIO.ignition,weather:wind?'Fixed northward scenario wind':SCENARIO.weather};
 }
 export function scoreRecord(record,{teamResult=null,referenceResult=null}={}){
   validateRecord(record);let observed=0,error=0;for(const s of ACTIVE){const guess=record.cells[s.id];if(!guess)continue;observed++;const ref=WORLD[s.id];error+=Math.abs(guess.fuel-ref.fuel)+Math.abs(guess.moisture-ref.moisture);}

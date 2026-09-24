@@ -1,7 +1,7 @@
 {
   "grant": 4,
   "communityGrant": 2,
-  "duration": 32,
+  "duration": 20,
   "opportunities": {
     "A": {"name": "Native nursery", "investment": 2, "description": "Raise the native plants needed to restore A.", "returns": "High if restoration happens here.", "health": "High with native restoration."},
     "B": {"name": "Cupuaçu under shade", "investment": 6, "description": "Grow cupuaçu fruit beneath mixed shade trees.", "returns": "Low at first; later harvests depend on the surrounding forest.", "health": "Medium; a tended crop plot, not native forest."},
