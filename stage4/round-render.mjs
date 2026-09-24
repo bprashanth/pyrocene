@@ -98,12 +98,16 @@ export class RoundForest extends ExpeditionForest{
  makeRegrowth(cx,cz,prefix='regrowth',cover=this.roundFX.invasiveCover){
   const cloud=prefix+'Cloud',positions=prefix+'Positions';
   if(this[cloud]){this.scene.remove(this[cloud]);this[cloud].geometry.dispose();this[cloud].material.dispose();this[cloud]=null;}
-  this[positions]=new Float32Array(this.regrowthSource||[]);for(let n=0;n<this[positions].length;n+=3){this[positions][n]+=cx;this[positions][n+2]+=cz;}
+  const source=this.regrowthSource||[];
+  // Main Cooperation uses a lighter sample so returning grass remains points,
+  // not an opaque tile made from every folded scan fragment.
+  this[positions]=new Float32Array(this.organicRegrowth?source.filter((_,i)=>Math.floor(i/3)%8===0):source);for(let n=0;n<this[positions].length;n+=3){this[positions][n]+=cx;this[positions][n+2]+=cz;}
   if(this.fallback)return;
   const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(this[positions],3));
   const m=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{invasiveCover:cover,fire:{value:this.arrivalTexture},hasFire:{value:this.fire?1:0},fireTime:{value:this.fireTime*240}},
    vertexShader:`uniform float invasiveCover;varying float alpha;varying vec2 mapUv;void main(){vec3 p=position;p.y*=.6+invasiveCover;mapUv=vec2((p.x+450.)/900.,(p.z+450.)/900.);float group=fract(sin(dot(floor(p.xz/8.),vec2(12.9898,78.233)))*43758.5453);alpha=invasiveCover*.65*smoothstep(group-.08,group+.08,invasiveCover);vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(1200./-mv.z,1.6,3.);}`,
    fragmentShader:`uniform sampler2D fire;uniform float hasFire,fireTime;varying float alpha;varying vec2 mapUv;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;vec3 c=vec3(.91,.28,.55);vec4 f=texture2D(fire,mapUv);float age=fireTime-f.r*255.;if(hasFire>.5&&f.a>.5&&age>=0.)c=mix(vec3(1.,.4,.08),vec3(.46,.29,.19),clamp(age/16.,0.,1.));gl_FragColor=vec4(c,alpha*(1.-smoothstep(.18,.5,d)));}`});
+  if(this.organicRegrowth)m.vertexShader=m.vertexShader.replace('invasiveCover*.65*smoothstep(group-.08,group+.08,invasiveCover)','invasiveCover*.38');
   this[cloud]=new T.Points(g,m);this[cloud].visible=!!this.succession;this[cloud].frustumCulled=false;this.scene.add(this[cloud]);
  }
  makeEmbers(){
@@ -154,6 +158,7 @@ export class RoundForest extends ExpeditionForest{
    if(!growth&&this.succession&&id===e?.id){if(y>5)alpha*=.08+.18*this.succession.nativeFraction;else{alpha*=.4+this.succession.invasive;if(this.succession.invasive>.4)colour='#d34b88';}}
    if(!growth&&!weeds&&id===this.roundFX.extraSector.value){const v=Math.sin(Math.floor(x/8)*12.9898+Math.floor(z/8)*78.233)*43758.5453,group=v-Math.floor(v);if(y>4)alpha*=group<this.clearing.nativeFraction?1:.025;else if(y>.5){alpha*=.1+.35*this.clearing.invasive;if(this.clearing.invasive>.4)colour='#d34b88';}}
    if(weeds){const cover=(weeds===2?this.clearing:this.succession).invasive;y*=.6+cover;const v=Math.sin(Math.floor(x/8)*12.9898+Math.floor(z/8)*78.233)*43758.5453,group=v-Math.floor(v);alpha=cover*.65*smooth(group-.08,group+.08,cover);colour='#e8488c';}
+   if(weeds&&this.organicRegrowth)alpha=(weeds===2?this.clearing:this.succession).invasive*.38;
    const col=Math.floor((x+450)/15),row=Math.floor((z+450)/15),at=this.fire?.[row*60+col];
    if(Number.isFinite(at)&&this.fireTime*this.duration>=at&&(!CONFIG.extensions.broadFire||y<4)){const age=(this.fireTime*this.duration-at)/this.duration*240;colour=age<16?'#ffac44':'#956244';if(age>16)alpha*=.78;}
    v.set(x,y,z).project(this.camera);if(Math.abs(v.x)>1||Math.abs(v.y)>1||v.z>1||v.z< -1)return;ctx.fillStyle=colour;ctx.globalAlpha=alpha;ctx.fillRect((v.x*.5+.5)*w,(-v.y*.5+.5)*h,1.6,1.6);

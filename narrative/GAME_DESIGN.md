@@ -814,3 +814,22 @@ The default sequence is Expedition, Cooperation, Combined, then Recap.
 Negligence is hidden, not deleted. `?negligence=1` restores the archived two-team
 sequence for comparison. Combined has not received Community mechanics yet.
 See [integration and rollback notes](../chronology/2026-09-24-cooperation-community-integration.md).
+
+### Cooperation: discuss, borrow, then project the shared landscape
+
+The room can now borrow rather than reject a costly compatible plan. One A/B/C
+dropdown per role changes the shared proposal and its funds. Conflicting coffee,
+pasture and native restoration uses still need agreement before commitment.
+
+After committing, Recap I compares the allowed plans on net group earnings and
+forest-health change without fire. Then one Projection slider shows all selected
+plots: repeated invasive clearance/regrowth, native recovery and shade-grown
+coffee. Nursery production remains off-map. Grazing C includes a first-season
+burn; other choices expose a Fire slider at the projected year. Main ignition is
+always C, so coffee/nursery choices do not quietly move the spark elsewhere.
+There is no Run fire button. Revise plan reopens discussion.
+
+The graph's returns, repeated cuts and growth timings are explicit game
+assumptions, not calibrated predictions. Combined and the existing closing
+Recap remain unchanged. See [the projection checkpoint](../chronology/2026-09-24-cooperation-debt-and-projection.md)
+for assumptions, screenshots, test commands and rollback baseline `5ac5bb6`.

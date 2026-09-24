@@ -22,7 +22,7 @@ export function navigation(mode,role){
  nav.innerHTML='<select id="game-mode" aria-label="Game mode"><option value="expedition">Expedition</option><option value="play">Cooperation</option><option value="negligence" disabled>Negligence</option></select><select id="role" aria-label="Team view"><option value="removal">Removal</option><option value="ecology">Ecologist</option><option value="room">Room</option></select><button id="teams-open">Teams</button>';
  if(!negligenceEnabled){nav.querySelector('[value=negligence]').remove();nav.querySelector('#role').add(new Option('Community','community'),nav.querySelector('#role [value=room]'));}
  nav.querySelector('#game-mode').append(new Option('Combined','combined'));
- document.querySelector('header .wordmark').after(nav);nav.querySelector('#game-mode').value=mode;nav.querySelector('#role').value=role;return nav;
+ document.querySelector('header').append(nav);nav.querySelector('#game-mode').value=mode;nav.querySelector('#role').value=role;return nav;
 }
 // Combined never advances or mutates the shared room.
 export async function enterCombined(){

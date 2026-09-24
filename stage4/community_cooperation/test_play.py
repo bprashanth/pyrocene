@@ -152,8 +152,8 @@ class Play(unittest.TestCase):
     def test_unfunded_shade_and_unordered_nursery(self):
         self.propose('ecology','A');self.propose('removal','B');self.propose('community','B')
         self.reveal()
-        expect(self.page.get_by_role('button',name='Commit plan')).to_be_disabled()
-        expect(self.page.locator('#status')).to_contain_text('more credits')
+        expect(self.page.get_by_role('button',name='Commit plan')).to_be_enabled()
+        expect(self.page.locator('#terms')).to_contain_text('Debt:')
         self.shot('shade-needs-investment')
         self.propose('ecology','B');self.propose('community','A')
         self.page.locator('#role').select_option('room')

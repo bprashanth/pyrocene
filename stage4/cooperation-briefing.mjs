@@ -16,7 +16,7 @@ export const COOPERATION_BRIEFINGS={
  ]},
  room:{title:'Bring the plans together.',paragraphs:[
   'Three teams share this landscape. Reveal their choices and ask each group to explain its proposal.',
-  'Agree on funding and land use. A coffee plot or pasture cannot also become native forest. Teams can revise their proposals.',
-  'Commit the shared plan, then explore recovery and fire.'
+  'Use the three choices to agree on land use. A coffee plot or pasture cannot also become native forest. The group may borrow money; negative funds are debt.',
+  'Commit the plan, compare its costs and benefits, then move Projection to see the whole landscape change.'
  ]}
 };

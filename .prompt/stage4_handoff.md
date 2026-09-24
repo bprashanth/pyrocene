@@ -1,5 +1,25 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: shared debt, Projection and Recap I
+
+Read [this checkpoint](../chronology/2026-09-24-cooperation-debt-and-projection.md)
+first; it supersedes funding/preview notes below. Baseline `5ac5bb6`. Main
+Cooperation permits debt but not conflicting land uses. Room has one dropdown
+per role, one commit, then Recap I (earnings/health before fire) and a Projection
+slider for all chosen plots. Unplanted removal cycles; native/coffee canopies
+grow; nursery stays off-map. Grazing includes first-season fire in Projection.
+Other choices get a Fire slider at the selected projection year. All main fires
+ignite at C. Existing Recap and Combined are unchanged. Header controls stay
+top right. Review the explicit simulation assumptions before changing them.
+
+New modules: `cooperation-{projection,growth,recap}.mjs`. Tests:
+`stage4.test_cooperation`, `stage4/test_cooperation_projection.mjs`. New files
+are on server/package allowlists; restart Stage 4 to pick up allowlist changes.
+Rooms live in memory, so restart expires room links. `run.sh` uses latest files.
+No need to restart any other stage. Preserve untracked user docs
+`narrative/CONCEPT_NOTE.md`, `narrative/RECAP.md`, `stage4/partner_note.md`
+and modified `stage4/v2_recap.md`.
+
 ## Update, 24 September: Community integrated into Cooperation
 
 This update supersedes the older current-state notes below. Main `/round.html`

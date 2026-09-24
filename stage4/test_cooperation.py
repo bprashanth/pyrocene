@@ -34,7 +34,17 @@ class CooperationPlay(unittest.TestCase):
         self.context.close(); self.assertEqual(self.errors, [])
 
     def ready(self, page=None):
-        (page or self.page).wait_for_function('globalThis.roundDiagnostics && roundDiagnostics().state && !roundDiagnostics().busy', timeout=60000)
+        p=page or self.page
+        p.wait_for_function('globalThis.roundDiagnostics && roundDiagnostics().state && !roundDiagnostics().busy', timeout=60000)
+        if p.locator('#cooperation-recap').is_visible():
+            p.screenshot(path=str(QA/'recap-I.png'))
+            expect(p.locator('#earnings-health circle')).to_have_count(21)
+            p.locator('#recap-one-back').click()
+
+    def commit(self):
+        self.page.get_by_role('button',name='Commit plan').click()
+        self.page.wait_for_function('roundDiagnostics().state.phase === "committed"')
+        self.ready()
 
     def begin(self, page=None):
         p = page or self.page
@@ -55,7 +65,7 @@ class CooperationPlay(unittest.TestCase):
     def seek(self, name, end=True):
         self.page.locator('#'+name).focus(); self.page.locator('#'+name).press('End' if end else 'Home')
         expect(self.page.locator('#'+name)).to_have_value(self.page.locator('#'+name).get_attribute('max' if end else 'min'))
-        if name=='fire-time': self.assertEqual(self.page.evaluate('roundDiagnostics().clock'),20 if end else 0)
+        if name=='fire-time': self.assertEqual(self.page.evaluate('roundDiagnostics().clock'),24 if end else 0)
 
     def test_three_roles_conflict_review_preview_and_original_fire_renderer(self):
         self.assertEqual(self.page.evaluate('roundDiagnostics().renderer'), 'RoundForest')
@@ -70,12 +80,19 @@ class CooperationPlay(unittest.TestCase):
         expect(self.page.locator('#status')).to_contain_text('pasture')
         self.shot('land-use-conflict')
         self.propose('community','B'); self.role('room')
-        proposals = self.page.evaluate('roundDiagnostics().state.proposals')
+        expect(self.page.locator('#outcomes')).to_be_hidden()
+        expect(self.page.locator('#patches')).to_be_hidden()
         for key in ['A','B','C']:
-            self.page.locator(f'[data-patch="{key}"]').click()
-            self.assertEqual(self.page.evaluate('roundDiagnostics().previewPlan.ecology'),key)
-            self.assertEqual(self.page.evaluate('roundDiagnostics().state.proposals'),proposals)
-        self.page.get_by_role('button',name='Commit plan').click(); self.ready()
+            self.page.locator('#plan-ecology').select_option(key)
+            self.page.wait_for_function('(key)=>roundDiagnostics().state.proposals.ecology===key',arg=key)
+            self.assertIsNone(self.page.evaluate('roundDiagnostics().previewPlan'))
+            if key=='B': expect(self.page.get_by_role('button',name='Commit plan')).to_be_disabled()
+        self.commit()
+        self.seek('recovery')
+        self.assertEqual(self.page.locator('#run-fire').count(),0)
+        self.assertEqual(self.page.evaluate('roundDiagnostics().projection.shadeHeight'),12)
+        self.assertEqual(self.page.evaluate('roundDiagnostics().projection.coffeeHeight'),2)
+        self.assertEqual(self.page.evaluate('roundDiagnostics().ignition'),27)
         self.seek('fire-time'); mature = self.page.evaluate('roundDiagnostics().fire')
         self.shot('restored-C-original-fire')
         self.seek('recovery',False)
@@ -100,7 +117,7 @@ class CooperationPlay(unittest.TestCase):
         member.locator('[data-patch="B"]').click(); member.get_by_role('button',name='Propose',exact=True).click()
         self.page.bring_to_front(); self.page.wait_for_function('roundDiagnostics().state.ready.community')
         self.propose('removal','A'); self.role('room'); self.page.get_by_role('button',name='Reveal plans').click()
-        self.page.get_by_role('button',name='Commit plan').click(); self.ready()
+        self.commit()
         member.bring_to_front(); member.wait_for_function('roundDiagnostics().state.phase === "committed"')
         self.page.bring_to_front(); self.page.locator('#game-mode').select_option('expedition')
         self.page.wait_for_url('**/expedition.html?fresh=1#*'); self.page.locator('#loading').wait_for(state='hidden')
@@ -112,12 +129,40 @@ class CooperationPlay(unittest.TestCase):
     def test_laptop_grazing_ignition(self):
         self.page.set_viewport_size({'width':1280,'height':800})
         self.propose('community','C'); self.propose('ecology','A'); self.propose('removal','A'); self.role('room')
-        self.page.get_by_role('button',name='Reveal plans').click(); self.page.get_by_role('button',name='Commit plan').click(); self.ready()
-        self.page.get_by_role('button',name='Run fire',exact=True).click()
-        self.page.wait_for_function('roundDiagnostics().clock > 2')
-        self.page.get_by_role('button',name='Pause',exact=True).click(); self.shot('laptop-small-ignition')
-        self.seek('fire-time'); expect(self.page.locator('#fire-note')).to_contain_text('patch C')
+        self.page.get_by_role('button',name='Reveal plans').click(); self.commit()
+        expect(self.page.locator('#fire-controls')).to_be_hidden()
+        self.page.locator('#recovery').focus();self.page.locator('#recovery').press('ArrowRight')
+        self.page.wait_for_function('roundDiagnostics().clock > 0');self.shot('laptop-small-ignition')
+        self.seek('recovery');expect(self.page.locator('#fire-note')).to_contain_text('pasture C')
         self.shot('laptop-grazing-spread')
+
+    def test_debt_recap_and_joint_projection(self):
+        for role,key in [('ecology','A'),('removal','C'),('community','B')]: self.propose(role,key)
+        self.role('room'); self.page.get_by_role('button',name='Reveal plans').click()
+        expect(self.page.locator('#terms')).to_contain_text('Debt:')
+        expect(self.page.get_by_role('button',name='Commit plan')).to_be_enabled()
+        self.shot('debt-review'); self.commit()
+        self.page.locator('#game-mode').select_option('recap-one')
+        old=self.page.evaluate('roundDiagnostics().state.revision')
+        self.page.locator('#earnings-health circle').first.click()
+        expect(self.page.locator('#recap-plan')).to_contain_text('Restore')
+        self.assertEqual(old,self.page.evaluate('roundDiagnostics().state.revision'))
+        self.shot('debt-recap'); self.page.locator('#recap-one-back').click()
+        # Twenty actual keyboard steps reach year two; ten more clear it again.
+        self.page.locator('#recovery').focus()
+        for _ in range(20): self.page.locator('#recovery').press('ArrowRight')
+        self.assertGreater(self.page.evaluate('roundDiagnostics().projection.removalCover'),.7)
+        self.shot('joint-projection-year-two')
+        for _ in range(10): self.page.locator('#recovery').press('ArrowRight')
+        self.assertEqual(self.page.evaluate('roundDiagnostics().projection.removalCover'),0)
+        self.shot('joint-projection-year-three')
+        self.seek('recovery')
+        self.assertGreater(self.page.evaluate('roundDiagnostics().projection.coffeePoints'),100)
+        self.assertEqual(self.page.evaluate('roundDiagnostics().projection.restoration'),1)
+        self.page.get_by_role('button',name='Forest',exact=True).click(); self.ready(); self.shot('joint-projection-year-ten')
+        self.page.get_by_role('button',name='Without plan',exact=True).click()
+        self.assertIsNone(self.page.evaluate('roundDiagnostics().projection'))
+        expect(self.page.locator('#livelihood')).to_contain_text('without the proposed work')
 
     def test_survey_flanks_structure_and_species(self):
         self.page.locator('[data-patch="C"]').click(); self.page.get_by_role('button',name='Close view',exact=True).click(); self.ready()
@@ -140,9 +185,12 @@ class CooperationPlay(unittest.TestCase):
 
     def test_expedition_entry_community_briefing_recap_combined(self):
         self.page.goto(self.base+'/expedition.html?fresh=1'); self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+        x=self.page.locator('#game-mode').bounding_box()['x']
+        self.assertGreater(x,900); self.shot('expedition-header-right')
         self.assertEqual(self.page.locator('#game-mode [value="negligence"]').count(),0)
         self.page.locator('#role').select_option('community'); self.page.locator('#game-mode').select_option('play'); self.ready()
         expect(self.page.locator('#briefing-role')).to_have_text('Role: community'); self.shot('community-briefing'); self.begin()
+        self.assertLess(abs(self.page.locator('#game-mode').bounding_box()['x']-x),25)
         before = self.page.evaluate('roundDiagnostics().state')
         self.page.locator('#game-mode').select_option('recap')
         expect(self.page.get_by_text('Why the edge keeps burning',exact=True)).to_be_visible()
@@ -184,6 +232,6 @@ class CooperationSoftware(CooperationPlay):
 
     def test_software_fire(self):
         self.propose('community','C'); self.propose('ecology','A'); self.propose('removal','A'); self.role('room')
-        self.page.get_by_role('button',name='Reveal plans').click(); self.page.get_by_role('button',name='Commit plan').click(); self.ready()
-        self.seek('fire-time'); self.shot('software-original-fire')
+        self.page.get_by_role('button',name='Reveal plans').click(); self.commit()
+        self.seek('recovery'); self.shot('software-original-fire')
         self.assertGreater(self.page.evaluate('roundDiagnostics().fire'),0)

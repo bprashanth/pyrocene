@@ -1,5 +1,13 @@
 # Community cooperation prototype
 
+**Latest main-game update:** [Debt, Projection and Recap I](../../chronology/2026-09-24-cooperation-debt-and-projection.md).
+Main `/round.html` now has per-role room dropdowns, debt permission and one
+committed landscape projection. Native restoration, repeated unplanted removal
+and coffee growth all move together. Grazing includes first-season fire; other
+choices have a Fire slider. Every main ignition is C. Recap I plots ten-year
+earnings versus forest-health change before fire. The comparison endpoint keeps
+its old controls. Historical play findings below refer to the earlier prototype.
+
 Originally an isolated experiment. Now integrated into main Cooperation at
 `/round.html`, using the main game’s unmodified RoundForest renderer. The separate
 page keeps its prototype renderer for comparison. Combined is unchanged.
@@ -20,8 +28,8 @@ Finally choose Shared plan, Reveal plans, resolve any disagreement and Commit.
 
 For a room, open Teams and give each group its role-specific link. Proposals
 remain private until the host reveals them. Each group can revise its own
-proposal during discussion. The host cannot commit incompatible land uses or
-an unaffordable plan. Revise plan reopens discussion after the fire comparison.
+proposal during discussion. The host cannot commit incompatible land uses.
+Debt is now permitted. Revise plan reopens discussion after the fire comparison.
 New room makes an independent session; it does not erase other teams' rooms.
 Rooms live in server memory, expire on restart, and are limited to 64.
 
@@ -51,7 +59,7 @@ benefit, not a promise about real pasture performance.
 The shared pot starts at 4 credits: the existing 2-credit project grant plus
 the community's 2 credits. Removal retains the original candidate costs and
 returns. Restoration retains original costs and the shared-clearing saving.
-The community investment is then charged. Negative balance prevents commitment.
+The community investment is then charged. Negative balance is debt, not a block.
 
 Nursery payment is part of the restoration purchase, not new money minted for
 the shared pot. An unmatched nursery order can be committed but is explicitly
@@ -119,7 +127,8 @@ away. The existing plant list still contains every species available to inspect.
    At year 0 more burns: choosing restoration does not instantly create shelter.
 3. All A funds a nursery order and leaves **7 credits**, but fails to interrupt
    the edge connection. Its year-10 fire is **20.00 ha**.
-4. Ecology A + removal B + shade B is unaffordable, forcing a funding revision.
+4. Ecology A + removal B + shade B has a shortfall. The original prototype
+   blocked commitment; the latest version permits debt instead.
 5. Ecology B + nursery A can be affordable but produces no nursery order.
 6. Ecology/removal A + grazing C leaves **8 credits** but the fire escapes C;
    projected burn area is **17.87 ha**. Feed savings do not protect the forest.

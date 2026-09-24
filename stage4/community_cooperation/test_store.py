@@ -45,8 +45,10 @@ class Rooms(unittest.TestCase):
         self.assertTrue(good['nurseryOrder'])
         self.assertEqual(good['left'], 7)
         self.plan('A', 'B', 'B')
-        with self.assertRaisesRegex(RoundError, 'credits'):
-            self.call('commit')
+        committed=self.call('commit')
+        self.assertEqual(committed['phase'],'committed')
+        self.assertGreater(committed['assessment']['debt'],0)
+        self.assertLess(committed['assessment']['left'],0)
 
     def test_stale_revision_and_invalid_patch(self):
         self.call('propose', 'community', team='community', patch='A')

@@ -7,6 +7,9 @@ import {RoundForest} from '../round-render.mjs';
 import {StructureLab} from '../structure-lab.mjs';
 import {bindRecap,flowURL,enterCombined} from '../play-flow.mjs';
 import {COOPERATION_BRIEFINGS} from '../cooperation-briefing.mjs';
+import {installProjection} from '../cooperation-growth.mjs';
+import {projection,projectedFire,projectionNote,beforeFire,FIRE_END} from '../cooperation-projection.mjs';
+import {createCooperationRecap} from '../cooperation-recap.mjs';
 const $=id=>document.getElementById(id);
 const integrated=document.body.classList.contains('integrated-cooperation');
 const entry=integrated?'round.html':'community-cooperation/';
@@ -22,11 +25,15 @@ const line=(parent,text,cls='')=>{const p=document.createElement('p');p.textCont
 const forest=new (integrated?RoundForest:CommunityForest)($('landscape'),{select:choose,specimen:meet});
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const lab=integrated?new StructureLab({forest,catalogue:()=>catalogue}):null;
+const recapOne=integrated?createCooperationRecap():null;let pendingRecap=false;
 const briefed=new Set();let typing=null;
 if(integrated){
+ years=0;installProjection(forest);
  bindRecap(forest,$('game-mode'),()=>'play');
+ $('game-mode').add(new Option('Recap I','recap-one'),$('game-mode').querySelector('[value=combined]'));$('game-mode').querySelector('[value=recap-one]').disabled=true;
  $('briefing-begin').onclick=()=>{$('briefing').close();clearInterval(typing);};$('briefing').onclose=()=>clearInterval(typing);
  $('game-mode').onchange=async()=>{
+  if($('game-mode').value==='recap-one'){$('game-mode').value='play';recapOne.open(state.proposals);return;}
   if($('game-mode').value==='combined'){await enterCombined();return;}
   if($('game-mode').value==='expedition')await leaveForExpedition();
  };
@@ -59,7 +66,7 @@ function accept(next){
  if(integrated&&state.screen==='expedition'){location.assign(flowURL('expedition.html?fresh=1',{...credentials,game:'cooperation'},role));return;}
  if(state.role!=='room')role=state.role;
  if(changed){running=false;clock=0;withPlan=!fireReview;cacheKey='';}
- if(state.phase==='committed'&&changed){role=state.role==='room'?'room':role;camera('overhead');}
+ if(state.phase==='committed'&&changed){role=state.role==='room'?'room':role;if(integrated){years=0;pendingRecap=true;}camera('overhead');}
  if(integrated&&changed&&state.phase==='review'){selected=patch(state.proposals.ecology).id;forest.selectPlot(selected);}
  updateProjection();render();briefing();
 }
@@ -88,8 +95,8 @@ function render(){
  $('role').value=role;$('role').disabled=!host||done||mutating;
  $('phase').textContent=done?'SHARED PLAN':state.phase==='review'?'DISCUSS':'SURVEY';
  $('task').textContent=done?'Shared plan':room?'Bring the plans together':role==='community'?'Choose a livelihood':role==='ecology'?'Choose a patch to restore':'Choose a patch to remove';
- $('goal').textContent=done?'Explore recovery, then follow the fire.':room?'Resolve land use before committing.':role==='community'?(p?.key==='B'?'You have 2 credits; this needs shared funding.':'You have 2 credits. Choose one opportunity.'):'Inspect A, B and C. Propose one.';
- $('patches').hidden=done||(room&&(!integrated||state.phase!=='review'));
+ $('goal').textContent=done?'':room?'Discuss and commit the plan.':role==='community'?(p?.key==='B'?'You have 2 credits; the group can borrow more.':'You have 2 credits. Choose one opportunity.'):'Inspect A, B and C. Propose one.';
+ $('patches').hidden=done||room;
  for(const b of $('patches').children){b.setAttribute('aria-pressed',String(b.dataset.patch===p?.key));b.disabled=busy;}
  $('choice-title').textContent=done||room?'':p?`${p.key} / ${role==='community'?CONFIG.opportunities[p.key].name:p.name==='Narrow link'?'Edge pasture':p.name}`:`${coordinate(selected)} / Surrounding forest`;
  $('finding').textContent=done||room?'':view==='close'||!p?surveyClue(selected):CLUES[role][p.key];
@@ -97,15 +104,20 @@ function render(){
  if(room||done){
   for(const team of ['ecology','removal','community']){
    const key=state.proposals[team];
-   line($('terms'),`${roleName[team]}: ${key?key+(team==='community'?' / '+CONFIG.opportunities[key].name:''):'waiting'}`,'plan-row');
+   if(integrated&&state.phase!=='survey'){
+    const label=document.createElement('label');label.className='room-choice';label.textContent=roleName[team];
+    const select=document.createElement('select');select.id='plan-'+team;select.setAttribute('aria-label',roleName[team]+' choice');
+    for(const choice of ['A','B','C'])select.append(new Option(choice+(team==='community'?' / '+(choice==='A'?'Nursery':choice==='B'?'Coffee':'Grazing'):''),choice));
+    select.value=key;select.disabled=!host||done||mutating;select.onchange=()=>action('propose',{team,patch:select.value});label.append(select);$('terms').append(label);
+   }else line($('terms'),`${roleName[team]}: ${key?key+(team==='community'?' / '+CONFIG.opportunities[key].name:''):'waiting'}`,'plan-row');
   }
   if(state.assessment){
    const a=state.assessment;
-   line($('terms'),`Funds: ${CONFIG.grant}. Cost: ${a.cost}. Return: ${a.returns}. Left: ${a.left}.`,'investment');
+   line($('terms'),`Funds: ${CONFIG.grant}. Cost: ${a.cost}. Return: ${a.returns}. ${a.left<0?'Debt: '+(-a.left):'Left: '+a.left}.`,'investment');
    if(done){const health=document.createElement('p');health.id='forest-health';$('terms').append(health);}
    $('status').textContent=a.issue||(!a.nurseryOrder&&state.proposals.community==='A'?'No restoration order for A. The nursery has no buyer.':'');
   }
-  if(integrated&&room&&state.phase==='review')$('finding').textContent=`Preview: restore ${p?.key||state.proposals.ecology}. Proposals stay unchanged.`;
+  if(integrated&&done)$('finding').textContent='Simulation: choices on the map over time.';
   if(host&&!done){const b=btn(state.phase==='survey'?'Reveal plans':'Commit plan',()=>action(state.phase==='survey'?'reveal':'commit'));b.disabled=mutating||!Object.values(state.ready).every(Boolean)||(state.phase==='review'&&!!state.assessment?.issue);$('decision').append(b);}
   if(host&&done)$('decision').append(btn('Revise plan',()=>action('revise')));
  }else{
@@ -129,8 +141,8 @@ function render(){
   $('review-link').textContent='Back to Community';$('review-link').href='community/';$('review-link').removeAttribute('target');
  }
  $('plant-label').hidden=room||done;populatePlants();
- $('outcomes').hidden=!done&&!(integrated&&room&&state.phase==='review');$('map-note').hidden=!done||clock===0;
- if(integrated)$('fire-controls').hidden=!done;
+ $('outcomes').hidden=!done;$('map-note').hidden=!done||clock===0;
+ if(integrated){$('fire-controls').hidden=!done||state.proposals.community==='C';$('game-mode').querySelector('[value=recap-one]').disabled=!done;}
  $('recovery-label').textContent=years+'y';$('recovery').value=years;
  $('livelihood').textContent=result?.livelihood||'';
  $('with').setAttribute('aria-pressed',String(withPlan));$('without').setAttribute('aria-pressed',String(!withPlan));
@@ -158,33 +170,34 @@ async function camera(next){
  if(busy)return;busy=true;view=next;closeRecord();render();
  try{await forest.setView(next,selected);if(next==='close')forest.setFieldVisited(true);specimens();}
  catch(e){toast(e.message);}
- finally{busy=false;render();}
+ finally{busy=false;render();if(pendingRecap){pendingRecap=false;recapOne.open(state.proposals);}}
 }
 function updateProjection(){
- let plan=proposed();const ready=state?.phase==='committed'||integrated&&state?.phase==='review';
- if(!ready){forest.setPlan(null);forest.setFire(null,CONFIG.duration);cacheKey='';result=null;return;}
- if(integrated&&state.phase==='review')plan={...plan,ecology:current()?.key||plan.ecology};
+ let plan=proposed();const ready=state?.phase==='committed';
+ if(!ready){if(integrated)forest.setProjection(null);else forest.setPlan(null);forest.setFire(null,CONFIG.duration);cacheKey='';result=null;return;}
  result=outcome(plan,years);
- forest.setPlan(withPlan?plan:null,years/10);
- const ignition=fireReview?reviewIgnition:plan.community;
+ if(integrated){forest.setProjection(withPlan?plan:null,years);result={...result,...beforeFire(plan,years)};if(plan.community==='C')clock=projection(plan,years).fireMinutes;}
+ else forest.setPlan(withPlan?plan:null,years/10);
+ const ignition=integrated?'C':fireReview?reviewIgnition:plan.community;
  const key=JSON.stringify([plan,years,withPlan,ignition]);
  if(key!==cacheKey){
-  if(!fireCache.has(key))fireCache.set(key,fire(withPlan?plan:null,years,ignition));
-  cacheKey=key;forest.setFire(state.phase==='committed'?fireCache.get(key).arrival:null,CONFIG.duration);
+  if(!fireCache.has(key))fireCache.set(key,integrated?projectedFire(withPlan?plan:null,plan.community==='C'?Math.min(years,.5):years):fire(withPlan?plan:null,years,ignition));
+  cacheKey=key;forest.setFire(fireCache.get(key).arrival,integrated?FIRE_END:CONFIG.duration);
  }
- forest.setFireTime(clock/CONFIG.duration);
+ forest.setFireTime(clock/(integrated?FIRE_END:CONFIG.duration));
  if(integrated&&view==='close')specimens();
 }
 function renderFire(){
- $('fire-time').value=clock;$('fire-label').textContent=clock.toFixed(1).replace(/\.0$/,'')+' min';$('run-fire').textContent=running?'Pause':'Run fire';
+ $('fire-time').value=clock;$('fire-label').textContent=clock.toFixed(1).replace(/\.0$/,'')+' min';if($('run-fire'))$('run-fire').textContent=running?'Pause':'Run fire';
  const f=fireCache.get(cacheKey),area=f?f.arrival.filter(t=>Number.isFinite(t)&&t<=clock).length*.0225:0;
  $('burned').textContent=clock>0?`${area.toFixed(1)} ha burned.`:'';
  const health=$('forest-health');if(health)health.textContent=`Forest health: ${Math.max(0,Math.round((withPlan?result?.health||60:60)-area*.8))}/100.`;
  let livelihood=withPlan?result?.livelihood||'':'Same ignition and weather, without the proposed work.';
  if(withPlan&&state?.proposals.community==='B'&&f?.arrival.some((t,i)=>Number.isFinite(t)&&t<=clock&&Math.floor(i/600)*6+Math.floor(i%60/10)===22))livelihood='Fire reached the coffee plot; the harvest is at risk.';
  $('livelihood').textContent=livelihood;
+ if(integrated&&withPlan&&state?.phase==='committed')$('livelihood').textContent=projectionNote(state.proposals,years)+(livelihood.startsWith('Fire reached')?' '+livelihood:'');
  if(fireReview)$('livelihood').textContent='Same spark and wind, before and after restoring C.';
- $('fire-note').textContent=(fireReview?reviewIgnition:state?.proposals.community)==='C'?'Ignition: patch C.':'Ignition: neighbouring field.';
+ $('fire-note').textContent=integrated?'Ignition: pasture C.':(fireReview?reviewIgnition:state?.proposals.community)==='C'?'Ignition: patch C.':'Ignition: neighbouring field.';
  $('map-note').hidden=state?.phase!=='committed'||clock===0;
 }
 function frame(now){
@@ -196,8 +209,8 @@ for(const b of $('patches').children)b.onclick=()=>choose(patch(b.dataset.patch)
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>camera(b.dataset.view);
 $('plot-plants').onchange=()=>{if($('plot-plants').value)meet($('plot-plants').value);};$('record-close').onclick=closeRecord;
 $('recovery').oninput=()=>{years=Number($('recovery').value);running=false;updateProjection();render();};
-$('fire-time').oninput=()=>{running=false;clock=Number($('fire-time').value);forest.setFireTime(clock/CONFIG.duration);renderFire();};
-$('run-fire').onclick=()=>{if(clock>=CONFIG.duration)clock=0;running=!running;renderFire();};
+$('fire-time').oninput=()=>{running=false;clock=Number($('fire-time').value);forest.setFireTime(clock/(integrated?FIRE_END:CONFIG.duration));renderFire();};
+if($('run-fire'))$('run-fire').onclick=()=>{if(clock>=CONFIG.duration)clock=0;running=!running;renderFire();};
 $('with').onclick=()=>{withPlan=true;updateProjection();render();};$('without').onclick=()=>{withPlan=false;updateProjection();render();};
 $('teams-open').onclick=()=>{
  $('teams').querySelector('h1').textContent=fireReview?'Sources':'Teams';
@@ -212,12 +225,12 @@ $('teams-open').onclick=()=>{
 $('teams-back').onclick=()=>$('teams').close();
 $('new-room').onclick=()=>{location.assign('/'+entry);};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecord();});
-globalThis.communityCooperationDiagnostics=()=>({state,role,selected,view,busy,years,clock,result,fire:fireCache.get(cacheKey)?.burned,renderedFireTime:forest.drawnFireTime,forest:forest.performance(),renderer:forest.constructor.name,previewPlan:forest.plan,lab:lab?.diagnostics(),inventory:INVENTORY[selected]});
+globalThis.communityCooperationDiagnostics=()=>({state,role,selected,view,busy,years,clock,result,fire:fireCache.get(cacheKey)?.burned,ignition:fireCache.get(cacheKey)?.ignition,projection:forest.projectedVegetation,renderedFireTime:forest.drawnFireTime,forest:forest.performance(),renderer:forest.constructor.name,previewPlan:forest.plan,lab:lab?.diagnostics(),inventory:INVENTORY[selected]});
 if(integrated)globalThis.roundDiagnostics=globalThis.communityCooperationDiagnostics;
 try{
  const [_,data,oldPhotos,newPhotos]=await Promise.all([forest.load(),fetch('field-catalogue.json').then(r=>r.json()),fetch('plant-images.json').then(r=>r.json()),fetch('field-photos.json').then(r=>r.json())]);
  catalogue=[...data.species,...ADDITIONAL_SPECIES];photos={...oldPhotos.images,...newPhotos.photos};forest.setInventory(catalogue,INVENTORY);forest.setSettlement(false);forest.selectPlot(selected);
- $('fire-time').max=CONFIG.duration;
+ $('fire-time').max=integrated?FIRE_END:CONFIG.duration;
  const next=fireReview?{id:'fire-review',revision:0,role:'room',phase:'committed',proposals:{ecology:'C',removal:'C',community:'A'},ready:{ecology:true,removal:true,community:true}}:await request(credentials.session?'state':'new');
  if(!fireReview&&!credentials.session)credentials={session:next.id,token:next.tokens.room};
  busy=false;accept(next);if(!fireReview)saveURL();$('loading').hidden=true;render();requestAnimationFrame(frame);

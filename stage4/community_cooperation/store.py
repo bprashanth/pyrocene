@@ -32,7 +32,7 @@ def assessment(proposals):
         conflict = f'{c} cannot be both native restoration and '+('a coffee plot.' if c == 'B' else 'pasture.')
     return dict(cost=cost, returns=returns, left=left, conflict=conflict,
                 nurseryOrder=c == 'A' and e == 'A',
-                issue=conflict or (f'The plan needs {-left} more credits.' if left < 0 else ''))
+                debt=max(0, -left), issue=conflict)
 
 
 class Store:

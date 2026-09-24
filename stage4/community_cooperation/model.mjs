@@ -26,7 +26,8 @@ export function surveyClue(id){
  if(!c.invasive)return 'Damp litter and little fuel; no invasive grass was found here.';
  return c.fuel>.7?'Grass occurs beneath this opening. Dry stems form a continuous layer.':'Grass occurs beneath this opening, but the fuel is scattered.';
 }
-export function fineField(plan=null,years=10){
+export function removalCycle(plan,years){return plan.removal===plan.ecology||plan.community==='B'&&plan.removal==='B'?0:clamp((years%3)/2.2)*.88;}
+export function fineField(plan=null,years=10,cycles=false){
  const growth=clamp(years/10),r=plan&&patch(plan.removal).id,e=plan&&patch(plan.ecology).id;
  return CANOPY.cells.map(([count,height],i)=>{
   const x=i%60,z=Math.floor(i/60),id=Math.floor(z/10)*6+Math.floor(x/10);
@@ -44,7 +45,8 @@ export function fineField(plan=null,years=10){
   let fuel=.25+.7*inv,moisture=clamp(.98-.9*dryness+shelter),exposure=.1+.8*inv;
   if(plan){
    const cleared=r===e?0:footprint(r,x,z),restored=footprint(e,x,z);
-   fuel=mix(fuel,.10+.20*growth,cleared);moisture=mix(moisture,.28,cleared);exposure=mix(exposure,.65,cleared);
+   const returning=cycles?removalCycle(plan,years):null;
+   fuel=mix(fuel,cycles ? .10+.7*returning : .10+.20*growth,cleared);moisture=mix(moisture,cycles ? .3-.1*returning : .28,cleared);exposure=mix(exposure,.65,cleared);
    moisture=mix(moisture,.28+.65*growth,restored);exposure=mix(exposure,.65-.5*growth,restored);fuel=mix(fuel,.10+.16*growth,restored);
   }
   if(plan?.community==='B'){const influence=footprint(22,x,z),shade=clamp(years/5)*shadeSupport(plan);fuel=mix(fuel,.22,influence);moisture=mix(moisture,.30+.46*shade,influence);exposure=mix(exposure,.65-.4*shade,influence);}
@@ -56,11 +58,11 @@ export function shadeSupport(plan){
  // exposes B. Explicit scenario dependency, not a crop-yield equation.
  return clamp(.55+(plan.ecology==='C'?.30:0)-(plan.removal==='C'&&plan.ecology!=='C'?.20:0));
 }
-export function fire(plan=null,years=10,community=plan?.community||'C'){
+export function fire(plan=null,years=10,community=plan?.community||'C',cycles=false){
  const old=referenceWorld(),saved=snapshot(),ignition=community==='C'?27:33;
  try{
   setWorld(INVENTORY.map(c=>({...c,ignition:c.id===ignition})),{day:0,version:'community-cooperation-1'});
-  const result=simulate(null,{duration:CONFIG.duration,fineField:fineField(plan,years),wind:{x:0,y:-1,strength:.82}});
+  const result=simulate(null,{duration:CONFIG.duration,fineField:fineField(plan,years,cycles),wind:{x:0,y:-1,strength:.82}});
   return {...result,burned:result.arrival.filter(Number.isFinite).length*.0225};
  }finally{setWorld(old,saved);}
 }
