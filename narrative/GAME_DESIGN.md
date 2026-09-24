@@ -801,3 +801,16 @@ not a replacement LiDAR palette. Fire crosses square boundaries with a forward
 bias and limited side spill. `/community/` has a Review fire link to the separate
 `/community-cooperation/#fire=1` comparison, which needs no proposals and changes
 no room state. See the [survey/fire refinement checkpoint](../chronology/2026-09-24-community-fire-survey-and-zoom.md).
+
+### Current Cooperation: three teams, one shared landscape
+
+Community now joins Removal and Ecologist in the [main Cooperation game](http://100.82.28.38:8024/round.html).
+It chooses nursery A, shade-grown coffee B or pasture grazing C. Private proposals
+lead to discussion about land use and funding before the room commits. The main
+map and fire renderer are retained; survey contents and the more natural fire
+spread come from the tested prototype. All surrounding squares can be surveyed.
+
+The default sequence is Expedition, Cooperation, Combined, then Recap.
+Negligence is hidden, not deleted. `?negligence=1` restores the archived two-team
+sequence for comparison. Combined has not received Community mechanics yet.
+See [integration and rollback notes](../chronology/2026-09-24-cooperation-community-integration.md).

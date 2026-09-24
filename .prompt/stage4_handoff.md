@@ -1,5 +1,22 @@
 # Stage 4 handoff, 22 September 2026
 
+## Update, 24 September: Community integrated into Cooperation
+
+This update supersedes the older current-state notes below. Main `/round.html`
+now offers Removal, Ecologist and Community. Nursery A, shade-grown coffee B,
+pasture C. Three private proposals, land-use conflict resolution and shared
+funding before commitment. Main RoundForest map/fire styling is unchanged;
+the tested prototype supplies inventory/fuel conditions and spread direction.
+Negligence is hidden by default. `?negligence=1` explicitly restores the archived
+two-team Cooperation -> Negligence flow. Combined is unchanged: wait for review
+before integrating anything there. Prototype routes are retained until review.
+
+Read [the integration chronology](../chronology/2026-09-24-cooperation-community-integration.md)
+for files, test commands and rollback baseline `f45226e`. Use fresh main links;
+old two-team rooms are not silently converted. New server/package allowlists
+include the integration entry modules. All current stages can run on 8024 with
+`run.sh`; the historic companion ports below are no longer required.
+
 Read this before changing anything. Latest task: finish Recap integration, then
 wait for the user to design the final stewardship mission. Do not redesign the
 accepted gameplay, replace the point clouds, or implement a new final mission

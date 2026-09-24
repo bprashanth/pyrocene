@@ -19,6 +19,11 @@
 .community-cooperation #outcomes input{margin:12px 0}.community-cooperation #outcomes #comparison button[aria-pressed=true]{color:#e3c879;border-color:#e3c879}
 #map-note{position:absolute;right:28px;bottom:30px;z-index:4;font:11px monospace;color:#b4c9b9;background:#071610e8;padding:9px 12px;pointer-events:none}
 .hot-dot,.ash-dot{display:inline-block;width:7px;height:7px;margin:0 5px 0 8px;background:#ffb33f}.ash-dot{background:#796757}
+.integrated-cooperation .ash-dot{background:#bd7139}
+.integrated-cooperation #round-panel #patch-actions{display:flex;gap:8px}
+.integrated-cooperation header .chapter{margin-left:auto}
+.integrated-cooperation header .game-navigation{margin-left:24px}
+.integrated-cooperation #goal:empty,.integrated-cooperation #status:empty{display:none}
 #teams{max-height:85dvh;overflow:auto;border-radius:0}#teams h1{font-size:20px}#teams #new-room{border:1px solid #d1b95e70;padding:8px;margin:16px 0}#teams details{margin-top:12px}#teams a{color:#dbc780}#teams input{box-sizing:border-box}
 #landscape #loading{padding:25px}.community-cooperation #round-panel [hidden],#map-note[hidden]{display:none}
 @media(max-width:800px){.community-cooperation #round-panel{top:78px;left:12px;width:265px;padding:13px;max-height:calc(100dvh - 174px)}.community-cooperation .chapter{display:none}.community-cooperation header nav{gap:8px}.community-cooperation header nav label{display:none}#map-note{right:12px;bottom:82px;font-size:10px}.community-cooperation #round-panel h1{font-size:16px}}

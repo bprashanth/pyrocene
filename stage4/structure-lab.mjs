@@ -81,7 +81,7 @@ export class StructureLab{
   if(this.mode==='slice')this.finding.textContent=tracksPlant(this.focus)?'Follow the highlighted plant through the section. Nearby stems are not confirmed connections.':'Move the bright section through the forest. The rest stays dim.';
   const record=fieldRecord(this.plot.parentId??this.plot.id);
   this.panels[0].caption.textContent='60 m wide. Damp litter and sheltered air.';
-  this.panels[1].caption.textContent=record.climate.text+' '+record.climate.wind;
+  this.panels[1].caption.textContent=this.plot.fieldNote??record.climate.text+' '+record.climate.wind;
   if(this.plot.succession){const f=this.plot.succession;this.panels[1].panel.querySelector('h2').textContent=`Selected patch - ${f.year}y - ${f.maintained?'with removal':'without removal'}`;this.panels[1].caption.textContent=forecastText(f)+' '+(this.models[1].profile.moisture>.7?'Damp litter.':this.models[1].profile.moisture<.3?'Dry litter.':'Mixed litter.')+' Modelled.';
    if(this.yearLabel){this.yearLabel.textContent=f.year+'y';this.dialog.querySelector('#structure-year').value=f.year;for(const b of this.dialog.querySelectorAll('[data-structure-care]'))b.setAttribute('aria-pressed',String(b.dataset.structureCare===String(f.maintained)));}
   }

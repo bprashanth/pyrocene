@@ -60,6 +60,19 @@ class Rooms(unittest.TestCase):
         second = self.store.request('new', {})
         self.assertFalse(any(second['ready'].values()))
 
+    def test_expedition_reset_preserves_capabilities_and_clears_three_plans(self):
+        self.plan('C', 'A', 'B')
+        self.call('commit')
+        tokens = self.host['tokens'].copy()
+        with self.assertRaisesRegex(RoundError, 'host'):
+            self.call('reset', 'community')
+        reset = self.call('reset')
+        self.assertEqual(reset['tokens'], tokens)
+        self.assertEqual(reset['screen'], 'expedition')
+        self.assertEqual(reset['generation'], 1)
+        self.assertFalse(any(reset['ready'].values()))
+        self.assertEqual(self.call('enter', 'community')['screen'], 'play')
+
 
 if __name__ == '__main__':
     unittest.main()

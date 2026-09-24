@@ -69,7 +69,7 @@ class Play(unittest.TestCase):
             slider.press('ArrowRight')
 
     def test_community_cards_and_dense_close_view(self):
-        for key, name in [('A','Native nursery'),('B','Cupuaçu under shade'),('C','Pasture grazing')]:
+        for key, name in [('A','Native nursery'),('B','Shade-grown coffee'),('C','Pasture grazing')]:
             self.page.locator(f'[data-patch="{key}"]').click()
             expect(self.page.locator('#choice-title')).to_contain_text(name)
             self.shot('choice-'+key)

@@ -1,4 +1,4 @@
-"""Isolated three-role proposal rooms. No accepted-game saves or state touched."""
+"""Three-role Cooperation rooms; separate from archived two-role saves."""
 from collections import OrderedDict
 from pathlib import Path
 import json
@@ -29,7 +29,7 @@ def assessment(proposals):
     left = CONFIG['grant'] + returns - cost
     conflict = ''
     if e == c and c in ('B', 'C'):
-        conflict = f'{c} cannot be both native restoration and '+('a fruit plot.' if c == 'B' else 'pasture.')
+        conflict = f'{c} cannot be both native restoration and '+('a coffee plot.' if c == 'B' else 'pasture.')
     return dict(cost=cost, returns=returns, left=left, conflict=conflict,
                 nurseryOrder=c == 'A' and e == 'A',
                 issue=conflict or (f'The plan needs {-left} more credits.' if left < 0 else ''))
@@ -43,7 +43,7 @@ class Store:
     def view(self, room, role):
         reveal = room['phase'] != 'survey' or role == 'room'
         proposals = {r: room['proposals'][r] if reveal or r == role else None for r in ROLES}
-        result = {k: room[k] for k in ('id', 'phase', 'revision')}
+        result = {k: room[k] for k in ('id', 'phase', 'revision', 'screen', 'generation')}
         result.update(role=role, proposals=proposals,
                       ready={r: room['proposals'][r] is not None for r in ROLES},
                       assessment=assessment(proposals))
@@ -55,7 +55,8 @@ class Store:
         with self.lock:
             if action == 'new':
                 ident = secrets.token_urlsafe(9)
-                room = dict(id=ident, phase='survey', revision=0,
+                room = dict(id=ident, phase='survey', revision=0, generation=0,
+                            screen='expedition' if body.get('screen') == 'expedition' else 'play',
                             proposals={r: None for r in ROLES},
                             tokens={r: secrets.token_urlsafe(24) for r in (*ROLES, 'room')})
                 self.rooms[ident] = room
@@ -73,7 +74,16 @@ class Store:
                 return self.view(room, role)
             if body.get('revision') != room['revision']:
                 raise RoundError('Another team just updated its plan. Try again.', 409)
-            if action == 'propose':
+            if action == 'enter':
+                room['screen'] = 'play'
+            elif action == 'reset':
+                if role != 'room':
+                    raise RoundError('Only the room host resets the shared game.', 403)
+                room['proposals'] = {r: None for r in ROLES}
+                room['phase'] = 'survey'
+                room['screen'] = 'expedition'
+                room['generation'] += 1
+            elif action == 'propose':
                 team, patch = body.get('team'), body.get('patch')
                 if not isinstance(team, str) or team not in ROLES or (role != 'room' and team != role):
                     raise RoundError('Only your team can change this proposal.', 403)

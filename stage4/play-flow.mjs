@@ -1,4 +1,5 @@
 import {createPrelude} from './play-briefing.mjs';
+import {negligenceEnabled} from './game-features.mjs';
 // In-place recap never advances or resets the game behind it.
 export function bindRecap(forest,select,currentMode){
  if(!select)return;
@@ -14,11 +15,12 @@ export function bindRecap(forest,select,currentMode){
 }
 // Navigation carries only this game's capability and chosen role in the hash.
 export function flowParams(){return new URLSearchParams(location.hash.slice(1));}
-export function roleFrom(params=flowParams()){return ['removal','ecology','room'].includes(params.get('role'))?params.get('role'):'removal';}
-export function flowURL(page,credentials,role){const p=new URLSearchParams({...credentials,role});return new URL(page,location.href).href+'#'+p;}
+export function roleFrom(params=flowParams()){return (negligenceEnabled?['removal','ecology','room']:['removal','ecology','community','room']).includes(params.get('role'))?params.get('role'):'removal';}
+export function flowURL(page,credentials,role){const p=new URLSearchParams({...credentials,role}),url=new URL(page,location.href);if(negligenceEnabled)url.searchParams.set('negligence','1');url.hash=p.toString();return url.href;}
 export function navigation(mode,role){
  const nav=document.createElement('nav');nav.className='game-navigation';nav.setAttribute('aria-label','Game');
  nav.innerHTML='<select id="game-mode" aria-label="Game mode"><option value="expedition">Expedition</option><option value="play">Cooperation</option><option value="negligence" disabled>Negligence</option></select><select id="role" aria-label="Team view"><option value="removal">Removal</option><option value="ecology">Ecologist</option><option value="room">Room</option></select><button id="teams-open">Teams</button>';
+ if(!negligenceEnabled){nav.querySelector('[value=negligence]').remove();nav.querySelector('#role').add(new Option('Community','community'),nav.querySelector('#role [value=room]'));}
  nav.querySelector('#game-mode').append(new Option('Combined','combined'));
  document.querySelector('header .wordmark').after(nav);nav.querySelector('#game-mode').value=mode;nav.querySelector('#role').value=role;return nav;
 }
@@ -30,6 +32,7 @@ export async function enterCombined(){
  target.hash=new URLSearchParams({seed:'113',fresh:'1',return:location.href}).toString();location.assign(target);
 }
 export function expeditionNavigation(){
+ if(!negligenceEnabled){cooperationExpeditionNavigation();return;}
  let params=flowParams(),role=roleFrom(params),credentials=params.has('session')?{session:params.get('session'),token:params.get('token')}:null,state=null;
  const nav=navigation('expedition',role),mode=nav.querySelector('#game-mode'),roles=nav.querySelector('#role');
  const dialog=document.createElement('dialog');dialog.id='expedition-teams';dialog.innerHTML='<div class="dialog-heading"><h1>Teams</h1><button>Back</button></div><p>Share one link with each team. Start in Expedition, then choose Cooperation.</p><div class="team-links"></div>';
@@ -47,5 +50,36 @@ export function expeditionNavigation(){
   else dialog.querySelector('p').textContent='Your team explores here, then joins the current mission. The room makes the shared decision.';
   dialog.showModal();
  }catch(e){alert(e.message);}};
+ if(credentials)session().catch(()=>{credentials=null;history.replaceState(null,'',flowURL('expedition.html',{},role));});
+}
+
+// All three teams keep the same private capability between survey and play.
+// Old two-team rooms are only opened through the explicit Negligence flag.
+function cooperationExpeditionNavigation(){
+ const params=flowParams();let role=roleFrom(params),credentials=params.get('game')==='cooperation'&&params.has('session')?{session:params.get('session'),token:params.get('token'),game:'cooperation'}:null;
+ const nav=navigation('expedition',role),mode=nav.querySelector('#game-mode'),roles=nav.querySelector('#role');
+ const dialog=document.createElement('dialog');dialog.id='expedition-teams';dialog.innerHTML='<div class="dialog-heading"><h1>Teams</h1><button>Back</button></div><p>Share one link with each team. Explore, then choose Cooperation.</p><div class="team-links"></div>';
+ document.body.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();
+ async function request(action,extra={}){const r=await fetch('/api/community-cooperation/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,...extra})}),s=await r.json();if(!r.ok)throw Error(s.error);return s;}
+ async function session(){
+  const s=await request(credentials?'state':'new',{screen:'expedition'});
+  credentials={session:s.id,token:credentials?.token||s.tokens.room,game:'cooperation'};
+  if(s.role!=='room'){role=s.role;roles.value=role;roles.disabled=true;}
+  history.replaceState(null,'',flowURL('expedition.html',credentials,role));return s;
+ }
+ roles.onchange=()=>{role=roles.value;history.replaceState(null,'',flowURL('expedition.html',credentials||{},role));};
+ mode.onchange=async()=>{
+  if(mode.value==='combined'){await enterCombined();return;}if(mode.value!=='play')return;
+  mode.disabled=true;
+  try{const s=await session();if(s.screen!=='play')await request('enter',{revision:s.revision});location.assign(flowURL('round.html',credentials,role));}
+  catch(e){mode.disabled=false;mode.value='expedition';alert(e.message);}
+ };
+ nav.querySelector('#teams-open').onclick=async()=>{
+  try{const s=await session(),links=dialog.querySelector('.team-links');links.replaceChildren();
+   if(s.tokens)for(const team of ['removal','ecology','community']){const label=document.createElement('label');label.textContent=team==='ecology'?'Ecologist team':team==='community'?'Community team':'Removal team';const input=document.createElement('input');input.readOnly=true;input.setAttribute('aria-label',label.textContent+' link');input.value=flowURL('expedition.html',{session:s.id,token:s.tokens[team],game:'cooperation'},team);input.onclick=()=>input.select();label.append(input);links.append(label);}
+   else dialog.querySelector('p').textContent='Your team explores here, then proposes in Cooperation. The room makes the shared decision.';
+   dialog.showModal();
+  }catch(e){alert(e.message);}
+ };
  if(credentials)session().catch(()=>{credentials=null;history.replaceState(null,'',flowURL('expedition.html',{},role));});
 }

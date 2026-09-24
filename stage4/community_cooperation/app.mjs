@@ -3,18 +3,49 @@ import {CONFIG,PATCHES,patch,INVENTORY,CLUES,fire,outcome,surveyClue} from './mo
 import {ADDITIONAL_SPECIES} from '../forest-flora.mjs';
 import {speciesRecord} from '../species-record.mjs';
 import {coordinate} from '../world.mjs';
+import {RoundForest} from '../round-render.mjs';
+import {StructureLab} from '../structure-lab.mjs';
+import {bindRecap,flowURL,enterCombined} from '../play-flow.mjs';
+import {COOPERATION_BRIEFINGS} from '../cooperation-briefing.mjs';
 const $=id=>document.getElementById(id);
+const integrated=document.body.classList.contains('integrated-cooperation');
+const entry=integrated?'round.html':'community-cooperation/';
 const roleName={ecology:'Ecologist',removal:'Removal',community:'Community',room:'Shared plan'};
 const params=new URLSearchParams(location.hash.slice(1));
-const fireReview=params.get('fire')==='1';
+const fireReview=!integrated&&params.get('fire')==='1';
 let reviewIgnition='C';
 let credentials={session:params.get('session'),token:params.get('token')},state=null;
-let role=params.get('role')||'community',selected=13,view='forest',busy=true,mutating=false,catalogue=[],photos={},clock=0,years=10,withPlan=true,running=false,lastFrame=0,result=null,cacheKey='',fireCache=new Map();
+let role=params.get('role')||(integrated?'removal':'community'),selected=13,view='forest',busy=true,mutating=false,catalogue=[],photos={},clock=0,years=10,withPlan=true,running=false,lastFrame=0,result=null,cacheKey='',fireCache=new Map();
 if(!roleName[role])role='community';
 const btn=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.className='primary';b.onclick=fn;return b;};
 const line=(parent,text,cls='')=>{const p=document.createElement('p');p.textContent=text;p.className=cls;parent.append(p);};
-const forest=new CommunityForest($('landscape'),{select:choose,specimen:meet});
+const forest=new (integrated?RoundForest:CommunityForest)($('landscape'),{select:choose,specimen:meet});
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const lab=integrated?new StructureLab({forest,catalogue:()=>catalogue}):null;
+const briefed=new Set();let typing=null;
+if(integrated){
+ bindRecap(forest,$('game-mode'),()=>'play');
+ $('briefing-begin').onclick=()=>{$('briefing').close();clearInterval(typing);};$('briefing').onclose=()=>clearInterval(typing);
+ $('game-mode').onchange=async()=>{
+  if($('game-mode').value==='combined'){await enterCombined();return;}
+  if($('game-mode').value==='expedition')await leaveForExpedition();
+ };
+ document.querySelector('.wordmark').onclick=async e=>{e.preventDefault();await leaveForExpedition();};
+}
+async function leaveForExpedition(){
+ if(mutating||!state)return;
+ if(state.role==='room'){await action('reset');return;}
+ location.assign(flowURL('expedition.html',{...credentials,game:'cooperation'},role));
+}
+function briefing(){
+ if(!integrated||!state||state.phase!=='survey'||busy||state.ready[role])return;
+ const key=[state.id,state.generation,role].join(':');if(briefed.has(key))return;briefed.add(key);
+ const copy=COOPERATION_BRIEFINGS[role],text=copy.paragraphs.join('\n\n');clearInterval(typing);
+ $('briefing-role').textContent='Role: '+roleName[role].toLowerCase();$('briefing-title').textContent=copy.title;$('briefing-accessible').textContent=text;
+ $('briefing-text').textContent=forest.reducedMotion?text:'';let at=0;
+ if(!forest.reducedMotion)typing=setInterval(()=>{at+=4;$('briefing-text').textContent=text.slice(0,at);if(at>=text.length)clearInterval(typing);},35);
+ if(!$('briefing').open)$('briefing').showModal();
+}
 const current=()=>PATCHES.find(p=>p.id===selected);
 const proposed=()=>state?.proposals;
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,5500);}
@@ -25,10 +56,12 @@ async function request(action,extra={}){
 function accept(next){
  if(state&&next.revision<=state.revision&&next.id===state.id)return;
  const changed=state?.phase!==next.phase;state=next;
+ if(integrated&&state.screen==='expedition'){location.assign(flowURL('expedition.html?fresh=1',{...credentials,game:'cooperation'},role));return;}
  if(state.role!=='room')role=state.role;
- if(changed){running=false;clock=0;withPlan=!fireReview;}
+ if(changed){running=false;clock=0;withPlan=!fireReview;cacheKey='';}
  if(state.phase==='committed'&&changed){role=state.role==='room'?'room':role;camera('overhead');}
- updateProjection();render();
+ if(integrated&&changed&&state.phase==='review'){selected=patch(state.proposals.ecology).id;forest.selectPlot(selected);}
+ updateProjection();render();briefing();
 }
 async function action(name,extra={}){
  if(mutating)return;mutating=true;render();
@@ -47,16 +80,16 @@ async function action(name,extra={}){
  catch(e){toast(e.message);try{accept(await request('state'));}catch{}}
  finally{mutating=false;render();}
 }
-function saveURL(){history.replaceState(null,'',location.pathname+'#'+new URLSearchParams({...credentials,role}));}
+function saveURL(){history.replaceState(null,'',location.pathname+location.search+'#'+new URLSearchParams({...credentials,role,...(integrated?{game:'cooperation'}:{})}));}
 function render(){
  if(!state)return;
  const p=current(),done=state.phase==='committed',host=!fireReview&&state.role==='room',room=role==='room';
  $('round-panel').classList.toggle('is-committed',done);
  $('role').value=role;$('role').disabled=!host||done||mutating;
  $('phase').textContent=done?'SHARED PLAN':state.phase==='review'?'DISCUSS':'SURVEY';
- $('task').textContent=done?'One landscape':room?'Bring the plans together':role==='community'?'Choose a livelihood':role==='ecology'?'Choose a patch to restore':'Choose a patch to remove';
+ $('task').textContent=done?'Shared plan':room?'Bring the plans together':role==='community'?'Choose a livelihood':role==='ecology'?'Choose a patch to restore':'Choose a patch to remove';
  $('goal').textContent=done?'Explore recovery, then follow the fire.':room?'Resolve land use before committing.':role==='community'?(p?.key==='B'?'You have 2 credits; this needs shared funding.':'You have 2 credits. Choose one opportunity.'):'Inspect A, B and C. Propose one.';
- $('patches').hidden=room||done;
+ $('patches').hidden=done||(room&&(!integrated||state.phase!=='review'));
  for(const b of $('patches').children){b.setAttribute('aria-pressed',String(b.dataset.patch===p?.key));b.disabled=busy;}
  $('choice-title').textContent=done||room?'':p?`${p.key} / ${role==='community'?CONFIG.opportunities[p.key].name:p.name==='Narrow link'?'Edge pasture':p.name}`:`${coordinate(selected)} / Surrounding forest`;
  $('finding').textContent=done||room?'':view==='close'||!p?surveyClue(selected):CLUES[role][p.key];
@@ -72,6 +105,7 @@ function render(){
    if(done){const health=document.createElement('p');health.id='forest-health';$('terms').append(health);}
    $('status').textContent=a.issue||(!a.nurseryOrder&&state.proposals.community==='A'?'No restoration order for A. The nursery has no buyer.':'');
   }
+  if(integrated&&room&&state.phase==='review')$('finding').textContent=`Preview: restore ${p?.key||state.proposals.ecology}. Proposals stay unchanged.`;
   if(host&&!done){const b=btn(state.phase==='survey'?'Reveal plans':'Commit plan',()=>action(state.phase==='survey'?'reveal':'commit'));b.disabled=mutating||!Object.values(state.ready).every(Boolean)||(state.phase==='review'&&!!state.assessment?.issue);$('decision').append(b);}
   if(host&&done)$('decision').append(btn('Revise plan',()=>action('revise')));
  }else{
@@ -83,6 +117,7 @@ function render(){
    const b=btn(state.proposals[role]===p.key?'Proposed':'Propose',()=>action('propose',{team:role,patch:p.key}));b.disabled=mutating||busy||state.proposals[role]===p.key;$('patch-actions').append(b);
   }
   if(state.proposals[role])$('status').textContent=`Proposed ${state.proposals[role]}. Bring your reasons to the room.`;
+  if(integrated&&view==='close'&&!busy){const b=btn('Structure',()=>openStructure());b.className='secondary';$('patch-actions').append(b);}
  }
  if(fireReview){
   $('phase').textContent='REVIEW';$('task').textContent='Follow the fire';$('goal').textContent='';$('status').textContent='';$('terms').replaceChildren();
@@ -94,7 +129,8 @@ function render(){
   $('review-link').textContent='Back to Community';$('review-link').href='community/';$('review-link').removeAttribute('target');
  }
  $('plant-label').hidden=room||done;populatePlants();
- $('outcomes').hidden=!done;$('map-note').hidden=!done||clock===0;
+ $('outcomes').hidden=!done&&!(integrated&&room&&state.phase==='review');$('map-note').hidden=!done||clock===0;
+ if(integrated)$('fire-controls').hidden=!done;
  $('recovery-label').textContent=years+'y';$('recovery').value=years;
  $('livelihood').textContent=result?.livelihood||'';
  $('with').setAttribute('aria-pressed',String(withPlan));$('without').setAttribute('aria-pressed',String(!withPlan));
@@ -103,18 +139,21 @@ function render(){
 }
 let pickerKey='';
 function populatePlants(){
- const ids=INVENTORY[selected].speciesIds,key=selected+':'+ids.join(',');if(key===pickerKey)return;pickerKey=key;
+ const planting=integrated&&current()&&forest.plan?.ecology===current().key?current().mix||[]:[];
+ const ids=[...new Set([...INVENTORY[selected].speciesIds,...planting])],key=selected+':'+ids.join(',');if(key===pickerKey)return;pickerKey=key;
  $('plot-plants').replaceChildren(new Option('Choose a plant',''));
  for(const id of ids){const sp=catalogue.find(s=>s.id===id);if(sp)$('plot-plants').append(new Option(sp.name,id));}
 }
 function closeRecord(){$('plant-guide').hidden=true;$('plot-plants').value='';}
 function meet(id){
  const species=catalogue.find(s=>s.id===id);if(!species)return;
- $('guide-content').replaceChildren(speciesRecord({species,photo:photos[species.photoAssetId||id],plot:selected,condition:INVENTORY[selected].moisture>.7?'The litter here is damp.':'Dry litter lies beneath the plants.',seedContext:{plot:INVENTORY[selected],grid:{columns:6,cells:INVENTORY.map(c=>c.active?c:null)}},immersive:true}));
+ const recovery=integrated&&current()&&forest.plan?.ecology===current().key?years:null;
+ $('guide-content').replaceChildren(speciesRecord({species,photo:photos[species.photoAssetId||id],plot:selected,condition:(recovery!==null?recovery>=7:INVENTORY[selected].moisture>.7)?'The litter here is damp.':'Dry litter lies beneath the plants.',seedContext:{plot:INVENTORY[selected],recovery,grid:{columns:6,cells:INVENTORY.map(c=>c.active?c:null)}},immersive:true,onStructure:integrated&&view==='close'?()=>{closeRecord();openStructure(id);}:null}));
  $('plant-guide').hidden=false;$('plot-plants').value=id;forest.focusSpecimen(id);
 }
-function specimens(){forest.setSpecimens(view==='close'?INVENTORY[selected].speciesIds.map(id=>({id,speciesId:id,label:catalogue.find(s=>s.id===id)?.name||id})):[]);}
-async function choose(id){if(busy||!INVENTORY[id]?.active)return;selected=id;closeRecord();forest.selectPlot(id);if(view==='close')await camera('close');else render();}
+function openStructure(id=null){lab?.open({...INVENTORY[selected],fieldNote:surveyClue(selected)},id);}
+function specimens(){const ids=integrated&&current()&&forest.plan?.ecology===current().key&&years>5?current().mix:INVENTORY[selected].speciesIds;forest.setSpecimens(view==='close'?ids.map(id=>({id,speciesId:id,label:catalogue.find(s=>s.id===id)?.name||id})):[]);}
+async function choose(id){if(busy||!INVENTORY[id]?.active)return;selected=id;closeRecord();forest.selectPlot(id);if(integrated&&state?.phase==='review')updateProjection();if(view==='close')await camera('close');else render();}
 async function camera(next){
  if(busy)return;busy=true;view=next;closeRecord();render();
  try{await forest.setView(next,selected);if(next==='close')forest.setFieldVisited(true);specimens();}
@@ -122,17 +161,19 @@ async function camera(next){
  finally{busy=false;render();}
 }
 function updateProjection(){
- const plan=proposed(),ready=state?.phase==='committed';
+ let plan=proposed();const ready=state?.phase==='committed'||integrated&&state?.phase==='review';
  if(!ready){forest.setPlan(null);forest.setFire(null,CONFIG.duration);cacheKey='';result=null;return;}
+ if(integrated&&state.phase==='review')plan={...plan,ecology:current()?.key||plan.ecology};
  result=outcome(plan,years);
  forest.setPlan(withPlan?plan:null,years/10);
  const ignition=fireReview?reviewIgnition:plan.community;
  const key=JSON.stringify([plan,years,withPlan,ignition]);
  if(key!==cacheKey){
   if(!fireCache.has(key))fireCache.set(key,fire(withPlan?plan:null,years,ignition));
-  cacheKey=key;forest.setFire(fireCache.get(key).arrival,CONFIG.duration);
+  cacheKey=key;forest.setFire(state.phase==='committed'?fireCache.get(key).arrival:null,CONFIG.duration);
  }
  forest.setFireTime(clock/CONFIG.duration);
+ if(integrated&&view==='close')specimens();
 }
 function renderFire(){
  $('fire-time').value=clock;$('fire-label').textContent=clock.toFixed(1).replace(/\.0$/,'')+' min';$('run-fire').textContent=running?'Pause':'Run fire';
@@ -140,7 +181,7 @@ function renderFire(){
  $('burned').textContent=clock>0?`${area.toFixed(1)} ha burned.`:'';
  const health=$('forest-health');if(health)health.textContent=`Forest health: ${Math.max(0,Math.round((withPlan?result?.health||60:60)-area*.8))}/100.`;
  let livelihood=withPlan?result?.livelihood||'':'Same ignition and weather, without the proposed work.';
- if(withPlan&&state?.proposals.community==='B'&&f?.arrival.some((t,i)=>Number.isFinite(t)&&t<=clock&&Math.floor(i/600)*6+Math.floor(i%60/10)===22))livelihood='Fire reached the fruit plot; the harvest is at risk.';
+ if(withPlan&&state?.proposals.community==='B'&&f?.arrival.some((t,i)=>Number.isFinite(t)&&t<=clock&&Math.floor(i/600)*6+Math.floor(i%60/10)===22))livelihood='Fire reached the coffee plot; the harvest is at risk.';
  $('livelihood').textContent=livelihood;
  if(fireReview)$('livelihood').textContent='Same spark and wind, before and after restoring C.';
  $('fire-note').textContent=(fireReview?reviewIgnition:state?.proposals.community)==='C'?'Ignition: patch C.':'Ignition: neighbouring field.';
@@ -150,7 +191,7 @@ function frame(now){
  if(running){clock=Math.min(CONFIG.duration,clock+(lastFrame?Math.min(now-lastFrame,100):0)/1000*1.7);forest.setFireTime(clock/CONFIG.duration);if(clock>=CONFIG.duration)running=false;renderFire();}
  lastFrame=now;requestAnimationFrame(frame);
 }
-$('role').onchange=()=>{role=$('role').value;closeRecord();saveURL();render();};
+$('role').onchange=()=>{role=$('role').value;closeRecord();saveURL();render();briefing();};
 for(const b of $('patches').children)b.onclick=()=>choose(patch(b.dataset.patch).id);
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>camera(b.dataset.view);
 $('plot-plants').onchange=()=>{if($('plot-plants').value)meet($('plot-plants').value);};$('record-close').onclick=closeRecord;
@@ -164,14 +205,15 @@ $('teams-open').onclick=()=>{
  $('teams').querySelector('details').open=fireReview;
  $('team-links').replaceChildren();
  if(state.tokens)for(const team of ['ecology','removal','community','room']){
-  const label=document.createElement('label');label.textContent=roleName[team];const input=document.createElement('input');input.readOnly=true;input.value=new URL('/community-cooperation/#'+new URLSearchParams({session:state.id,token:state.tokens[team],role:team}),location.href).href;input.onclick=()=>input.select();label.append(input);$('team-links').append(label);
+  const label=document.createElement('label');label.textContent=roleName[team];const input=document.createElement('input');input.readOnly=true;input.setAttribute('aria-label',roleName[team]+' link');input.value=new URL('/'+entry+'#'+new URLSearchParams({session:state.id,token:state.tokens[team],role:team,...(integrated?{game:'cooperation'}:{})}),location.href).href;input.onclick=()=>input.select();label.append(input);$('team-links').append(label);
  }
  $('new-room').hidden=fireReview||state.role!=='room';$('teams').showModal();
 };
 $('teams-back').onclick=()=>$('teams').close();
-$('new-room').onclick=()=>{location.assign('/community-cooperation/');};
+$('new-room').onclick=()=>{location.assign('/'+entry);};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecord();});
-globalThis.communityCooperationDiagnostics=()=>({state,role,selected,view,busy,years,clock,result,fire:fireCache.get(cacheKey)?.burned,renderedFireTime:forest.drawnFireTime,forest:forest.performance()});
+globalThis.communityCooperationDiagnostics=()=>({state,role,selected,view,busy,years,clock,result,fire:fireCache.get(cacheKey)?.burned,renderedFireTime:forest.drawnFireTime,forest:forest.performance(),renderer:forest.constructor.name,previewPlan:forest.plan,lab:lab?.diagnostics(),inventory:INVENTORY[selected]});
+if(integrated)globalThis.roundDiagnostics=globalThis.communityCooperationDiagnostics;
 try{
  const [_,data,oldPhotos,newPhotos]=await Promise.all([forest.load(),fetch('field-catalogue.json').then(r=>r.json()),fetch('plant-images.json').then(r=>r.json()),fetch('field-photos.json').then(r=>r.json())]);
  catalogue=[...data.species,...ADDITIONAL_SPECIES];photos={...oldPhotos.images,...newPhotos.photos};forest.setInventory(catalogue,INVENTORY);forest.setSettlement(false);forest.selectPlot(selected);
@@ -180,4 +222,4 @@ try{
  if(!fireReview&&!credentials.session)credentials={session:next.id,token:next.tokens.room};
  busy=false;accept(next);if(!fireReview)saveURL();$('loading').hidden=true;render();requestAnimationFrame(frame);
  if(!fireReview)setInterval(async()=>{if(mutating||document.hidden)return;try{accept(await request('state'));}catch(e){toast(e.message);}},1500);
-}catch(e){$('loading').textContent=e.message;$('loading').append(btn('New room',()=>location.assign('/community-cooperation/')));}
+}catch(e){$('loading').textContent=e.message;$('loading').append(btn('New room',()=>location.assign('/'+entry)));}

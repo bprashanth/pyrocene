@@ -1,11 +1,16 @@
 # Community cooperation prototype
 
-Separate experiment, not a replacement for Cooperation, Negligence or Combined.
+Originally an isolated experiment. Now integrated into main Cooperation at
+`/round.html`, using the main game’s unmodified RoundForest renderer. The separate
+page keeps its prototype renderer for comparison. Combined is unchanged.
+Negligence is hidden by default; `?negligence=1` restores the archived two-team
+sequence. See [integration notes](../../chronology/2026-09-24-cooperation-community-integration.md).
 Baseline before this prototype: `67ee3fb` on `stage4_recap`.
 
-Open **http://100.82.28.38:8036/community-cooperation/** for the preview.
-After restarting the normal `./run.sh`, the same path works on port **8024**.
-The existing 8024 server was left running and was not restarted for this work.
+Open **http://100.82.28.38:8024/round.html** for the integrated game.
+The comparison preview remains at **http://100.82.28.38:8036/community-cooperation/**.
+Both Stage 4 processes were refreshed for the integration; other stages were
+left running. The normal `./run.sh` includes the integrated game and routes.
 
 ## Play
 
@@ -33,7 +38,7 @@ opportunity. Investment is numeric; return and forest health are qualitative.
 | Square | Community proposal | Dependency |
 | --- | --- | --- |
 | A | Native nursery, investment 2 | Raise the planting mix for A. High return only if restoration is ordered for A. Nursery production is off-map, not a competing land use on the restored square. |
-| B | Cupuaçu under mixed shade, investment 6 | Low early return. Later prospects depend on surrounding shelter. B cannot simultaneously be native restoration and a fruit plot. |
+| B | Coffee under mixed shade, investment 6 | Low early return. Later prospects depend on surrounding shelter. B cannot simultaneously be native restoration and a coffee plot. |
 | C | Existing pasture grazing, investment 1 | Burn old pasture growth; regrowth replaces bought cattle feed during the season. C cannot simultaneously remain pasture and become native restoration. |
 
 No cattle purchase, lease system, prescribed-burn menu, additional mission,
@@ -50,11 +55,11 @@ The community investment is then charged. Negative balance prevents commitment.
 
 Nursery payment is part of the restoration purchase, not new money minted for
 the shared pot. An unmatched nursery order can be committed but is explicitly
-shown to have no buyer or return. Feed savings and future fruit earnings do not
+shown to have no buyer or return. Feed savings and future coffee earnings do not
 fund today's planting. Returns are not turned into a second wallet in this v0.
 
-Cupuaçu prospects improve if neighbouring C is restored; removal in C without
-restoration exposes B. Its establishment has no fruit income before scenario
+Coffee prospects improve if neighbouring C is restored; removal in C without
+restoration exposes B. Its establishment has no harvest income before scenario
 year 3. These are qualitative dependencies, not calibrated yield estimates.
 Fire entering B changes the harvest explanation to warn that it is at risk.
 
@@ -84,8 +89,8 @@ The old RoundForest narrow notch is disabled in this subclass. A small ignition
 grows into an irregular front; bright points cool to a muted scar. Both WebGL
 and software Canvas paths support exploration, close view, recovery and fire.
 TLS still uses modelled arrangements of scan fragments, not a surveyed pasture
-or species-resolved scan. Cupuaçu is an economic/ground-fuel treatment here;
-this prototype does not claim to render a measured cupuaçu plantation.
+or species-resolved scan. Coffee is an economic/ground-fuel treatment here;
+this prototype does not claim to render a measured coffee plantation.
 
 Grazing starts the scenario ignition in C. Other choices are tested against an
 ignition at a nearby field, id 33. Within each Without work / Shared plan pair,
@@ -160,8 +165,10 @@ python3 -m stage4.serve --host 0.0.0.0 --port 8036
 Most implementation stays in this directory. Shared changes are server routing,
 the independent room store instance, portable-package inclusion, the optional
 wind argument and the Close-view label fix. The old Community page also links
-to fire review. No dropdown entry, accepted-game rule change or saved-game
-migration has been added. Revert scoped commits to remove this experiment;
+to fire review. The three-role controller now powers main Cooperation through `cooperation.mjs`.
+The main shell retains role briefings, structure, Recap and A/B/C previews.
+Old two-role rooms remain in their original store; no saved-game migration is
+performed. Revert scoped commits to remove this experiment;
 never reset unrelated user edits.
 
 ## Sources and limits
@@ -169,7 +176,7 @@ never reset unrelated user edits.
 - [Embrapa: pasture management and fire](https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/403419/1/OrientalDoc83.pdf).
   Supports the pasture-maintenance story and repeated-burning/escape concerns,
   not guaranteed fodder savings or safe burning in this setting.
-- [Embrapa: cupuaçu in agroforestry](https://www.infoteca.cnptia.embrapa.br/handle/doc/666684).
+- [WeForest and IDESAM: coffee with native trees](https://www.weforest.org/programmes/special-projects/apui/).
   Supports the specific crop and degraded-pasture restoration setting. The
   cost, year-3 threshold and neighbouring-C effect are scenario choices.
 - [Amazon Fund: Sementes do Portal](https://www.fundoamazonia.gov.br/pt/projeto/Sementes-do-Portal/).

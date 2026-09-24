@@ -69,12 +69,12 @@ export function outcome(plan,years=10){
  const left=CONFIG.grant+b.returns-b.totalCost-op.investment;
  const conflict=plan.community===plan.ecology&&plan.community!=='A';
  const livelihood=plan.community==='A'?(plan.ecology==='A'?'The nursery has a buyer: the restoration order for A.':'No order for A, so the nursery has no return.'):
-  plan.community==='B'?(years<3?'Cupuaçu is establishing; fruit income has not started.':shadeSupport(plan)>.7?'Nearby restoration shelters the cupuaçu; harvest prospects improve.':shadeSupport(plan)<.4?'Nearby clearance exposes the cupuaçu; harvest prospects fall.':'Cupuaçu can earn from fruit, but nearby openings leave it exposed.'):
+  plan.community==='B'?(years<3?'Coffee is establishing; harvest income has not started.':shadeSupport(plan)>.7?'Nearby restoration shelters the coffee; harvest prospects improve.':shadeSupport(plan)<.4?'Nearby clearance exposes the coffee; harvest prospects fall.':'Coffee can earn from harvests, but nearby openings leave it exposed.'):
   'Grazing saves bought feed this season; it does not fund restoration.';
  return {left,conflict,livelihood,health:60-b.healthLoss+b.healthGain*clamp(years/10)};
 }
 export const CLUES={
  ecology:{A:'Native stems remain among the grasses; clearing them all would damage recovery.',B:'An old opening can recover, but its southern neighbour affects shelter.',C:'Dry grass joins the southern edge to openings north; the plots on either side are damp.'},
  removal:{A:'The largest harvest is mixed with native stems.',B:'Dry grass covers open ground with few native stems.',C:'A smaller harvest crosses the gap between the field and the forest.'},
- community:{A:'Raise the native plants needed to restore A.',B:'Grow cupuaçu fruit beneath mixed shade trees.',C:'Burn old pasture growth so cattle can graze the regrowth.'}
+ community:{A:'Raise the native plants needed to restore A.',B:'Grow coffee beneath shade trees; nearby forest helps keep the ground cool and damp.',C:'Burn old pasture growth so cattle can graze the regrowth.'}
 };
