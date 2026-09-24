@@ -1,5 +1,15 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: graph-first recap and two removal cycles
+
+Baseline `962f16b`; see [graph/cycle checkpoint](../chronology/2026-09-24-cooperation-graph-space-and-two-cycles.md).
+Recap I now has one explanatory paragraph and a roughly two-thirds-width graph.
+Linear bounds hug all outcomes with 6% padding, rather than excess negative-axis
+space. Unplanted removal shows two smooth five-year clearance/return cycles,
+cleared at 2.5/7.5 and reinvaded at 5/10. Initial cut plus one later paid cut
+keeps the same ten-year recap accounting as before. Static refresh only.
+Combined remains unchanged. Next discussion: how Community could enter Combined.
+
 ## Latest refinement: direct Room editing
 
 See [room simplification](../chronology/2026-09-24-cooperation-room-simplification.md),

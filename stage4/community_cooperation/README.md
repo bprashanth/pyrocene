@@ -2,8 +2,9 @@
 
 **Current main Room flow:** open Room, edit the three role dropdowns, Commit.
 No Reveal gate or With/Without controls. Revise reopens the choices. The main
-projection now fades invasives through a slow eight-year return/clearance cycle.
-Recap I uses four plain-language bullets. See [the latest checkpoint](../../chronology/2026-09-24-cooperation-room-simplification.md).
+projection fades invasives through two smooth clearance/return cycles in ten years.
+Recap I uses a paragraph beside a larger, tightly framed interactive graph.
+See [the latest checkpoint](../../chronology/2026-09-24-cooperation-graph-space-and-two-cycles.md).
 The prototype workflow described below retains its Reveal/comparison controls.
 
 **Latest main-game update:** [Debt, Projection and Recap I](../../chronology/2026-09-24-cooperation-debt-and-projection.md).

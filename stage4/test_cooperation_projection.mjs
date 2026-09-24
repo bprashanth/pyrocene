@@ -3,19 +3,27 @@ import assert from 'node:assert/strict';
 import {projection,beforeFire,alternatives,projectedFire,FIRE_END} from './cooperation-projection.mjs';
 import {fineField} from './community_cooperation/model.mjs';
 import {referenceWorld,snapshot} from './memory-model.mjs';
+import {chartBounds} from './cooperation-recap.mjs';
 
 test('Unplanted removal cycles, while planted plots establish',()=>{
  const plan={ecology:'C',removal:'A',community:'B'};
- for(const year of [0,8])assert.equal(projection(plan,year).removalCover,0);
- assert.ok(projection(plan,4).removalCover>.8);
- for(let y=.1;y<=10;y+=.1)assert.ok(Math.abs(projection(plan,y).removalCover-projection(plan,y-.1).removalCover)<.04);
- assert.ok(fineField(plan,4,true)[25*60+15].fuel>fineField(plan,8,true)[25*60+15].fuel);
+ for(const year of [2.5,7.5])assert.equal(projection(plan,year).removalCover,0);
+ for(const year of [0,5,10])assert.ok(projection(plan,year).removalCover>.8);
+ for(let y=.1;y<=10;y+=.1)assert.ok(Math.abs(projection(plan,y).removalCover-projection(plan,y-.1).removalCover)<.06);
+ assert.ok(fineField(plan,5,true)[25*60+15].fuel>fineField(plan,7.5,true)[25*60+15].fuel);
  assert.equal(projection(plan,10).repeatClearings,1);
  assert.equal(projection({...plan,removal:'C'},8).removalCover,0);
  assert.equal(projection({...plan,removal:'B'},8).removalCover,0);
  assert.equal(projection(plan,10).shadeHeight,12);
  assert.equal(projection(plan,10).coffeeHeight,2);
  assert.equal(projection({...plan,community:'A'},10).coffeeHeight,0);
+});
+test('Chart uses tight linear bounds without clipping any plan or the zero axes',()=>{
+ const points=alternatives(),b=chartBounds(points);
+ assert.ok(b.xmin>-10);
+ for(const p of points){assert.ok(p.earnings>b.xmin&&p.earnings<b.xmax);assert.ok(p.healthChange>b.ymin&&p.healthChange<b.ymax);}
+ assert.ok(b.xmin<0&&b.xmax>0&&b.ymin<0&&b.ymax>0);
+ assert.ok((Math.min(...points.map(p=>p.earnings))-b.xmin)/(b.xmax-b.xmin)<.08);
 });
 test('Recap includes all compatible plans and excludes the grant from earnings',()=>{
  const plans=alternatives();assert.equal(plans.length,21);

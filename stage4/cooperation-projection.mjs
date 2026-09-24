@@ -7,7 +7,7 @@ export const FIRE_END=CONFIG.duration+4; // allow the final front to cool
 export function projection(plan,year){
  const y=Math.max(0,Math.min(10,year)),planted=plan.removal===plan.ecology||plan.community==='B'&&plan.removal==='B';
  const weedCover=removalCycle(plan,y);
- return {year:y,restoration:y/10,removalCover:weedCover,repeatClearings:planted?0:Math.floor(y/REMOVAL_CYCLE_YEARS),
+ return {year:y,restoration:y/10,removalCover:weedCover,repeatClearings:planted?0:Math.max(0,Math.floor((y-REMOVAL_CYCLE_YEARS/2)/REMOVAL_CYCLE_YEARS)),
   shadeHeight:plan.community==='B'?12*clamp(y/10)**.65:0,
   coffeeHeight:plan.community==='B'?2*clamp(y/4):0,
   grazing:plan.community==='C',fireMinutes:plan.community==='C'?FIRE_END*clamp(y/.5):0};
@@ -36,7 +36,7 @@ export function alternatives(){
 }
 export function projectionNote(plan,year){
  const p=projection(plan,year),bits=[`Restore ${plan.ecology}: ${year>=8?'canopy closes':'young trees grow'}.`];
- if(plan.removal!==plan.ecology&&!(plan.community==='B'&&plan.removal==='B'))bits.push(`Remove ${plan.removal}: ${p.removalCover<.15?(year<4?'cleared':'cleared again'):year%REMOVAL_CYCLE_YEARS>4?'invasives are being cleared':'invasives return'}.`);
+ if(plan.removal!==plan.ecology&&!(plan.community==='B'&&plan.removal==='B'))bits.push(`Remove ${plan.removal}: ${p.removalCover<.15?(year<REMOVAL_CYCLE_YEARS?'cleared':'cleared again'):year%REMOVAL_CYCLE_YEARS<REMOVAL_CYCLE_YEARS/2&&year<10?'invasives are being cleared':'invasives return'}.`);
  if(plan.community==='B')bits.push(year===0?'B: coffee and shade trees planted.':`B: coffee below ${p.shadeHeight.toFixed(0)} m shade trees.`);
  else if(plan.community==='C')bits.push('C: the pasture burn spreads in the first season.');
  else bits.push('A: the nursery supplies plants off-map.');

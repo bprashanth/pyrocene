@@ -838,3 +838,8 @@ Room editing now opens directly, with no Reveal step in main Cooperation.
 Commit opens Recap I; Revise returns to those same choices. The With/Without
 buttons are removed. Returning invasives fade through a slower continuous cycle
 rather than flashing off at a year boundary. See [the simplification checkpoint](../chronology/2026-09-24-cooperation-room-simplification.md).
+
+The latest refinement shows two smooth removal/regrowth cycles over ten years.
+Recap I prioritises the interactive graph with tighter linear bounds and a
+narrower paragraph column. Combined is still unchanged; Community integration
+there remains a discussion. See [graph and cycle notes](../chronology/2026-09-24-cooperation-graph-space-and-two-cycles.md).

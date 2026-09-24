@@ -26,12 +26,12 @@ export function surveyClue(id){
  if(!c.invasive)return 'Damp litter and little fuel; no invasive grass was found here.';
  return c.fuel>.7?'Grass occurs beneath this opening. Dry stems form a continuous layer.':'Grass occurs beneath this opening, but the fuel is scattered.';
 }
-export const REMOVAL_CYCLE_YEARS=8;
+export const REMOVAL_CYCLE_YEARS=5;
 export function removalCycle(plan,years){
  if(plan.removal===plan.ecology||plan.community==='B'&&plan.removal==='B')return 0;
- // A broad, continuous cycle: returning grass, gradual clearance, then return.
+ // Two broad clearance/return cycles across the ten-year projection.
  // No reset at a year boundary that flashes an entire square off at once.
- return .44*(1-Math.cos(2*Math.PI*years/REMOVAL_CYCLE_YEARS));
+ return .44*(1+Math.cos(2*Math.PI*years/REMOVAL_CYCLE_YEARS));
 }
 export function fineField(plan=null,years=10,cycles=false){
  const growth=clamp(years/10),r=plan&&patch(plan.removal).id,e=plan&&patch(plan.ecology).id;
