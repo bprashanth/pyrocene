@@ -1,5 +1,29 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: nursery inflection and coordination colours
+
+See [curves and colours](../chronology/2026-09-25-coordination-curves-and-colours.md).
+Rollback `stage4-before-coordination-curves-20260925` -> `64866ae`.
+This supersedes earlier notes saying tending stops at four years or colours count
+field plots. Tree care continues at an easing rate through year ten. Matched
+nursery payments remain internal group transfers, while annual community orders
+taper in Prelude II. Group earnings for all-A peak after the first supply and
+then decline gently with tending. Coffee now uses one annual/integrated ramp in
+all Prelude pages, rather than different yield assumptions.
+
+Green means shared recovery (AAA or CCB); blue means some shared work; pink means
+recurring removal separate from planting and livelihood support. Codes remain
+ecology/removal/community internally. Visible labels instead say Remove, restore,
+livelihood, explaining C/C/coffee-B's order. Every plan keeps its opaque category
+colour at Start/5/10, including the selected path. Numbered badges sit beside it.
+All-A has highest before-fire health; CCB balances health and later earnings;
+clearing A repeatedly earns more at a health cost. No claims of field calibration.
+
+Only projected income/care assumptions changed; actual room costs and grant,
+health weights, fire, point clouds and The Game's rules remain untouched. Prose
+explains causes positively instead of “it is not simply…” reversals. All-A now
+explicitly warns that untreated C can still carry fire into the forest.
+
 ## Latest: same menu in Game, Prelude maps and hinges
 
 See [this checkpoint](../chronology/2026-09-25-prelude-hinges-and-consistent-menu.md).

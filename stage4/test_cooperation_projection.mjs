@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {projection,beforeFire,alternatives,projectedFire,FIRE_END,planStory,timeOutcome,timeStory,fieldPlots,planHinges} from './cooperation-projection.mjs';
+import {projection,beforeFire,alternatives,projectedFire,FIRE_END,planStory,timeOutcome,timeStory,fieldPlots,planHinges,tendingCost,coffeeHarvest,planCoordination} from './cooperation-projection.mjs';
 import {recapFire} from './play-briefing.mjs';
 import {fineField} from './community_cooperation/model.mjs';
 import {referenceWorld,snapshot} from './memory-model.mjs';
@@ -56,8 +56,42 @@ test('Cooperation health and income benefits have a consistent ordering',()=>{
  assert.equal(rich[0].plan.removal,'A');assert.ok(rich[0].healthChange<top[0].healthChange);
  const allA=beforeFire({ecology:'A',removal:'A',community:'A'});
  assert.ok(allA.earnings>5);assert.equal(allA.support.localPurchases,4);
- assert.ok(planStory({ecology:'C',removal:'C',community:'B'}).join(' ').includes('not included in this graph'));
- assert.ok(planStory({ecology:'B',removal:'B',community:'A'}).join(' ').includes('no matching order'));
+ assert.ok(planStory({ecology:'C',removal:'C',community:'B'}).join(' ').includes('C remains exposed to fire'));
+ assert.ok(planStory({ecology:'B',removal:'B',community:'A'}).join(' ').includes('needs a buyer'));
+});
+test('Matched nursery earnings turn after the first supply while care continues',()=>{
+ const p={ecology:'A',removal:'A',community:'A'};
+ assert.ok(beforeFire(p,2).earnings>beforeFire(p,0).earnings);
+ for(const [a,b]of [[2,4],[4,5],[5,10]])assert.ok(beforeFire(p,a).earnings>beforeFire(p,b).earnings);
+ assert.ok(beforeFire(p,10).health>beforeFire(p,5).health);
+ assert.equal(projection(p,10).repeatClearings,0);
+ assert.ok(tendingCost(10)>tendingCost(5));
+ assert.ok(tendingCost(6)-tendingCost(5)>tendingCost(10)-tendingCost(9));
+ assert.ok(planStory(p).join(' ').includes('dry fuel in C'));
+});
+test('Coffee harvests ramp up consistently in annual and accumulated projections',()=>{
+ const p={ecology:'C',removal:'C',community:'B'};
+ assert.deepEqual(coffeeHarvest(p,3),{annual:0,total:0});
+ for(const year of [3.5,5,9]){
+  const rate=(coffeeHarvest(p,year+.00001).total-coffeeHarvest(p,year-.00001).total)/.00002;
+  assert.ok(Math.abs(rate-coffeeHarvest(p,year).annual)<1e-6);
+ }
+ const coordinated=beforeFire(p),allA=beforeFire({ecology:'A',removal:'A',community:'A'}),extractive=beforeFire({...p,removal:'A'});
+ assert.ok(coordinated.earnings>allA.earnings&&coordinated.health<allA.health);
+ assert.ok(extractive.earnings>coordinated.earnings&&extractive.health<coordinated.health);
+ const coffeeA={ecology:'A',removal:'A',community:'B'};
+ assert.equal(timeOutcome('coffee',10).annualIncome,coffeeHarvest(coffeeA,10).annual-.3);
+});
+test('Coordination colours follow shared work rather than the number of plots',()=>{
+ for(const [key,group]of [['AAA','shared'],['CCB','shared'],['CBB','partial'],['ABA','partial'],['CBA','separate'],['CAB','separate']]){
+  const [ecology,removal,community]=key,p=Object.freeze({ecology,removal,community});
+  assert.equal(planCoordination(p).id,group);
+ }
+ for(const {plan}of alternatives()){
+  const copy=structuredClone(plan);planCoordination(plan);assert.deepEqual(plan,copy);
+  const text=[...planStory(plan),...planHinges(plan).map(e=>e.text)].join(' ');
+  assert.doesNotMatch(text,/not simply|does not mean|not itself|need not mean/);
+ }
 });
 test('A new fire uses the projection year and returning invasive fuel',()=>{
  const p={ecology:'A',removal:'C',community:'A'};

@@ -18,13 +18,22 @@ export function projectedFire(plan,year,{atProjectionYear=false}={}){
  // The independent Fire slider can instead test a new ignition at any year.
  return fire(plan,plan?.community==='C'&&!atProjectionYear?Math.min(year,.5):year,'C',true);
 }
+export function tendingCost(year){
+ const y=Math.max(0,Math.min(10,year)),later=Math.max(0,y-4);
+ // Later annual tending eases from 0.3 to 0.1 as the canopy establishes.
+ return Math.min(y,4)*.4+.3*later-later*later/60;
+}
+export function coffeeHarvest(plan,age){
+ const harvestYears=Math.max(0,Math.min(10,age)-3),mature=4.3*shadeSupport(plan);
+ return {annual:mature*(1-Math.exp(-harvestYears/2)),total:mature*(harvestYears-2*(1-Math.exp(-harvestYears/2)))};
+}
 export function beforeFire(plan,year=10){
  const p=projection(plan,year),b=planBudget(plan.removal,plan.ecology),investment=CONFIG.opportunities[plan.community].investment;
  const repeatMargin=p.repeatClearings*(patch(plan.removal).income*.65);
- const coffee=plan.community==='B'?Math.max(0,p.year-3)*2*shadeSupport(plan):0;
+ const coffee=plan.community==='B'?coffeeHarvest(plan,p.year).total:0;
  const feed=plan.community==='C'?Math.min(p.year,1)*2:0;
  const support=cooperationSupport(plan,p.year);
- const tending=Math.min(p.year,4)*.4+(plan.community==='B'?p.year*.3:0);
+ const tending=tendingCost(p.year)+(plan.community==='B'?p.year*.3:0);
  // Local seed purchases retain money in the group rather than creating income.
  // They were included in planting cost upfront; return only the internal share.
  const earnings=b.returns-b.totalCost-investment+repeatMargin+coffee+feed-tending+support.localPurchases+support.careSavings;
@@ -41,15 +50,15 @@ export function cooperationSupport(plan,year){
 }
 export function planStory(plan){
  const {matched,together,neighbourShelter}=cooperationSupport(plan,10),parts=[];
- if(together)parts.push('All three teams work on A. The crew clears carefully around healthy natives, and the nursery supplies the plants needed for restoration. The same work supports their income and helps the forest recover.','However, C is still dry and connected to the forest. A fire could still enter there.');
- else if(neighbourShelter)parts.push('Restoring C helps shelter the coffee in B. Restoration costs money now and its return is forest health, while coffee earns later if that shelter holds. However, C is exposed to fire while the trees are young. That danger is not included in this graph.');
+ if(together)parts.push('All three teams work on A. Careful clearing and a matching nursery order give the forest a strong start. After that first supply, smaller plant orders and careful weeding bring little income, while tending keeps using credits.','This gives the highest forest health before fire. However, dry fuel in C still connects to the forest, so fire could undo some of that recovery.');
+ else if(neighbourShelter)parts.push((plan.removal==='C'?'Remove C first, then restore C and grow coffee in B. The first clearance earns credits that the group can share towards planting and coffee. ':'Restore C and grow coffee in B. ')+ 'As C recovers it shelters B, so later coffee harvests support continued care. This gives a strong balance of health and earnings. However, C remains exposed to fire while its trees are young.');
  else if(matched)parts.push('The nursery has buyers because restoration happens in A. Seed purchases stay within the group, and the planting mix supports recovery. However, the removal crew is working elsewhere, so clearing and planting need separate visits.');
- else if(plan.community==='A')parts.push('A nursery needs buyers for seeds. Here it prepares plants for A, but restoration happens in '+plan.ecology+'. There is no matching order, so the investment does not bring the expected return.');
- else if(plan.community==='B')parts.push('Coffee costs money now and earns later if it has enough shelter from healthy forests. It can support livelihoods, but a coffee plot does not replace the native forest being restored in '+plan.ecology+'.');
- else parts.push('Grazing saves the cost of bought feed this season. Restoration in '+plan.ecology+' can still help the forest, but grazing in C does not close the gap at the edge. The cost of an escaped fire is not included here.');
+ else if(plan.community==='A')parts.push('A nursery needs buyers for seeds. Here it prepares plants for A, while restoration happens in '+plan.ecology+'. The nursery needs a buyer for those plants before its investment can earn a return.');
+ else if(plan.community==='B')parts.push('Coffee costs money now and earns later if it has enough shelter from healthy forests. The crop supports livelihoods alongside the native forest being restored in '+plan.ecology+'.');
+ else parts.push('Grazing saves the cost of bought feed this season. Restoration in '+plan.ecology+' can still help the forest, while the open pasture in C leaves a route for fire at the edge. These outcomes show the forest before a wildfire.');
  if(plan.removal==='A'&&!together)parts.push('Removal in A brings a large return, but invasives grow among healthy natives there. '+(plan.ecology==='A'?'Restoration follows the clearing, although some of those natives are lost in the work.':'The crew keeps clearing without replanting, so it earns again while native growth is lost.'));
- else if(plan.removal!==plan.ecology&&!(plan.community==='B'&&plan.removal==='B')&&!matched)parts.push('The cleared plot has not been replanted, so invasives return and the crew has to come back.');
- if(beforeFire(plan,0).balance<0)parts.push('Debt lets this plan start, but must be repaid from future earnings. Those earnings are not guaranteed if the forest degrades.');
+ else if(plan.removal!==plan.ecology&&!(plan.community==='B'&&plan.removal==='B')&&!matched)parts.push('The cleared plot stays open, so invasives return and the crew has to come back.');
+ if(beforeFire(plan,0).balance<0)parts.push('Debt helps the group start planting. Future earnings must repay it, so recovery and later harvests matter to the budget too.');
  return parts;
 }
 
@@ -65,7 +74,7 @@ export function timeOutcome(choice,year){
  // cash. Replacement orders taper as restoration establishes. These payments
  // require buyers; they must not be added to beforeFire as free group revenue.
  const orders=.35+5.65*Math.exp(-.48*y);
- const coffeeIncome=age=>5.5*shadeSupport(coffee)*(1-Math.exp(-Math.max(0,age-3)/2))-.3;
+ const coffeeIncome=age=>coffeeHarvest(coffee,age).annual-.3;
  const annualIncome=choice==='nursery'?orders:choice==='coffee'?coffeeIncome(y):orders+(y>=3?coffeeIncome(y-3):0);
  const extraHealth=choice==='sequence'?3*clamp((y-3)/10):0;
  return {year:y,annualIncome,healthChange:result.healthChange+extraHealth,
@@ -73,21 +82,33 @@ export function timeOutcome(choice,year){
 }
 export function timeStory(choice){
  if(choice==='nursery')return ['The first order for A brings the most income. Smaller replacement orders follow, but as the forest establishes it needs fewer plants. Hence earnings decline unless the nursery finds new buyers.'];
- if(choice==='coffee')return ['Coffee in B costs 6 credits at the start. Harvests begin after year three and grow as the crop establishes. However, A has no local nursery supplying its restoration, and the coffee still needs shelter from the surrounding forest.'];
+ if(choice==='coffee')return ['Coffee in B costs 6 credits at the start. Harvests begin after year three and grow as the crop establishes. Restoration in A buys its plants elsewhere, while coffee still needs shelter from the surrounding forest.'];
  return ['The nursery starts with an order for A. At year three the group invests 6 credits in coffee in B while smaller plant orders continue. Coffee begins earning after year six, so income grows again as nursery orders decline. However, both sites still need care.'];
 }
-// A simple coordination count, not a travel-time or labour-cost estimate.
+// A simple site count, not a coordination score or labour-cost estimate.
 // Nursery production is off-map; it does not count as a third field plot.
 export function fieldPlots(plan){return [...new Set([plan.ecology,plan.removal,...(plan.community==='A'?[]:[plan.community])])].sort();}
+export const COORDINATION=[
+ {id:'shared',label:'Shared recovery',colour:'#8dbb9e'},
+ {id:'partial',label:'Some shared work',colour:'#7db5ce'},
+ {id:'separate',label:'Separate work',colour:'#ce93ae'}
+];
+export function planCoordination(plan){
+ const matched=plan.community==='A'&&plan.ecology==='A',sheltered=plan.community==='B'&&plan.ecology==='C';
+ if(plan.removal===plan.ecology&&(matched||sheltered))return COORDINATION[0];
+ if(projection(plan,10).repeatClearings)return COORDINATION[matched?1:2];
+ return COORDINATION[1];
+}
 export function planHinges(plan){
  const events=[];
- if(plan.community==='A'&&plan.ecology==='A')events.push({year:2,title:'The nursery order is filled',text:'The first seed order has been paid for. That money stays within the group, but this plan has no further large order. Early tending still costs money while the forest recovers.'});
- else if(plan.community==='B')events.push({year:3,title:'Coffee starts earning',text:'The first harvests begin after year three. Income now helps cover care, although the return still depends on shelter from the surrounding forest.'});
- else if(plan.community==='C')events.push({year:1,title:'The first feed saving ends',text:'Grazing saved the cost of bought feed in the first season. This plan does not count that saving again every year, so tending can now reduce the money left over.'});
- else events.push({year:2,title:'The nursery has no matching order',text:`The nursery prepared plants for A, but restoration is in ${plan.ecology}. Its investment has not found a buyer, while planting and tending still need funding.`});
- events.push({year:4,title:'Early tending has been paid for',text:'Four years of early tending have been paid for. That cost stops pulling earnings down in this projection, while the planted canopy continues to recover. It does not mean the forest no longer needs care.'});
- if(projection(plan,10).repeatClearings){const p=patch(plan.removal);events.push({year:7.5,title:`The crew clears ${plan.removal} again`,text:`Invasives returned to ${plan.removal} because it was not replanted. Another clearance adds ${(p.income*.65).toFixed(1)} credits, but costs ${(p.healthLoss*.3).toFixed(1)} native-health points. Hence this bend moves towards more earnings as well as lower health; it is not simply a drop in returns.`});}
- else events.push({year:10,title:'The planted canopy has grown',text:`Planting follows clearing in this plan, so there is no second clearance payment. Recovery in ${plan.ecology} raises forest health${plan.community==='B'?' while coffee keeps earning in B':', but healthier forest is not itself a cash payment'}.`});
+ if(plan.community==='A'&&plan.ecology==='A')events.push({year:2,title:'The nursery order is filled',text:'The first large order has been supplied. Replacement orders become smaller and weeding among the saplings brings little return. The early earnings stay in the group, while continued care gradually spends some of those credits.'});
+ else if(plan.community==='B')events.push({year:3,title:'Coffee starts earning',text:plan.removal==='C'&&plan.ecology==='C'?'Removal in C earns the first credits. The group can share them towards restoring C and planting coffee in B. Harvests begin after year three, then grow as the restored forest shelters the crop.':'The first harvests begin after year three. Income grows with the crop and helps cover care, although the return still depends on shelter from the surrounding forest.'});
+ else if(plan.community==='C')events.push({year:1,title:'The first feed saving ends',text:'Grazing saved the cost of bought feed in the first season. That saving stays in the budget, while continued tending gradually uses some of the money left over.'});
+ else events.push({year:2,title:'The nursery still needs a buyer',text:`The nursery prepared plants for A, while restoration is in ${plan.ecology}. Finding a buyer would help recover that investment. Meanwhile planting and tending still need funding.`});
+ events.push({year:4,title:'Care continues as the canopy grows',text:'As the canopy grows the work begins to ease. The forest still needs time and credits for care, so the budget keeps changing after the first planting and seed orders.'});
+ if(projection(plan,10).repeatClearings){const p=patch(plan.removal);events.push({year:7.5,title:`The crew clears ${plan.removal} again`,text:`The open ground in ${plan.removal} filled with invasives again. Another clearance adds ${(p.income*.65).toFixed(1)} credits, but costs ${(p.healthLoss*.3).toFixed(1)} native-health points. ${plan.removal==='A'?'This is why earnings stay high even though forest health is lower.':'This is why the turn includes a rise in earnings alongside the loss of native growth.'}`});}
+ else if(plan.ecology==='A'&&plan.community==='A')events.push({year:10,title:'High recovery still needs protection',text:'Shared work gives A the highest forest health before fire. The first removal and nursery order earned most of the money; later care uses credits as smaller orders taper. However, dry fuel in C still leads into the forest, so a wildfire could undo this recovery.'});
+ else events.push({year:10,title:'The planted canopy has grown',text:plan.ecology==='C'&&plan.community==='B'?'Restoration in C now shelters coffee in B. The first clearance helped fund the work, and later harvests help pay for care. This supports both forest health and income, although fire during establishment could still have changed the outcome.':`Recovery in ${plan.ecology} raises forest health${plan.community==='B'?' while coffee keeps earning in B':", but healthier forests don't always mean more credits"}. The group still needs time and money to tend its work.`});
  return events;
 }
 export function alternatives(){

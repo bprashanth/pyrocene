@@ -155,7 +155,7 @@ class CooperationPlay(unittest.TestCase):
         expect(self.page.locator('#cooperation-recap')).not_to_contain_text('These are game estimates')
         old=self.page.evaluate('roundDiagnostics().state.revision')
         self.page.locator('#earnings-health circle').first.click()
-        expect(self.page.locator('#recap-plan')).to_contain_text('Restore')
+        expect(self.page.locator('#recap-plan')).to_contain_text('Remove')
         self.assertEqual(old,self.page.evaluate('roundDiagnostics().state.revision'))
         self.shot('debt-recap'); self.page.locator('#recap-one-back').click()
         # Two full, smooth clearance/return cycles across the slider.
@@ -203,7 +203,7 @@ class CooperationPlay(unittest.TestCase):
         expect(self.page.locator('#cooperation-recap')).to_have_attribute('aria-label','Prelude I')
         expect(self.page.locator('#recap-map')).to_be_visible()
         before=self.page.evaluate('({state:roundDiagnostics().state,years:roundDiagnostics().years,clock:roundDiagnostics().clock})')
-        for key,copy in [('AAA','All three teams'),('CCB','Restoring C helps shelter'),('CAB','Removal in A brings a large return')]:
+        for key,copy in [('AAA','All three teams'),('CCB','Remove C first'),('CAB','Removal in A brings a large return')]:
             self.page.locator(f'#earnings-health [data-plan="{key}"]').click()
             expect(self.page.locator('#recap-story')).to_contain_text(copy)
             self.page.mouse.move(20,20)
@@ -227,7 +227,7 @@ class CooperationPlay(unittest.TestCase):
         expect(self.page.locator('#cooperation-recap')).to_have_attribute('aria-label','Prelude III: possibilities')
         self.page.locator('#recap-space-plan').select_option('ABA')
         expect(self.page.locator('#hinge-title')).to_have_text('The crew clears B again')
-        expect(self.page.locator('#recap-story')).to_contain_text('more earnings as well as lower health')
+        expect(self.page.locator('#recap-story')).to_contain_text('rise in earnings alongside')
         self.shot('prelude-hinge-returning-crew')
         self.page.locator('#hinge-choices button').first.click()
         expect(self.page.locator('#hinge-title')).to_have_text('The nursery order is filled')
@@ -237,10 +237,24 @@ class CooperationPlay(unittest.TestCase):
         expect(self.page.locator('#recap-space-chart [data-plan]')).to_have_count(60)
         expect(self.page.locator('#recap-space-chart [data-trail]')).to_have_count(1)
         self.shot('recap-space-initial')
-        for key,count in [('AAA','One field plot'),('CCB','2 field plots'),('ABC','3 field plots')]:
+        for key,count,colour in [('AAA','One field plot','#8dbb9e'),('CCB','2 field plots','#8dbb9e'),('CAB','3 field plots','#ce93ae'),('CBA','2 field plots','#ce93ae'),('ABC','3 field plots','#ce93ae')]:
             self.page.locator('#recap-space-plan').select_option(key)
             expect(self.page.locator('#recap-work')).to_contain_text(count)
+            expect(self.page.locator('#recap-space-plan option:checked')).to_contain_text('Remove '+key[1]+', restore '+key[0])
+            for year in [0,5,10]:
+                dot=self.page.locator(f'#recap-space-chart [data-anchor="{year}"]')
+                expect(dot).to_have_attribute('fill',colour)
+                expect(dot).to_have_attribute('opacity','1')
+            expect(self.page.locator('#recap-space-chart [data-trail]')).to_have_attribute('stroke',colour)
             self.shot('recap-space-'+key)
+            if key=='AAA':
+                self.page.locator('#hinge-choices button').first.click()
+                expect(self.page.locator('#recap-story')).to_contain_text('Replacement orders become smaller')
+                self.shot('prelude-nursery-order-filled')
+        # Opaque background dots use the same category at all time anchors too.
+        for year in [0,5,10]:
+            expect(self.page.locator(f'#recap-space-chart [data-plan="CBA"][data-year="{year}"]')).to_have_attribute('fill','#ce93ae')
+            expect(self.page.locator(f'#recap-space-chart [data-plan="CBA"][data-year="{year}"]')).to_have_attribute('opacity','1')
         chart=self.page.locator('#recap-space-chart')
         old_path=chart.locator('[data-trail]').get_attribute('d')
         bounds=chart.bounding_box()
@@ -318,7 +332,7 @@ class CooperationPlay(unittest.TestCase):
         self.assertEqual(self.page.locator('#stage option').all_text_contents(),['Start Here','The Players','Prelude','The Game','Recap'])
         before=self.page.evaluate('strategyDiagnostics().game')
         self.page.locator('#stage').select_option('recap-one')
-        expect(self.page.locator('#recap-plan')).to_contain_text('Restore A, remove C, grazing C')
+        expect(self.page.locator('#recap-plan')).to_contain_text('Remove C, restore A, grazing C')
         self.page.locator('#recap-time-open').click();self.page.locator('#recap-space-open').click()
         self.page.locator('#recap-play').click()
         self.assertEqual(self.page.evaluate('strategyDiagnostics().game'),before)

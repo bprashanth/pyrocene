@@ -895,3 +895,21 @@ tending?” Its numbered turning points explain orders, harvests, care costs and
 repeat clearing one at a time; general instructions sit under About this graph.
 The closing Recap's fire map now uses the current Players fuel corridor and scar,
 not the older square-centre route. See [navigation, annotation and scar notes](../chronology/2026-09-25-prelude-hinges-and-consistent-menu.md).
+
+### Prelude earnings and coordination refinement
+
+Matched nursery supply now leads into a gentle decline in group money as care
+continues after year four. Annual community replacement orders still taper in
+Prelude II; they transfer credits within the group rather than create new group
+income. Coffee harvests ramp up after establishment, using one annual/cumulative
+curve across the pages. All-A remains healthiest before fire, while Remove C,
+restore C, coffee B offers strong health and later income. Its initial clearance
+helps fund planting and coffee, and recovering C shelters B. All-A also explicitly
+warns that untreated C remains a route for fire.
+
+Plan labels put removal first. Green/blue/pink now mean shared recovery, some
+shared work and separate work; they replace the earlier field-site-count colours.
+Each plan retains its colour across all three time anchors, including selected
+points and their path. Field-site counts remain separate. Explanations describe
+the causes of income and health changes directly. These are scenario projections;
+wildfire and single-player rules remain unchanged. See [assumptions and rollback](../chronology/2026-09-25-coordination-curves-and-colours.md).
