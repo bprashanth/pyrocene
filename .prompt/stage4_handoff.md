@@ -1,5 +1,22 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: Recap I cooperation stories and Recap II time
+
+Checkpoint tag `stage4-before-recap-tradeoffs-20260925` points to `4d0e7b7`.
+Read [this trial](../chronology/2026-09-25-recap-tradeoffs-and-time.md) before changing
+the graph. All-A now ranks highest for health through explicit careful-clearing,
+matched nursery and care assumptions, used in both the graph and projected
+health display. Restore C / coffee B follows. Repeated removal in A earns more
+but damages native growth. Click/focus dots for relevant prose; white is the
+selected comparison, yellow is the room's committed plan.
+
+Recap II: time is reached by a button in Recap I. It compares nursery-only,
+coffee now, and nursery then coffee at year three, fixing removal/restoration
+in A and coffee in B. Two graphs and one year slider, no room writes. Back
+preserves the selected dot. Costs, delayed earnings and limitations are in the
+chronology and Sources. Both pages exclude wildfire. Recap II does not change
+the map or commit a new plan. No server restart needed. Combined stays untouched.
+
 ## Latest: graph-first recap and two removal cycles
 
 Baseline `962f16b`; see [graph/cycle checkpoint](../chronology/2026-09-24-cooperation-graph-space-and-two-cycles.md).

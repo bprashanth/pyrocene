@@ -1,5 +1,11 @@
 # Community cooperation prototype
 
+**Recap trial:** main Recap I now ranks explicit cooperation benefits and shows
+a story for each clicked dot. Recap II compares nursery-only, coffee immediately,
+and nursery then coffee at year three. Both are read-only comparisons without
+wildfire. See [the 25 September checkpoint](../../chronology/2026-09-25-recap-tradeoffs-and-time.md).
+Combined is unchanged; the pre-trial tag is `stage4-before-recap-tradeoffs-20260925`.
+
 **Current main Room flow:** open Room, edit the three role dropdowns, Commit.
 No Reveal gate or With/Without controls. Revise reopens the choices. The main
 projection fades invasives through two smooth clearance/return cycles in ten years.

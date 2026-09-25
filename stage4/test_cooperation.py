@@ -188,6 +188,40 @@ class CooperationPlay(unittest.TestCase):
             self.page.wait_for_function('([team,key])=>roundDiagnostics().state.proposals[team]===key',arg=[team,key])
         self.shot('direct-room-edit');self.commit()
 
+    def test_tradeoff_stories_and_recap_time_are_read_only(self):
+        self.page.set_viewport_size({'width':1280,'height':800})
+        self.role('room')
+        for team in ['ecology','removal','community']:
+            self.page.locator('#plan-'+team).select_option('A')
+            self.page.wait_for_function('(team)=>roundDiagnostics().state.proposals[team] === "A"',arg=team)
+        self.commit();self.page.locator('#game-mode').select_option('recap-one')
+        before=self.page.evaluate('({state:roundDiagnostics().state,years:roundDiagnostics().years,clock:roundDiagnostics().clock})')
+        for key,copy in [('AAA','All three teams'),('CCB','Restoring C helps shelter'),('CAB','Removal in A brings a large return')]:
+            self.page.locator(f'#earnings-health [data-plan="{key}"]').click()
+            expect(self.page.locator('#recap-story')).to_contain_text(copy)
+            self.page.mouse.move(20,20)
+            expect(self.page.locator(f'#earnings-health [data-plan="{key}"]')).to_have_attribute('aria-pressed','true')
+            self.shot('recap-tradeoff-'+key)
+        self.page.locator('#recap-time-open').click()
+        expect(self.page.locator('#recap-time-chart [data-series]')).to_have_count(6)
+        self.shot('recap-time-year-zero')
+        slider=self.page.locator('#recap-year');slider.focus()
+        for _ in range(30):slider.press('ArrowRight')
+        expect(self.page.locator('#recap-story')).to_contain_text('6 credits')
+        self.shot('recap-time-coffee-investment')
+        slider.press('End');self.shot('recap-time-year-ten')
+        for choice in ['nursery','coffee','sequence']:
+            self.page.locator(f'[data-choice="{choice}"]').click()
+            expect(self.page.locator(f'[data-choice="{choice}"]')).to_have_attribute('aria-pressed','true')
+            self.shot('recap-time-'+choice)
+        layout=self.page.locator('#cooperation-recap').evaluate('(e)=>({height:e.clientHeight,content:e.scrollHeight})')
+        self.assertLessEqual(layout['content'],layout['height']+2)
+        self.page.locator('#recap-one-return').click()
+        expect(self.page.locator('#earnings-health [data-plan="CAB"]')).to_have_attribute('aria-pressed','true')
+        self.page.locator('#recap-one-back').click()
+        after=self.page.evaluate('({state:roundDiagnostics().state,years:roundDiagnostics().years,clock:roundDiagnostics().clock})')
+        self.assertEqual(before,after)
+
     def test_survey_flanks_structure_and_species(self):
         self.page.locator('[data-patch="C"]').click(); self.page.get_by_role('button',name='Close view',exact=True).click(); self.ready()
         expect(self.page.locator('#finding')).to_contain_text('continuous layer')

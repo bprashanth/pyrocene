@@ -843,3 +843,18 @@ The latest refinement shows two smooth removal/regrowth cycles over ten years.
 Recap I prioritises the interactive graph with tighter linear bounds and a
 narrower paragraph column. Combined is still unchanged; Community integration
 there remains a discussion. See [graph and cycle notes](../chronology/2026-09-24-cooperation-graph-space-and-two-cycles.md).
+
+### Recap I tradeoffs, then Recap II time
+
+Recap I now explains each selected dot. Matched removal/restoration/nursery in A
+protects native growth and supports establishment. Restoring C can shelter coffee
+in B. Removal in A can earn more while damaging natives. These benefits are
+explicit scenario assumptions, not measured rankings, and wildfire remains
+excluded. The map's projected health uses the same accounting as the graph.
+
+Recap II holds restoration/removal in A fixed and compares nursery-only, coffee
+in B from the start, and nursery followed by coffee in B at year three. Two
+graphs show earnings and health over time; one slider advances the explanation.
+Later coffee costs money and delays harvest. It need not beat keeping the
+nursery on ten-year cash retained. Neither recap changes the committed plan.
+Combined is unchanged. See [assumptions, play checks and rollback](../chronology/2026-09-25-recap-tradeoffs-and-time.md).

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {projection,beforeFire,alternatives,projectedFire,FIRE_END} from './cooperation-projection.mjs';
+import {projection,beforeFire,alternatives,projectedFire,FIRE_END,planStory,timeOutcome,timeStory} from './cooperation-projection.mjs';
 import {fineField} from './community_cooperation/model.mjs';
 import {referenceWorld,snapshot} from './memory-model.mjs';
 import {chartBounds} from './cooperation-recap.mjs';
@@ -44,5 +44,29 @@ test('All plans ignite at C, and grazing burns once in the first season',()=>{
  assert.deepEqual(projectedFire(grazing,10).arrival,projectedFire(grazing,.5).arrival);
  const restored={ecology:'C',removal:'A',community:'A'};
  assert.ok(projectedFire(restored,0).burned>projectedFire(restored,10).burned);
+ assert.deepEqual(referenceWorld(),world);assert.deepEqual(snapshot(),state);
+});
+test('Cooperation health and income benefits have a consistent ordering',()=>{
+ const points=alternatives(),top=[...points].sort((a,b)=>b.healthChange-a.healthChange);
+ assert.deepEqual(top[0].plan,{ecology:'A',removal:'A',community:'A'});
+ assert.equal(top[0].healthChange,17);
+ for(const p of top.slice(1,3)){assert.equal(p.plan.ecology,'C');assert.equal(p.plan.community,'B');}
+ const rich=[...points].sort((a,b)=>b.earnings-a.earnings);
+ assert.equal(rich[0].plan.removal,'A');assert.ok(rich[0].healthChange<top[0].healthChange);
+ const allA=beforeFire({ecology:'A',removal:'A',community:'A'});
+ assert.ok(allA.earnings>5);assert.equal(allA.support.localPurchases,4);
+ assert.ok(planStory({ecology:'C',removal:'C',community:'B'}).join(' ').includes('not included in this graph'));
+ assert.ok(planStory({ecology:'B',removal:'B',community:'A'}).join(' ').includes('no matching order'));
+});
+test('Time comparison pays for later coffee, waits for harvest and preserves state',()=>{
+ const world=referenceWorld(),state=snapshot();
+ assert.deepEqual(timeOutcome('sequence',2),timeOutcome('nursery',2));
+ assert.ok(Math.abs(timeOutcome('nursery',3).earnings-timeOutcome('sequence',3).earnings-6)<1e-8);
+ assert.ok(timeOutcome('sequence',5).earnings<timeOutcome('sequence',3).earnings);
+ assert.ok(timeOutcome('sequence',10).earnings>timeOutcome('sequence',6).earnings);
+ assert.ok(timeOutcome('sequence',10).healthChange>timeOutcome('coffee',10).healthChange);
+ // Later investment is not an unconditional winner: keeping the nursery saves cash.
+ assert.ok(timeOutcome('nursery',10).earnings>timeOutcome('sequence',10).earnings);
+ assert.ok(timeStory('sequence',3).join(' ').includes('6 credits'));
  assert.deepEqual(referenceWorld(),world);assert.deepEqual(snapshot(),state);
 });
