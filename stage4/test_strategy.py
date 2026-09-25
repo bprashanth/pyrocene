@@ -84,7 +84,7 @@ class StrategyPlay(unittest.TestCase):
   strip=self.page.locator('#ledger-strip').bounding_box()
   self.assertAlmostEqual(strip['x']+strip['width']/2,720,delta=1)
   expect(self.page.locator('#stage')).to_have_value('combined')
-  expect(self.page).to_have_title('Combined - Pyrocene')
+  expect(self.page).to_have_title('The Game - Pyrocene')
   self.assertEqual(self.page.locator('.strategy-pins button').count(),1)
   self.page.get_by_role('button',name='Overhead',exact=True).click(); self.ready()
   # B3 is unmarked native forest in the finer grid.

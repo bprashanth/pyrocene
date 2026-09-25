@@ -8,7 +8,7 @@ export function chartBounds(points){
  const [xmin,xmax]=extent(points.map(p=>p.earnings)),[ymin,ymax]=extent(points.map(p=>p.healthChange));
  return {xmin,xmax,ymin,ymax};
 }
-export function createCooperationRecap(forest){
+export function createCooperationRecap(forest,onPlay){
  const dialog=document.createElement('dialog');dialog.id='cooperation-recap';dialog.setAttribute('aria-label','Recap I');document.body.append(dialog);
  let committed,selected,choice='sequence',spacePlan,yaw=.48,pitch=.3;
  const $=id=>dialog.querySelector('#'+id);
@@ -97,16 +97,15 @@ export function createCooperationRecap(forest){
  }
  function showSpace(){
   dialog.dataset.page='space';dialog.setAttribute('aria-label','Recap III: possibilities');
-  dialog.innerHTML=`<section class="prelude-copy"><small>RECAP III / POSSIBILITIES</small><h1>How much can we keep tending?</h1>
+  dialog.innerHTML=`<section class="prelude-copy"><small>RECAP III / POSSIBILITIES</small><h1>How much can place-neutral actors keep tending?</h1>
    <p>These are the same 21 plans from Recap I, now at the start, year five and year ten. Follow one to see how early costs and later returns change its position.</p>
    <div id="recap-story" aria-live="polite"></div><p id="recap-work"></p>
-   <p class="recap-note">In Combined you can work across the forest. However, each new site needs attention while the canopy is still open.</p>
-   <div class="prelude-nav"><button id="recap-time-return">Back</button><button class="primary" id="recap-one-back">Back to map</button></div></section>
+   <div class="prelude-nav"><button id="recap-time-return">Back</button><button class="primary" id="recap-play">Play game</button></div></section>
    <figure><label class="space-select" for="recap-space-plan">Follow a plan <select id="recap-space-plan"></select></label>
    <svg id="recap-space-chart" viewBox="0 0 620 480" role="group" tabindex="0" aria-label="Plans through time. Drag or use arrow keys to turn the graph. Choose a dot to follow a plan."></svg>
    <div class="space-legend"><span style="--line-colour:#8dbb9e">1 field plot</span><span style="--line-colour:#7db5ce">2 field plots</span><span style="--line-colour:#ce93ae">3 field plots</span></div>
    <p id="recap-values"></p><small>Drag to turn - choose a dot to follow its plan. Group earnings include costs, unlike community income in Recap II. No wildfire. Nursery production is off-map.</small></figure>`;
-  $('recap-time-return').onclick=showTime;$('recap-one-back').onclick=close;
+  $('recap-time-return').onclick=showTime;$('recap-play').onclick=()=>{close();onPlay?.();};
   for(const {plan}of alternatives()){const option=document.createElement('option');option.value=plan.ecology+plan.removal+plan.community;option.textContent=describe(plan);$('recap-space-plan').append(option);}
   $('recap-space-plan').onchange=()=>{const [ecology,removal,community]=$('recap-space-plan').value;spacePlan={ecology,removal,community};drawSpace();};
   const svg=$('recap-space-chart');let drag=null,moved=false;

@@ -58,6 +58,17 @@ test('Cooperation health and income benefits have a consistent ordering',()=>{
  assert.ok(planStory({ecology:'C',removal:'C',community:'B'}).join(' ').includes('not included in this graph'));
  assert.ok(planStory({ecology:'B',removal:'B',community:'A'}).join(' ').includes('no matching order'));
 });
+test('A new fire uses the projection year and returning invasive fuel',()=>{
+ const p={ecology:'A',removal:'C',community:'A'};
+ assert.ok(projectedFire(p,5).burned>projectedFire(p,2.5).burned+2);
+ assert.ok(projectedFire(p,10).burned>projectedFire(p,7.5).burned+2);
+ const grazing={...p,community:'C'};
+ // Automatic Projection retains its first-season grazing fire.
+ assert.deepEqual(projectedFire(grazing,10).arrival,projectedFire(grazing,.5).arrival);
+ // Manual Fire instead tests today's fuel, even for a grazing plan.
+ assert.ok(projectedFire(grazing,5,{atProjectionYear:true}).burned>projectedFire(grazing,2.5,{atProjectionYear:true}).burned+2);
+ assert.notDeepEqual(projectedFire(grazing,2.5,{atProjectionYear:true}).arrival,projectedFire(grazing,2.5).arrival);
+});
 test('Community income tapers with nursery orders and rises after delayed coffee harvest',()=>{
  const world=referenceWorld(),state=snapshot();
  assert.deepEqual(timeOutcome('sequence',2),timeOutcome('nursery',2));

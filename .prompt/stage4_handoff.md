@@ -1,5 +1,21 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: stage labels, explicit Prelude and independent Fire
+
+See [fire and prelude flow](../chronology/2026-09-25-fire-slider-and-prelude-flow.md).
+Rollback `stage4-before-prelude-flow-20260925` at `452225f`. Commit now stays on
+the map. Projection, Fire and Recap are visible in that order. Recap opens the
+three-page Prelude only on request. Dropdown labels: Start Here / The Players /
+Prelude / The Game / Recap. Values and routes retain their old names.
+
+Grazing Projection still includes its first-season burn. Manual Fire tests a
+fresh ignition at the selected year, even for grazing. Moving Projection again
+returns grazing to its automatic first-season view. Non-grazing fire already
+uses current-year fuel. C always supplies the ignition; fuel cycles affect spread.
+These are independent previews, not cumulative fire damage. Recap III now says
+“place-neutral actors”; Play game enters the existing fresh single-player game.
+No mechanics of that game changed. No server restart required.
+
 ## Latest: annual community income and Recap III
 
 Read [income and possibilities](../chronology/2026-09-25-recap-income-and-possibilities.md).

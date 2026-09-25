@@ -12,6 +12,9 @@
 #round-panel.is-committed #terms p{margin:7px 0}
 #round-panel.is-committed #terms .plan-row{padding:4px 0}
 #round-panel.is-committed #outcomes input{margin:8px 0}
+.integrated-cooperation #round-panel.is-committed{max-height:calc(100dvh - 130px)}
+.integrated-cooperation #round-panel.is-committed .room-choice{margin:8px 0}.integrated-cooperation #round-panel.is-committed .room-choice select{padding:7px 9px}
+.integrated-cooperation #round-panel.is-committed #livelihood,.integrated-cooperation #round-panel.is-committed #fire-note{margin:8px 0}
 #round-panel #fire-note{font-size:12px;color:#a9bfae}
 .fire-heading{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font:12px monospace}
 #run-fire{border:1px solid #d1b95e70;padding:8px 12px;color:#e3c879}
@@ -35,6 +38,7 @@
 #recap-space-chart{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;max-height:60dvh;outline:none}#recap-space-chart:active{cursor:grabbing}#recap-space-chart:focus-visible{outline:1px solid #e3c879}
 .space-legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 12px;font:12px Arial}.space-legend span:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--line-colour);margin-right:6px}
 #cooperation-recap #recap-work{color:#e3c879}
+#cooperation-recap[data-page=space] h1{font-size:25px;line-height:1.25}
 @media(max-width:850px){#cooperation-recap[open]{grid-template-columns:1fr}#cooperation-recap .prelude-copy{padding:20px}#cooperation-recap figure{padding:0 20px 20px}}
 #teams{max-height:85dvh;overflow:auto;border-radius:0}#teams h1{font-size:20px}#teams #new-room{border:1px solid #d1b95e70;padding:8px;margin:16px 0}#teams details{margin-top:12px}#teams a{color:#dbc780}#teams input{box-sizing:border-box}
 #landscape #loading{padding:25px}.community-cooperation #round-panel [hidden],#map-note[hidden]{display:none}

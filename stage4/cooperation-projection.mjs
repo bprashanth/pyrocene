@@ -12,10 +12,11 @@ export function projection(plan,year){
   coffeeHeight:plan.community==='B'?2*clamp(y/4):0,
   grazing:plan.community==='C',fireMinutes:plan.community==='C'?FIRE_END*clamp(y/.5):0};
 }
-export function projectedFire(plan,year){
+export function projectedFire(plan,year,{atProjectionYear=false}={}){
  // C remains the pasture ignition even when the community chooses another job.
  // With grazing, the burn is in the first season, not replayed every year.
- return fire(plan,plan?.community==='C'?Math.min(year,.5):year,'C',true);
+ // The independent Fire slider can instead test a new ignition at any year.
+ return fire(plan,plan?.community==='C'&&!atProjectionYear?Math.min(year,.5):year,'C',true);
 }
 export function beforeFire(plan,year=10){
  const p=projection(plan,year),b=planBudget(plan.removal,plan.ecology),investment=CONFIG.opportunities[plan.community].investment;
@@ -86,7 +87,7 @@ export function alternatives(){
 }
 export function projectionNote(plan,year){
  const p=projection(plan,year),bits=[`Restore ${plan.ecology}: ${year>=8?'canopy closes':'young trees grow'}.`];
- if(plan.removal!==plan.ecology&&!(plan.community==='B'&&plan.removal==='B'))bits.push(`Remove ${plan.removal}: ${p.removalCover<.15?(year<REMOVAL_CYCLE_YEARS?'cleared':'cleared again'):year%REMOVAL_CYCLE_YEARS<REMOVAL_CYCLE_YEARS/2&&year<10?'invasives are being cleared':'invasives return'}.`);
+ if(plan.removal!==plan.ecology&&!(plan.community==='B'&&plan.removal==='B'))bits.push(`Remove ${plan.removal}: ${p.removalCover<.15?(year<REMOVAL_CYCLE_YEARS?'cleared':'cleared again'):p.removalCover>.6?'invasives cover the ground':year%REMOVAL_CYCLE_YEARS<REMOVAL_CYCLE_YEARS/2&&year<10?'invasives are being cleared':'invasives return'}.`);
  if(plan.community==='B')bits.push(year===0?'B: coffee and shade trees planted.':`B: coffee below ${p.shadeHeight.toFixed(0)} m shade trees.`);
  else if(plan.community==='C')bits.push('C: the pasture burn spreads in the first season.');
  else bits.push('A: the nursery supplies plants off-map.');

@@ -873,3 +873,17 @@ many field plots need attention. It adds time and a coordination cue without
 drawing every possible path at once. This is not a new logistics simulation.
 Recap I's group accounting and Combined stay unchanged, and all three recaps
 remain read-only and exclude wildfire. See [the trial and rollback notes](../chronology/2026-09-25-recap-income-and-possibilities.md).
+
+### Explicit Prelude and fire testing
+
+The menu now reads Start Here / The Players / Prelude / The Game / Recap.
+Committing a shared plan stays on the map with Projection and Fire sliders.
+The Recap button beneath them opens the three-page Prelude; its final Play game
+button enters the existing single-player game. The title asks how much
+place-neutral actors can keep tending, rather than speaking for every group.
+
+Grazing still includes a first-season fire in Projection. The separate Fire
+slider can test a new ignition at any projected year for every plan. Returning
+invasives increase the fuel and spread compared with recently cleared ground.
+These are independent comparisons, not accumulating fires. Forest and fire
+styling are unchanged. See [flow and fire semantics](../chronology/2026-09-25-fire-slider-and-prelude-flow.md).

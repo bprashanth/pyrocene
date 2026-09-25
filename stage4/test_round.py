@@ -40,7 +40,7 @@ class RoundPlay(unittest.TestCase):
  def test_expedition_role_briefing_play_sliders_and_reset(self):
   self.page.goto(self.base+'/expedition.html?negligence=1');self.page.locator('#loading').wait_for(state='hidden');self.shot('play-01-expedition')
   self.page.locator('#role').select_option('ecology');self.page.locator('#game-mode').select_option('play');self.page.locator('#briefing[open]').wait_for()
-  expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#game-mode option:checked')).to_have_text('Cooperation');self.shot('play-02-briefing');self.begin()
+  expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#game-mode option:checked')).to_have_text('The Players');self.shot('play-02-briefing');self.begin()
   self.inspect('C');expect(self.page.locator('#finding')).to_contain_text('Cost: 9 credits. Health: +6');expect(self.page.locator('#finding')).not_to_contain_text('shared')
   self.assertEqual(self.page.locator('#patch-actions button').all_text_contents(),['Propose','Structure'])
   self.shot('play-03-choice');self.click('Structure');self.page.wait_for_function('roundDiagnostics().lab.draws>0');self.click('Look through');self.page.locator('#structure-focus').select_option('liana')

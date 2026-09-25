@@ -44,6 +44,11 @@ class CooperationPlay(unittest.TestCase):
     def commit(self):
         self.page.get_by_role('button',name='Commit plan').click()
         self.page.wait_for_function('roundDiagnostics().state.phase === "committed"')
+        self.page.wait_for_function('!roundDiagnostics().busy')
+        expect(self.page.locator('#cooperation-recap')).not_to_be_visible()
+        expect(self.page.locator('#recovery')).to_be_visible()
+        expect(self.page.locator('#fire-time')).to_be_visible()
+        expect(self.page.locator('#recap-open')).to_be_visible()
         self.ready()
 
     def begin(self, page=None):
@@ -129,7 +134,7 @@ class CooperationPlay(unittest.TestCase):
         self.page.set_viewport_size({'width':1280,'height':800})
         self.propose('community','C'); self.propose('ecology','A'); self.propose('removal','A'); self.role('room')
         self.commit()
-        expect(self.page.locator('#fire-controls')).to_be_hidden()
+        expect(self.page.locator('#fire-controls')).to_be_visible()
         self.page.locator('#recovery').focus();self.page.locator('#recovery').press('ArrowRight')
         self.page.wait_for_function('roundDiagnostics().clock > 0');self.shot('laptop-small-ignition')
         self.seek('recovery');expect(self.page.locator('#fire-note')).to_contain_text('pasture C')
@@ -141,7 +146,7 @@ class CooperationPlay(unittest.TestCase):
         expect(self.page.locator('#terms')).to_contain_text('Debt:')
         expect(self.page.get_by_role('button',name='Commit plan')).to_be_enabled()
         self.shot('debt-review'); self.commit()
-        self.page.locator('#game-mode').select_option('recap-one')
+        self.page.get_by_role('button',name='Recap',exact=True).click()
         expect(self.page.locator('#cooperation-recap li')).to_have_count(0)
         copy=self.page.locator('#cooperation-recap .prelude-copy').bounding_box()
         graph=self.page.locator('#cooperation-recap figure').bounding_box()
@@ -255,6 +260,48 @@ class CooperationPlay(unittest.TestCase):
         self.page.locator('#recap-one-back').click()
         after=self.page.evaluate('({state:roundDiagnostics().state,years:roundDiagnostics().years,clock:roundDiagnostics().clock})')
         self.assertEqual(before,after)
+
+    def test_fire_at_projected_year_and_explicit_prelude_to_game(self):
+        self.page.set_viewport_size({'width':1280,'height':800})
+        self.role('room')
+        self.assertEqual(self.page.locator('#game-mode option').all_text_contents(),['Start Here','The Players','Prelude','The Game','Recap'])
+        for team,key in [('ecology','A'),('removal','C'),('community','A')]:
+            self.page.locator('#plan-'+team).select_option(key)
+            self.page.wait_for_function('(a)=>roundDiagnostics().state.proposals[a[0]]===a[1]',arg=[team,key])
+        self.commit()
+        slider=self.page.locator('#recovery')
+        burned=[]
+        for year in [2.5,5]:
+            slider.focus()
+            for _ in range(25):slider.press('ArrowRight')
+            self.seek('fire-time',False);self.seek('fire-time')
+            expect(self.page.locator('#fire-note')).to_contain_text('year '+str(year).removesuffix('.0'))
+            burned.append(float(self.page.locator('#burned').inner_text().split()[0]))
+            panel=self.page.locator('#round-panel').bounding_box()
+            recap=self.page.locator('#recap-open').bounding_box()
+            self.assertLessEqual(recap['y']+recap['height'],panel['y']+panel['height'])
+            self.shot('fire-current-fuel-'+str(year))
+        self.assertGreater(burned[1],burned[0]+2)
+        # The same independent test is available even when Projection includes grazing.
+        self.page.get_by_role('button',name='Revise plan').click()
+        self.page.locator('#plan-community').select_option('C')
+        self.page.wait_for_function('roundDiagnostics().state.proposals.community==="C"')
+        self.commit();self.seek('recovery')
+        expect(self.page.locator('#fire-note')).to_contain_text('first season')
+        self.seek('fire-time',False);self.seek('fire-time')
+        expect(self.page.locator('#fire-note')).to_contain_text('year 10')
+        slider.focus();slider.press('ArrowLeft')
+        expect(self.page.locator('#fire-note')).to_contain_text('first season')
+        self.page.get_by_role('button',name='Recap',exact=True).click()
+        self.page.locator('#recap-time-open').click();self.page.locator('#recap-space-open').click()
+        expect(self.page.locator('#cooperation-recap h1')).to_have_text('How much can place-neutral actors keep tending?')
+        expect(self.page.locator('#cooperation-recap')).not_to_contain_text('In Combined')
+        self.shot('prelude-play-game')
+        self.page.get_by_role('button',name='Play game',exact=True).click()
+        self.page.wait_for_url('**/strategy.html#*')
+        self.page.locator('#loading').wait_for(state='hidden',timeout=60000)
+        expect(self.page.locator('#strategy-intro')).to_be_visible()
+        expect(self.page.locator('#stage [value=combined]')).to_have_text('The Game')
 
     def test_survey_flanks_structure_and_species(self):
         self.page.locator('[data-patch="C"]').click(); self.page.get_by_role('button',name='Close view',exact=True).click(); self.ready()

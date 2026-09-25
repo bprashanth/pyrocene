@@ -25,12 +25,12 @@ const line=(parent,text,cls='')=>{const p=document.createElement('p');p.textCont
 const forest=new (integrated?RoundForest:CommunityForest)($('landscape'),{select:choose,specimen:meet});
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const lab=integrated?new StructureLab({forest,catalogue:()=>catalogue}):null;
-const recapOne=integrated?createCooperationRecap(forest):null;let pendingRecap=false;
+const recapOne=integrated?createCooperationRecap(forest,enterCombined):null;let manualFire=false;
 const briefed=new Set();let typing=null;
 if(integrated){
  years=0;installProjection(forest);
  bindRecap(forest,$('game-mode'),()=>'play');
- $('game-mode').add(new Option('Recap I','recap-one'),$('game-mode').querySelector('[value=combined]'));$('game-mode').querySelector('[value=recap-one]').disabled=true;
+ $('recap-open').onclick=()=>recapOne.open(state.proposals);
  $('briefing-begin').onclick=()=>{$('briefing').close();clearInterval(typing);};$('briefing').onclose=()=>clearInterval(typing);
  $('game-mode').onchange=async()=>{
   if($('game-mode').value==='recap-one'){$('game-mode').value='play';recapOne.open(state.proposals);return;}
@@ -65,8 +65,8 @@ function accept(next){
  const changed=state?.phase!==next.phase;state=next;
  if(integrated&&state.screen==='expedition'){location.assign(flowURL('expedition.html?fresh=1',{...credentials,game:'cooperation'},role));return;}
  if(state.role!=='room')role=state.role;
- if(changed){running=false;clock=0;withPlan=!fireReview;cacheKey='';}
- if(state.phase==='committed'&&changed){role=state.role==='room'?'room':role;if(integrated){years=0;pendingRecap=true;}camera('overhead');}
+ if(changed){running=false;clock=0;manualFire=false;withPlan=!fireReview;cacheKey='';}
+ if(state.phase==='committed'&&changed){role=state.role==='room'?'room':role;if(integrated)years=0;camera('overhead');}
  if(integrated&&changed&&state.phase==='review'){selected=patch(state.proposals.ecology).id;forest.selectPlot(selected);}
  updateProjection();render();briefing();
 }
@@ -143,7 +143,7 @@ function render(){
  }
  $('plant-label').hidden=room||done;populatePlants();
  $('outcomes').hidden=!done;$('map-note').hidden=!done||clock===0;
- if(integrated){$('fire-controls').hidden=!done||state.proposals.community==='C';$('game-mode').querySelector('[value=recap-one]').disabled=!done;}
+ if(integrated){$('fire-controls').hidden=!done;$('game-mode').querySelector('[value=recap-one]').disabled=!done;}
  $('recovery-label').textContent=years+'y';$('recovery').value=years;
  $('livelihood').textContent=result?.livelihood||'';
  $('with')?.setAttribute('aria-pressed',String(withPlan));$('without')?.setAttribute('aria-pressed',String(!withPlan));
@@ -171,18 +171,18 @@ async function camera(next){
  if(busy)return;busy=true;view=next;closeRecord();render();
  try{await forest.setView(next,selected);if(next==='close')forest.setFieldVisited(true);specimens();}
  catch(e){toast(e.message);}
- finally{busy=false;render();if(pendingRecap){pendingRecap=false;recapOne.open(state.proposals);}}
+ finally{busy=false;render();}
 }
 function updateProjection(){
  let plan=proposed();const ready=state?.phase==='committed';
  if(!ready){if(integrated)forest.setProjection(null);else forest.setPlan(null);forest.setFire(null,CONFIG.duration);cacheKey='';result=null;return;}
  result=outcome(plan,years);
- if(integrated){forest.setProjection(withPlan?plan:null,years);result={...result,...beforeFire(plan,years)};if(plan.community==='C')clock=projection(plan,years).fireMinutes;}
+ if(integrated){forest.setProjection(withPlan?plan:null,years);result={...result,...beforeFire(plan,years)};if(plan.community==='C'&&!manualFire)clock=projection(plan,years).fireMinutes;}
  else forest.setPlan(withPlan?plan:null,years/10);
  const ignition=integrated?'C':fireReview?reviewIgnition:plan.community;
- const key=JSON.stringify([plan,years,withPlan,ignition]);
+ const key=JSON.stringify([plan,years,withPlan,ignition,integrated&&manualFire]);
  if(key!==cacheKey){
-  if(!fireCache.has(key))fireCache.set(key,integrated?projectedFire(withPlan?plan:null,plan.community==='C'?Math.min(years,.5):years):fire(withPlan?plan:null,years,ignition));
+  if(!fireCache.has(key))fireCache.set(key,integrated?projectedFire(withPlan?plan:null,years,{atProjectionYear:manualFire}):fire(withPlan?plan:null,years,ignition));
   cacheKey=key;forest.setFire(fireCache.get(key).arrival,integrated?FIRE_END:CONFIG.duration);
  }
  forest.setFireTime(clock/(integrated?FIRE_END:CONFIG.duration));
@@ -198,7 +198,7 @@ function renderFire(){
  $('livelihood').textContent=livelihood;
  if(integrated&&withPlan&&state?.phase==='committed')$('livelihood').textContent=projectionNote(state.proposals,years)+(livelihood.startsWith('Fire reached')?' '+livelihood:'');
  if(fireReview)$('livelihood').textContent='Same spark and wind, before and after restoring C.';
- $('fire-note').textContent=integrated?'Ignition: pasture C.':(fireReview?reviewIgnition:state?.proposals.community)==='C'?'Ignition: patch C.':'Ignition: neighbouring field.';
+ $('fire-note').textContent=integrated?`Ignition: pasture C, ${state?.proposals.community==='C'&&!manualFire?'first season':'year '+years}.`:(fireReview?reviewIgnition:state?.proposals.community)==='C'?'Ignition: patch C.':'Ignition: neighbouring field.';
  $('map-note').hidden=state?.phase!=='committed'||clock===0;
 }
 function frame(now){
@@ -209,8 +209,8 @@ $('role').onchange=()=>{role=$('role').value;closeRecord();saveURL();render();br
 for(const b of $('patches').children)b.onclick=()=>choose(patch(b.dataset.patch).id);
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>camera(b.dataset.view);
 $('plot-plants').onchange=()=>{if($('plot-plants').value)meet($('plot-plants').value);};$('record-close').onclick=closeRecord;
-$('recovery').oninput=()=>{years=Number($('recovery').value);running=false;updateProjection();render();};
-$('fire-time').oninput=()=>{running=false;clock=Number($('fire-time').value);forest.setFireTime(clock/(integrated?FIRE_END:CONFIG.duration));renderFire();};
+$('recovery').oninput=()=>{years=Number($('recovery').value);running=false;manualFire=false;updateProjection();render();};
+$('fire-time').oninput=()=>{running=false;clock=Number($('fire-time').value);if(integrated){manualFire=true;updateProjection();}else forest.setFireTime(clock/CONFIG.duration);renderFire();};
 if($('run-fire'))$('run-fire').onclick=()=>{if(clock>=CONFIG.duration)clock=0;running=!running;renderFire();};
 if($('with'))$('with').onclick=()=>{withPlan=true;updateProjection();render();};if($('without'))$('without').onclick=()=>{withPlan=false;updateProjection();render();};
 $('teams-open').onclick=()=>{
