@@ -858,3 +858,18 @@ graphs show earnings and health over time; one slider advances the explanation.
 Later coffee costs money and delays harvest. It need not beat keeping the
 nursery on ten-year cash retained. Neither recap changes the committed plan.
 Combined is unchanged. See [assumptions, play checks and rollback](../chronology/2026-09-25-recap-tradeoffs-and-time.md).
+
+### Recap II income refinement and Recap III possibilities
+
+Recap II now shows **community income each year**, not accumulated group
+earnings. The first nursery order is largest; replacement orders taper as
+restoration establishes. Later coffee harvests can raise income again, although
+the investment and continued care must be paid for. Costs are shown separately.
+The Year slider is removed and a small overhead map marks A/B/C beneath the text.
+
+Recap III places Recap I's 21 fixed plans at the start, year five and year ten
+in a rotatable spatial graph. Choose one to follow its path; colours show how
+many field plots need attention. It adds time and a coordination cue without
+drawing every possible path at once. This is not a new logistics simulation.
+Recap I's group accounting and Combined stay unchanged, and all three recaps
+remain read-only and exclude wildfire. See [the trial and rollback notes](../chronology/2026-09-25-recap-income-and-possibilities.md).

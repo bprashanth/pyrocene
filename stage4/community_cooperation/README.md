@@ -1,5 +1,12 @@
 # Community cooperation prototype
 
+**Latest recap refinement:** Recap II shows annual community income with declining
+nursery orders and later coffee harvests. No slider; A/B/C orientation map under
+the copy. Recap III adds a rotatable time-anchored view of the same 21 plans,
+colour-grouped by field plots to coordinate. Main game mechanics are unchanged.
+See [income and possibilities](../../chronology/2026-09-25-recap-income-and-possibilities.md).
+Rollback: `stage4-before-recap-three-20260925` at `29e21c0`.
+
 **Recap trial:** main Recap I now ranks explicit cooperation benefits and shows
 a story for each clicked dot. Recap II compares nursery-only, coffee immediately,
 and nursery then coffee at year three. Both are read-only comparisons without

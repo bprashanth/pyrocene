@@ -60,17 +60,24 @@ export const TIME_CHOICES=[
 export function timeOutcome(choice,year){
  const y=Math.max(0,Math.min(10,year)),nursery={ecology:'A',removal:'A',community:'A'},coffee={...nursery,community:'B'};
  const result=beforeFire(choice==='coffee'?coffee:nursery,y);
- if(choice!=='sequence'||y<3)return result;
- const age=y-3,harvest=Math.max(0,age-3)*2*shadeSupport(coffee),cost=CONFIG.opportunities.B.investment+age*.3;
- return {...result,earnings:result.earnings-cost+harvest,balance:result.balance-cost+harvest,
-  health:result.health+3*clamp(age/10),healthChange:result.healthChange+3*clamp(age/10)};
+ // Recap II follows COMMUNITY operating income, not the group's accumulated
+ // cash. Replacement orders taper as restoration establishes. These payments
+ // require buyers; they must not be added to beforeFire as free group revenue.
+ const orders=.35+5.65*Math.exp(-.48*y);
+ const coffeeIncome=age=>5.5*shadeSupport(coffee)*(1-Math.exp(-Math.max(0,age-3)/2))-.3;
+ const annualIncome=choice==='nursery'?orders:choice==='coffee'?coffeeIncome(y):orders+(y>=3?coffeeIncome(y-3):0);
+ const extraHealth=choice==='sequence'?3*clamp((y-3)/10):0;
+ return {year:y,annualIncome,healthChange:result.healthChange+extraHealth,
+  investment:choice==='coffee'?6:choice==='sequence'&&y>=3?8:2};
 }
-export function timeStory(choice,year){
- if(choice==='nursery')return ['The nursery supplies restoration in A, so there is a buyer for its plants. Careful clearing and shared tending help the natives recover.','After that order is filled, keeping the nursery does not mean orders will keep arriving. The group keeps more money available over these ten years, but has no new source of income once the order is filled.'];
- if(choice==='coffee')return [year<3?'The group pays for coffee in B at the start, as well as restoration in A. Coffee has not started earning yet.':'Coffee in B has begun earning, but its harvest still depends on shelter from the surrounding forest.', 'There was no matching nursery order for A. Plant purchases leave the group, and the restoration does not get the same shared support.'];
- return [year<3?'The nursery starts with an order for restoration in A. Seed purchases stay within the group while the teams clear carefully and tend the young trees.':year<6?'At year three the group spends 6 credits to plant coffee in B. The forest work in A continues, but coffee will take another three years to start earning.':'Coffee in B is now earning alongside the recovering forest in A. The nursery helped the group get started, although the later coffee investment took money away from other work.',
- 'Waiting reduces the early spending, but also delays the harvest. This can work if the group can keep tending the land. Fire or a poor harvest could still change the result.'];
+export function timeStory(choice){
+ if(choice==='nursery')return ['The first order for A brings the most income. Smaller replacement orders follow, but as the forest establishes it needs fewer plants. Hence earnings decline unless the nursery finds new buyers.'];
+ if(choice==='coffee')return ['Coffee in B costs 6 credits at the start. Harvests begin after year three and grow as the crop establishes. However, A has no local nursery supplying its restoration, and the coffee still needs shelter from the surrounding forest.'];
+ return ['The nursery starts with an order for A. At year three the group invests 6 credits in coffee in B while smaller plant orders continue. Coffee begins earning after year six, so income grows again as nursery orders decline. However, both sites still need care.'];
 }
+// A simple coordination count, not a travel-time or labour-cost estimate.
+// Nursery production is off-map; it does not count as a third field plot.
+export function fieldPlots(plan){return [...new Set([plan.ecology,plan.removal,...(plan.community==='A'?[]:[plan.community])])].sort();}
 export function alternatives(){
  const plans=[];for(const ecology of ['A','B','C'])for(const removal of ['A','B','C'])for(const community of ['A','B','C']){
   if(community===ecology&&community!=='A')continue;

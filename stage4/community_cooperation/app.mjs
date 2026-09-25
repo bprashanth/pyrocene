@@ -25,7 +25,7 @@ const line=(parent,text,cls='')=>{const p=document.createElement('p');p.textCont
 const forest=new (integrated?RoundForest:CommunityForest)($('landscape'),{select:choose,specimen:meet});
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const lab=integrated?new StructureLab({forest,catalogue:()=>catalogue}):null;
-const recapOne=integrated?createCooperationRecap():null;let pendingRecap=false;
+const recapOne=integrated?createCooperationRecap(forest):null;let pendingRecap=false;
 const briefed=new Set();let typing=null;
 if(integrated){
  years=0;installProjection(forest);

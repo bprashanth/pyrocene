@@ -1,5 +1,21 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: annual community income and Recap III
+
+Read [income and possibilities](../chronology/2026-09-25-recap-income-and-possibilities.md).
+Rollback tag `stage4-before-recap-three-20260925` preserves `29e21c0`.
+Recap II now shows annual community income, not cumulative group earnings.
+Nursery orders taper, later coffee harvests rise; set-up costs are separate.
+No slider. A small measured overhead map marks A/B/C beneath the left copy.
+
+Recap III is a read-only SVG spatial chart of all 21 Recap I plans at years
+0/5/10. Select one path, drag/arrow keys to turn, Home resets view. Colours
+count field plots to coordinate; nursery production is off-map. This does not
+add a labour penalty or model every possible sequence. Recap I's group finances
+and all actual game mechanics remain unchanged. Both pages work without WebGL.
+No new routes or server restart. Combined remains unchanged. The older Recap II
+slider/no-new-orders/retained-cash description below is historical and superseded.
+
 ## Latest: Recap I cooperation stories and Recap II time
 
 Checkpoint tag `stage4-before-recap-tradeoffs-20260925` points to `4d0e7b7`.
