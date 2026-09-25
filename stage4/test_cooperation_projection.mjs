@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {projection,beforeFire,alternatives,projectedFire,FIRE_END,planStory,timeOutcome,timeStory,fieldPlots} from './cooperation-projection.mjs';
+import {projection,beforeFire,alternatives,projectedFire,FIRE_END,planStory,timeOutcome,timeStory,fieldPlots,planHinges} from './cooperation-projection.mjs';
+import {recapFire} from './play-briefing.mjs';
 import {fineField} from './community_cooperation/model.mjs';
 import {referenceWorld,snapshot} from './memory-model.mjs';
 import {chartBounds} from './cooperation-recap.mjs';
@@ -94,4 +95,17 @@ test('Spatial comparison counts field plots without inventing a labour cost',()=
  assert.deepEqual(fieldPlots({ecology:'C',removal:'C',community:'B'}),['B','C']);
  assert.deepEqual(fieldPlots({ecology:'A',removal:'B',community:'C'}),['A','B','C']);
  for(const {plan}of alternatives())for(const year of [0,5,10]){const p=beforeFire(plan,year);assert.ok(Number.isFinite(p.earnings)&&Number.isFinite(p.healthChange));}
+});
+test('Hinge explanation matches the actual re-clearance payment and native loss',()=>{
+ const plan={ecology:'A',removal:'B',community:'A'},events=planHinges(plan);
+ assert.deepEqual(events.map(e=>e.year),[2,4,7.5]);
+ const before=beforeFire(plan,7.499999),after=beforeFire(plan,7.5);
+ assert.ok(after.earnings>before.earnings);assert.ok(after.health<before.health);
+ assert.ok(events[2].text.includes((after.earnings-before.earnings).toFixed(1)+' credits'));
+ assert.ok(events[2].text.includes((before.health-after.health).toFixed(1)+' native-health'));
+ for(const {plan}of alternatives()){assert.equal(planHinges(plan).length,3);assert.equal(planHinges(plan)[2].year,projection(plan,10).repeatClearings?7.5:10);}
+});
+test('Closing recap uses the current Players fire scar without changing the world',()=>{
+ const world=referenceWorld(),state=snapshot();assert.deepEqual(recapFire().arrival,projectedFire(null,0).arrival);
+ assert.deepEqual(referenceWorld(),world);assert.deepEqual(snapshot(),state);
 });

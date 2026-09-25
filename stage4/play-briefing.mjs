@@ -21,7 +21,9 @@ export const BRIEFINGS={
   'Commit one shared plan. Change the recovery year and move the fire forward to see what the plan changes.'
  ]}
 };
-import {runFire} from './round-model.mjs';
+import {projectedFire} from './cooperation-projection.mjs';
+import {fineField} from './community_cooperation/model.mjs';
+export function recapFire(){return projectedFire(null,0);}
 
 // Editable narration. No actions, save imports, or changes to either game model.
 export const PRELUDE = [
@@ -49,8 +51,8 @@ export const PRELUDE = [
       'Identifying and breaking a fuel corridor can help stop a wildfire spreading. This is the idea behind a fire line. Its effectiveness still depends on maintenance, wind and how dry the forest has become.',
       'This means the edge still needs care while the forest recovers. Who can keep doing that after the grant ends?',
     ],
-    caption: 'Cooperation - simulated fire scar',
-    description: 'The Cooperation fire scar extends into the forest. Yellow connecting lines highlight the fuel corridor from the edge into the interior.',
+    caption: 'The Players - simulated fire scar',
+    description: 'The Players fire scar extends from pasture C into the forest. Yellow points mark connected dry fuel within the simulated scar.',
     sources: [
       ['ATREE: Lantana and fire', 'https://archived.atree.org/sites/default/files/C%2526S_ankila_vol.3_no.1_2005.pdf', 'Discusses how invasive vegetation changes fuel structure and can connect surface fire with the canopy.'],
       ['World Agroforestry: fuelbreaks and greenbreaks', 'https://apps.worldagroforestry.org/Units/Library/Books/Book%2082/imperata%20grassland/html/3.3_grass.htm?n=16', 'Reducing fuel continuity can slow spread and help control fire. Even wide fuelbreaks can be crossed.'],
@@ -82,7 +84,7 @@ export function createPrelude(forest, onFinish) {
   dialog.setAttribute('aria-labelledby', 'prelude-title');
   dialog.innerHTML = `<section class="prelude-copy"><small id="prelude-step"></small><h1 id="prelude-title"></h1>
     <div id="prelude-text"></div><div class="prelude-nav"><button id="prelude-back">Back</button><button id="prelude-next" class="primary">Next</button></div>
-    <details class="prelude-sources"><summary>Sources</summary><div id="prelude-sources-body"></div><p>The map uses measured points. Ignition marks are illustrative and the scar is Cooperation's simulation, not a historical fire record or a replay of your last run.</p></details></section>
+    <details class="prelude-sources"><summary>Sources</summary><div id="prelude-sources-body"></div><p>The map uses measured points. Ignition marks are illustrative. The scar uses The Players' current fuel and fire model before treatment, not a historical fire record or a replay of your last run.</p></details></section>
     <figure><figcaption id="prelude-caption"></figcaption><canvas id="prelude-map" width="640" height="640" role="img"></canvas></figure>`;
   document.body.append(dialog);
   const el = id => dialog.querySelector('#' + id);
@@ -102,8 +104,8 @@ export function createPrelude(forest, onFinish) {
     b.globalAlpha = h < 2 ? .8 : .55; b.fillRect(px(x), py(z), 1.3, 1.3);
   }
   b.globalAlpha = 1;
-  // Same baseline used by Cooperation, not an invented path or historical NBR.
-  const scar = runFire();
+  // Same irregular fine-fuel landscape and pasture-C ignition as The Players.
+  const scar = recapFire(),fuel=fineField(null,0,true);
   let step = 0, frame = null, typing = null;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const sparks = [[55,300],[110,405],[170,275],[240,365],[320,310],[380,410]];
@@ -129,16 +131,10 @@ export function createPrelude(forest, onFinish) {
         // Retain the dotted scan aesthetic instead of a flat filled polygon.
         for(let k=0;k<5;k++)ctx.fillRect(x+((i*13+k*3)%9),y+((i*7+k*5)%9),2,2);
       });
-      // The authored corridor used by round-model.mjs, shown as connectivity,
-      // not a second fire trajectory or an instruction to clear every segment.
-      ctx.globalAlpha=.95;
-      for(const [colour,width,dashes] of [['#102018',6,[]],['#ffe8a1',2.5,[6,4]]]){
-        ctx.strokeStyle=colour;ctx.lineWidth=width;ctx.setLineDash(dashes);
-        for(const route of [[33,27,21,15,9,8,13],[21,22]]){
-          ctx.beginPath();route.forEach((id,j)=>{const x=25+(id%6+.5)*590/6,y=25+(Math.floor(id/6)+.5)*590/6;j?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
-        }
-      }
-      ctx.setLineDash([]);ctx.globalAlpha=1;
+      // Highlight connected dry fuel in the actual scar, not a square-centre route.
+      ctx.fillStyle='#ffe8a1';ctx.globalAlpha=.75;
+      scar.arrival.forEach((at,i)=>{if(Number.isFinite(at)&&fuel[i].invasion>.7){const x=25+i%60*590/60,y=25+Math.floor(i/60)*590/60;ctx.fillRect(x+3,y+3,2,2);}});
+      ctx.globalAlpha=1;
       ctx.fillStyle='#071710';ctx.fillRect(355,437,190,26);ctx.fillStyle='#ebd184';ctx.font='16px monospace';ctx.fillText('Fuel connectivity',362,456);
     } else if (step === 2) {
       // Illustrative transition from the forest body to its exposed lower edge.

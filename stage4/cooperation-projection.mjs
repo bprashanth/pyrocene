@@ -79,6 +79,17 @@ export function timeStory(choice){
 // A simple coordination count, not a travel-time or labour-cost estimate.
 // Nursery production is off-map; it does not count as a third field plot.
 export function fieldPlots(plan){return [...new Set([plan.ecology,plan.removal,...(plan.community==='A'?[]:[plan.community])])].sort();}
+export function planHinges(plan){
+ const events=[];
+ if(plan.community==='A'&&plan.ecology==='A')events.push({year:2,title:'The nursery order is filled',text:'The first seed order has been paid for. That money stays within the group, but this plan has no further large order. Early tending still costs money while the forest recovers.'});
+ else if(plan.community==='B')events.push({year:3,title:'Coffee starts earning',text:'The first harvests begin after year three. Income now helps cover care, although the return still depends on shelter from the surrounding forest.'});
+ else if(plan.community==='C')events.push({year:1,title:'The first feed saving ends',text:'Grazing saved the cost of bought feed in the first season. This plan does not count that saving again every year, so tending can now reduce the money left over.'});
+ else events.push({year:2,title:'The nursery has no matching order',text:`The nursery prepared plants for A, but restoration is in ${plan.ecology}. Its investment has not found a buyer, while planting and tending still need funding.`});
+ events.push({year:4,title:'Early tending has been paid for',text:'Four years of early tending have been paid for. That cost stops pulling earnings down in this projection, while the planted canopy continues to recover. It does not mean the forest no longer needs care.'});
+ if(projection(plan,10).repeatClearings){const p=patch(plan.removal);events.push({year:7.5,title:`The crew clears ${plan.removal} again`,text:`Invasives returned to ${plan.removal} because it was not replanted. Another clearance adds ${(p.income*.65).toFixed(1)} credits, but costs ${(p.healthLoss*.3).toFixed(1)} native-health points. Hence this bend moves towards more earnings as well as lower health; it is not simply a drop in returns.`});}
+ else events.push({year:10,title:'The planted canopy has grown',text:`Planting follows clearing in this plan, so there is no second clearance payment. Recovery in ${plan.ecology} raises forest health${plan.community==='B'?' while coffee keeps earning in B':', but healthier forest is not itself a cash payment'}.`});
+ return events;
+}
 export function alternatives(){
  const plans=[];for(const ecology of ['A','B','C'])for(const removal of ['A','B','C'])for(const community of ['A','B','C']){
   if(community===ecology&&community!=='A')continue;

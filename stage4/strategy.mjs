@@ -3,8 +3,10 @@ import {newGame,clone,act,quote,ledger,metrics,studyPlot,replay,WORKABLE_IDS,VER
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {speciesRecord} from './species-record.mjs';
 import {StructureLab} from './structure-lab.mjs';
-import {bindRecap} from './play-flow.mjs';
+import {bindRecap,fillStageMenu} from './play-flow.mjs';
+import {createCooperationRecap} from './cooperation-recap.mjs';
 const $=id=>document.getElementById(id);
+const recapStyle=document.createElement('link');recapStyle.rel='stylesheet';recapStyle.href='community_cooperation/style.css';document.head.append(recapStyle);
 const strategies=[
  {name:'Opportunistic',line:'Remove and restore where the returns are highest.',weak:'Caveat: old work can fill with weeds while you move on.'},
  {name:'Hold',line:'Stay with one plot until its canopy closes.',weak:'Caveat: your plot gets the most attention, but fire can spread through the land left waiting.'},
@@ -22,7 +24,28 @@ let game=newGame(seed,foundation),moves=[],approach=0,selected=foundation?childO
 let restoredSave=false;
 try{const saved=JSON.parse(sessionStorage.getItem(saveKey)||'null');if(!fresh&&saved&&saved.seed===seed&&Array.isArray(saved.moves)&&saved.moves.length<=24){game=replay(seed,saved.moves,foundation);for(const id of saved.inspected||[])if(game.plots[id])inspect(game,id);moves=saved.moves;approach=Math.max(0,Math.min(2,saved.approach||0));selected=game.plots[saved.selected]?saved.selected:selected;restoredSave=true;}}catch{}
 const forest=new StrategyForest($('landscape'),{select:id=>choose(id),specimen:meet});
+fillStageMenu($('stage'),'combined',{prelude:true});
 bindRecap(forest,$('stage'),()=> 'combined');
+const prelude=createCooperationRecap(forest); // Play game returns to this run, not a fresh board.
+async function sharedState(){
+ const p=new URLSearchParams(returnURL.hash.slice(1));if(!p.has('session')||!p.has('token')||p.get('game')!=='cooperation')return null;
+ const credentials={session:p.get('session'),token:p.get('token')};
+ const r=await fetch('/api/community-cooperation/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(credentials)});
+ if(!r.ok)throw Error('The shared room is no longer available.');return {state:await r.json(),credentials};
+}
+async function changeStage(){
+ const mode=$('stage').value;$('stage').value='combined';if(mode==='combined')return;
+ if(mode==='recap-one'){
+  if(busy)return;
+  let shared;try{shared=await sharedState();}catch{toast('The shared room is unavailable. Showing an example plan.');}
+  const valid=shared?.state.phase==='committed';prelude.open(valid?shared.state.proposals:{ecology:'A',removal:'A',community:'A'},{example:!valid});return;
+ }
+ if(!['expedition','play'].includes(mode))return;
+ try{
+  if(mode==='play'){const shared=await sharedState();if(shared?.state.screen==='expedition'){const r=await fetch('/api/community-cooperation/enter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shared.credentials,revision:shared.state.revision})});if(!r.ok)throw Error('Could not open The Players. Please try again.');}}
+  const target=new URL(returnURL);target.pathname=target.pathname.replace(/(round|expedition)\.html$/,mode==='play'?'round.html':'expedition.html');save();location.assign(target);
+ }catch(e){toast(e.message);}
+}
 forest.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 class StrategyStructureLab extends StructureLab{
  sync(){super.sync();if(!this.models||!this.plot?.strategy)return;const p=this.plot;this.dialog.querySelector('h1').textContent='Inside the forest - '+coordinate(p.id);this.panels[1].panel.querySelector('h2').textContent='Selected patch - '+coordinate(p.id);this.panels[1].caption.textContent=`${Math.round(p.canopy*100)}% canopy closure. ${Math.round(p.grass*100)}% weeds. ${p.state==='young'?'Young planting.':p.state==='cleared'?'Not planted yet.':p.state==='invaded'?'Invasive cover.':'Standing forest.'}`;}
@@ -81,7 +104,7 @@ function showCards(){document.querySelectorAll('[data-strategy]').forEach(b=>b.s
 function showReplay(){$('run-summary').textContent=`${game.seasonMonths/12} years: ${newCanopies()} new canopies, ${metrics(game).burnedPlots} plots burned and ${ledger(game).length} plots still vulnerable. ${game.credits} credits remain.`;$('replay-dialog').showModal();}
 function restart(newWeather){if(busy)return;if(newWeather)seed=crypto.getRandomValues(new Uint32Array(1))[0];game=newGame(seed,foundation);moves=[];forest.setState(game,true);forest.setInventory(catalogue,WORLD.map(w=>game.plots[w.id]||w));forest.setFireEvent(null);save();const p=new URLSearchParams(location.hash.slice(1));p.set('seed',seed);history.replaceState(null,'',location.pathname+'#'+p);$('replay-dialog').close();render();showIntro();}
 $('begin').onclick=$('intro-back').onclick=()=>$('strategy-intro').close();$('replay-open').onclick=showReplay;$('replay-back').onclick=()=>$('replay-dialog').close();$('retry').onclick=()=>restart(false);$('new-weather').onclick=()=>restart(true);$('record-close').onclick=closeRecord;$('plot-plants').onchange=()=>meet($('plot-plants').value);
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>changeView(b.dataset.view));$('stage').onchange=()=>{if($('stage').value==='shared')location.assign(returnURL);};document.querySelector('.wordmark').onclick=e=>{e.preventDefault();location.assign(returnURL);};
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>changeView(b.dataset.view));$('stage').onchange=changeStage;document.querySelector('.wordmark').onclick=e=>{e.preventDefault();location.assign(returnURL);};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecord();});
 globalThis.strategyDiagnostics=()=>({game,selected,view,busy,approach,moves,forest:forest.diagnostics(),lab:lab.diagnostics()});
 try{const [_,data,oldPhotos,newPhotos]=await Promise.all([forest.load(),fetch('field-catalogue.json').then(r=>r.json()),fetch('plant-images.json').then(r=>r.json()),fetch('field-photos.json').then(r=>r.json())]);catalogue=[...data.species,...ADDITIONAL_SPECIES];photos={...oldPhotos.images,...newPhotos.photos};forest.setInventory(catalogue,WORLD.map(w=>game.plots[w.id]||w));forest.setSettlement(false);forest.setState(game,true);forest.pins.classList.add('round-labels');forest.selectPlot(selected);busy=false;$('loading').hidden=true;render();if(!restoredSave){save();showIntro();}}catch(e){$('loading').textContent='Could not open Combined: '+e.message;$('loading').append(button('Retry',()=>location.reload()));console.error(e);}

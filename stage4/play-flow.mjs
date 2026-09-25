@@ -1,5 +1,8 @@
 import {createPrelude} from './play-briefing.mjs';
 import {negligenceEnabled} from './game-features.mjs';
+export function fillStageMenu(select,mode,{prelude=false}={}){
+ select.replaceChildren(...[['expedition','Start Here'],['play','The Players'],['recap-one','Prelude'],['combined','The Game'],['recap','Recap']].map(([value,label])=>{const option=new Option(label,value);option.disabled=value==='recap-one'&&!prelude;return option;}));select.value=mode;
+}
 // In-place recap never advances or resets the game behind it.
 export function bindRecap(forest,select,currentMode){
  if(!select)return;
@@ -19,10 +22,10 @@ export function roleFrom(params=flowParams()){return (negligenceEnabled?['remova
 export function flowURL(page,credentials,role){const p=new URLSearchParams({...credentials,role}),url=new URL(page,location.href);if(negligenceEnabled)url.searchParams.set('negligence','1');url.hash=p.toString();return url.href;}
 export function navigation(mode,role){
  const nav=document.createElement('nav');nav.className='game-navigation';nav.setAttribute('aria-label','Game');
- nav.innerHTML='<select id="game-mode" aria-label="Game mode"><option value="expedition">Start Here</option><option value="play">The Players</option><option value="negligence" disabled>Negligence</option></select><select id="role" aria-label="Team view"><option value="removal">Removal</option><option value="ecology">Ecologist</option><option value="room">Room</option></select><button id="teams-open">Teams</button>';
- if(!negligenceEnabled){nav.querySelector('[value=negligence]').remove();nav.querySelector('#role').add(new Option('Community','community'),nav.querySelector('#role [value=room]'));}
- if(!negligenceEnabled){const prelude=new Option('Prelude','recap-one');prelude.disabled=true;nav.querySelector('#game-mode').append(prelude);}
- nav.querySelector('#game-mode').append(new Option('The Game','combined'));
+ nav.innerHTML='<select id="game-mode" aria-label="Game mode"></select><select id="role" aria-label="Team view"><option value="removal">Removal</option><option value="ecology">Ecologist</option><option value="room">Room</option></select><button id="teams-open">Teams</button>';
+ fillStageMenu(nav.querySelector('#game-mode'),mode);
+ if(!negligenceEnabled)nav.querySelector('#role').add(new Option('Community','community'),nav.querySelector('#role [value=room]'));
+ else{const option=new Option('Negligence','negligence');option.disabled=true;nav.querySelector('#game-mode').add(option,nav.querySelector('[value=recap-one]'));}
  document.querySelector('header').append(nav);nav.querySelector('#game-mode').value=mode;nav.querySelector('#role').value=role;return nav;
 }
 // Combined never advances or mutates the shared room.

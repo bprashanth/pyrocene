@@ -39,6 +39,12 @@
 .space-legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 12px;font:12px Arial}.space-legend span:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--line-colour);margin-right:6px}
 #cooperation-recap #recap-work{color:#e3c879}
 #cooperation-recap[data-page=space] h1{font-size:25px;line-height:1.25}
+#cooperation-recap .graph-about{font:12px/1.5 Arial;color:#9eb3a5;margin:0 0 12px}#cooperation-recap .graph-about summary{cursor:pointer;color:#d6c67f}#cooperation-recap .graph-about p{font-size:13px;margin:8px 0}
+#cooperation-recap[data-page=space] .prelude-copy,#cooperation-recap[data-page=one] .prelude-copy{padding:24px}
+#cooperation-recap[data-page=space] p,#cooperation-recap[data-page=one] p{font-size:14px;line-height:1.5;margin-bottom:12px}
+#cooperation-recap[data-page=space] #recap-map,#cooperation-recap[data-page=one] #recap-map{max-height:200px;margin-bottom:16px}
+#hinge-choices{display:flex;gap:6px;margin-bottom:10px}#hinge-choices button{font:11px Arial;background:#0b2118;color:#bbcec0;border:1px solid #526047;border-radius:0;padding:8px 6px}#hinge-choices button[aria-pressed=true]{color:#13251a;background:#e3c879;border-color:#e3c879}#hinge-title{font:14px/1.5 Arial;color:#e3c879;margin-bottom:6px}
+#recap-space-chart [data-hinge]{cursor:pointer}#recap-space-chart [data-hinge]:focus-visible circle{stroke:#fff;stroke-width:3}
 @media(max-width:850px){#cooperation-recap[open]{grid-template-columns:1fr}#cooperation-recap .prelude-copy{padding:20px}#cooperation-recap figure{padding:0 20px 20px}}
 #teams{max-height:85dvh;overflow:auto;border-radius:0}#teams h1{font-size:20px}#teams #new-room{border:1px solid #d1b95e70;padding:8px;margin:16px 0}#teams details{margin-top:12px}#teams a{color:#dbc780}#teams input{box-sizing:border-box}
 #landscape #loading{padding:25px}.community-cooperation #round-panel [hidden],#map-note[hidden]{display:none}

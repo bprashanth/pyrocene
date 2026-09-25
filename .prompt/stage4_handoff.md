@@ -1,5 +1,21 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: same menu in Game, Prelude maps and hinges
+
+See [this checkpoint](../chronology/2026-09-25-prelude-hinges-and-consistent-menu.md).
+Rollback tag `stage4-before-prelude-hinges-20260925` at `1bf6ff3`.
+Single-player now has the same five menu labels, via `fillStageMenu()`. Its
+Prelude opens in place using the originating committed room or a labelled
+example. Play game closes it without resetting the run. Shared-room navigation
+retains capabilities. Prelude I/II/III all show an A/B/C reference map.
+
+Prelude III: “How much can we keep tending?” About this graph is collapsed;
+three numbered turning points explain one event at a time. `planHinges()` uses
+existing costs/returns, not new rules. ABA at 7.5y adds 5.2 credits and loses 0.3
+health; both effects are explained. Closing Recap now uses the current Players
+untreated scar (`projectedFire(null,0)`), with high fuel highlighted inside it
+instead of the old square-centre route. No new routes/restart or game-rule edits.
+
 ## Latest: stage labels, explicit Prelude and independent Fire
 
 See [fire and prelude flow](../chronology/2026-09-25-fire-slider-and-prelude-flow.md).

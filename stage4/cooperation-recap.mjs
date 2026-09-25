@@ -1,4 +1,4 @@
-import {alternatives,beforeFire,planStory,TIME_CHOICES,timeOutcome,timeStory,fieldPlots} from './cooperation-projection.mjs';
+import {alternatives,beforeFire,planStory,TIME_CHOICES,timeOutcome,timeStory,fieldPlots,planHinges} from './cooperation-projection.mjs';
 const NS='http://www.w3.org/2000/svg';
 const tag=(name,attrs={},text='')=>{const n=document.createElementNS(NS,name);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;};
 const same=(a,b)=>['ecology','removal','community'].every(k=>a[k]===b[k]);
@@ -9,8 +9,8 @@ export function chartBounds(points){
  return {xmin,xmax,ymin,ymax};
 }
 export function createCooperationRecap(forest,onPlay){
- const dialog=document.createElement('dialog');dialog.id='cooperation-recap';dialog.setAttribute('aria-label','Recap I');document.body.append(dialog);
- let committed,selected,choice='sequence',spacePlan,yaw=.48,pitch=.3;
+ const dialog=document.createElement('dialog');dialog.id='cooperation-recap';dialog.setAttribute('aria-label','Prelude I');document.body.append(dialog);
+ let committed,selected,choice='sequence',spacePlan,yaw=.48,pitch=.3,hinge=2,example=false;
  const $=id=>dialog.querySelector('#'+id);
  const story=paragraphs=>{$('recap-story').replaceChildren(...paragraphs.map(text=>{const p=document.createElement('p');p.textContent=text;return p;}));};
  const close=()=>dialog.close();
@@ -22,11 +22,12 @@ export function createCooperationRecap(forest,onPlay){
  }
  function showFirst(){
   dialog.dataset.page='one';
-  dialog.setAttribute('aria-label','Recap I');
-  dialog.innerHTML=`<section class="prelude-copy"><small>RECAP I</small><h1>What does the group gain?</h1>
+  dialog.setAttribute('aria-label','Prelude I');
+  dialog.innerHTML=`<section class="prelude-copy"><small>PRELUDE I</small><h1>What does the group gain?</h1>
    <div id="recap-story" aria-live="polite"></div>
-   <p class="recap-note">Choose a dot to explore the plan. Higher means healthier forest; farther right means more group earnings. Yellow is your committed plan.</p>
-   <div class="prelude-nav"><button id="recap-one-back">Back to map</button><button class="primary" id="recap-time-open">Recap II: time</button></div></section>
+   <details class="graph-about"><summary>About this graph</summary><p>Choose a dot to explore the plan. Higher means healthier forest; farther right means more group earnings. Yellow is ${example?'an example plan':'your committed plan'}.</p></details>
+   ${example?'<small>Showing an example plan.</small>':''}
+   <div class="prelude-nav"><button id="recap-one-back">Back to map</button><button class="primary" id="recap-time-open">Prelude II: time</button></div></section>
    <figure><svg id="earnings-health" viewBox="0 0 520 390" role="group" aria-label="Ten-year net group earnings versus change in forest health before fire"></svg><figcaption id="recap-plan"></figcaption><p id="recap-values"></p><small>Ten years, without wildfire. Earnings exclude the starting grant and include saved feed costs.</small></figure>`;
   $('recap-one-back').onclick=close;$('recap-time-open').onclick=()=>{choice='sequence';showTime();};
   const svg=$('earnings-health'),points=alternatives(),{xmin,xmax,ymin,ymax}=chartBounds(points);
@@ -40,21 +41,21 @@ export function createCooperationRecap(forest,onPlay){
    dot.append(tag('title',{},describe(entry.plan)));dot.onfocus=dot.onclick=()=>showPlan(entry.plan);
    dot.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showPlan(entry.plan);}};svg.append(dot);
   }
-  showPlan(selected||committed);
+  showPlan(selected||committed);mountMap();
  }
  function showTime(){
   dialog.dataset.page='time';
-  dialog.setAttribute('aria-label','Recap II: time');
-  dialog.innerHTML=`<section class="prelude-copy"><small>RECAP II / TIME</small><h1>What if we do this in steps?</h1>
+  dialog.setAttribute('aria-label','Prelude II: time');
+  dialog.innerHTML=`<section class="prelude-copy"><small>PRELUDE II / TIME</small><h1>What if we do this in steps?</h1>
    <p>Keep removal and restoration in A. Coffee uses B, so it does not replace the native planting.</p>
    <div id="recap-story" aria-live="polite"></div>
    <canvas id="recap-map" width="420" height="270" role="img" aria-label="Overhead forest map. A: native restoration and nursery order. B: coffee. C: pasture."></canvas>
    <small class="recap-map-key">A: restoration / nursery order<br>B: coffee &nbsp; C: pasture</small>
-   <div class="prelude-nav"><button id="recap-one-return">Back</button><button class="primary" id="recap-space-open">Recap III: possibilities</button></div></section>
+   <div class="prelude-nav"><button id="recap-one-return">Back</button><button class="primary" id="recap-space-open">Prelude III: possibilities</button></div></section>
    <figure><div id="time-choices" aria-label="Compare timing"></div>
    <svg id="recap-time-chart" viewBox="0 0 620 440" role="img" aria-label="Community income each year and forest health over ten years"></svg>
    <p id="recap-values"></p><small>Income each year after routine care, not savings. Set-up costs are shown separately. Replacement orders need buyers. No wildfire or failed harvest is included.</small></figure>`;
-  $('recap-one-return').onclick=showFirst;$('recap-space-open').onclick=()=>{spacePlan={...selected};showSpace();};
+  $('recap-one-return').onclick=showFirst;$('recap-space-open').onclick=()=>{spacePlan={...selected};hinge=2;showSpace();};
   for(const item of TIME_CHOICES){const b=document.createElement('button');b.textContent=item.name;b.dataset.choice=item.id;b.style.setProperty('--line-colour',item.colour);b.onclick=()=>{choice=item.id;drawTime();};$('time-choices').append(b);}
   drawMap();drawTime();
  }
@@ -95,30 +96,36 @@ export function createCooperationRecap(forest,onPlay){
    ctx.strokeRect(px,pz,side/6,side/6);ctx.fillStyle='#06150f';ctx.fillRect(px+3,pz+3,21,23);ctx.fillStyle='#ffe39d';ctx.fillText(label,px+8,pz+20);
   }
  }
+ function mountMap(){
+  const canvas=document.createElement('canvas');canvas.id='recap-map';canvas.width=420;canvas.height=270;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Overhead forest reference map with plots A, B and C.');
+  const nav=dialog.querySelector('.prelude-nav');nav.before(canvas);drawMap();
+ }
+ function selectSpacePlan(plan){spacePlan=plan;hinge=2;drawSpace();}
  function showSpace(){
-  dialog.dataset.page='space';dialog.setAttribute('aria-label','Recap III: possibilities');
-  dialog.innerHTML=`<section class="prelude-copy"><small>RECAP III / POSSIBILITIES</small><h1>How much can place-neutral actors keep tending?</h1>
-   <p>These are the same 21 plans from Recap I, now at the start, year five and year ten. Follow one to see how early costs and later returns change its position.</p>
-   <div id="recap-story" aria-live="polite"></div><p id="recap-work"></p>
+  dialog.dataset.page='space';dialog.setAttribute('aria-label','Prelude III: possibilities');
+  dialog.innerHTML=`<section class="prelude-copy"><small>PRELUDE III / POSSIBILITIES</small><h1>How much can we keep tending?</h1>
+   <details class="graph-about"><summary>About this graph</summary><p>These are the same 21 plans from Prelude I, now at the start, year five and year ten. Follow one to see how early costs and later returns change its position. Depth shows time, so a downward turn on screen need not mean lower returns. The axes show group earnings and forest health. Unlike Prelude II, earnings here include costs and accumulate over time. No wildfire is included.</p></details>
+   <div id="hinge-choices" aria-label="Turning points"></div><strong id="hinge-title"></strong><div id="recap-story" aria-live="polite"></div><p id="recap-work"></p>
    <div class="prelude-nav"><button id="recap-time-return">Back</button><button class="primary" id="recap-play">Play game</button></div></section>
    <figure><label class="space-select" for="recap-space-plan">Follow a plan <select id="recap-space-plan"></select></label>
    <svg id="recap-space-chart" viewBox="0 0 620 480" role="group" tabindex="0" aria-label="Plans through time. Drag or use arrow keys to turn the graph. Choose a dot to follow a plan."></svg>
    <div class="space-legend"><span style="--line-colour:#8dbb9e">1 field plot</span><span style="--line-colour:#7db5ce">2 field plots</span><span style="--line-colour:#ce93ae">3 field plots</span></div>
-   <p id="recap-values"></p><small>Drag to turn - choose a dot to follow its plan. Group earnings include costs, unlike community income in Recap II. No wildfire. Nursery production is off-map.</small></figure>`;
+   <p id="recap-values"></p><small>Drag to turn - numbered points explain the changes. Colours count field plots to tend; nursery production is off-map.</small></figure>`;
   $('recap-time-return').onclick=showTime;$('recap-play').onclick=()=>{close();onPlay?.();};
   for(const {plan}of alternatives()){const option=document.createElement('option');option.value=plan.ecology+plan.removal+plan.community;option.textContent=describe(plan);$('recap-space-plan').append(option);}
-  $('recap-space-plan').onchange=()=>{const [ecology,removal,community]=$('recap-space-plan').value;spacePlan={ecology,removal,community};drawSpace();};
+  $('recap-space-plan').onchange=()=>{const [ecology,removal,community]=$('recap-space-plan').value;selectSpacePlan({ecology,removal,community});};
+  const activate=target=>{const h=target.closest('[data-hinge]')?.dataset.hinge,key=target.closest('[data-plan]')?.dataset.plan;if(h!==undefined){hinge=Number(h);drawSpace();}else if(key){const [ecology,removal,community]=key;selectSpacePlan({ecology,removal,community});}};
   const svg=$('recap-space-chart');let drag=null,moved=false;
-  svg.onpointerdown=e=>{if(e.button!==0)return;drag={x:e.clientX,y:e.clientY,key:e.target.closest('[data-plan]')?.dataset.plan};moved=false;svg.setPointerCapture(e.pointerId);};
+  svg.onpointerdown=e=>{if(e.button!==0)return;drag={x:e.clientX,y:e.clientY,target:e.target};moved=false;svg.setPointerCapture(e.pointerId);};
   svg.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)<3)return;moved=true;yaw=Math.max(-.85,Math.min(.85,yaw+dx*.005));pitch=Math.max(.12,Math.min(.6,pitch+dy*.004));drag={...drag,x:e.clientX,y:e.clientY};drawSpace(false);};
-  svg.onpointerup=e=>{const key=!moved&&drag?.key;drag=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);if(key){const [ecology,removal,community]=key;spacePlan={ecology,removal,community};drawSpace();}};svg.onpointercancel=()=>{drag=null;};
+  svg.onpointerup=e=>{const target=!moved&&drag?.target;drag=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);if(target)activate(target);};svg.onpointercancel=()=>{drag=null;};
   // Assistive technology can activate a point without a pointer sequence.
-  svg.onclick=e=>{const key=e.detail===0&&e.target.closest('[data-plan]')?.dataset.plan;if(key){const [ecology,removal,community]=key;spacePlan={ecology,removal,community};drawSpace();svg.focus();}};
+  svg.onclick=e=>{if(e.detail===0){activate(e.target);svg.focus();}};
   svg.onkeydown=e=>{
-   if(e.key==='Enter'||e.key===' '){const key=e.target.dataset.plan;if(key){e.preventDefault();const [ecology,removal,community]=key;spacePlan={ecology,removal,community};drawSpace();svg.focus();}return;}
+   if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(e.target);svg.focus();return;}
    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return;e.preventDefault();
    if(e.key==='Home'){yaw=.48;pitch=.3;}else if(e.key==='ArrowLeft'||e.key==='ArrowRight')yaw=Math.max(-.85,Math.min(.85,yaw+(e.key==='ArrowLeft'?-.1:.1)));else pitch=Math.max(.12,Math.min(.6,pitch+(e.key==='ArrowUp'?-.06:.06)));drawSpace(false);svg.focus();
-  };drawSpace();
+  };drawSpace();mountMap();
  }
  function drawSpace(updateCopy=true){
   const svg=$('recap-space-chart');svg.replaceChildren();
@@ -146,15 +153,18 @@ export function createCooperationRecap(forest,onPlay){
    const xy=project(p.earnings,p.healthChange,p.year),dot=tag('circle',{cx:xy.x,cy:xy.y,r:4.5,fill:colours[fieldPlots(p.plan).length],opacity:.48,'data-plan':p.plan.ecology+p.plan.removal+p.plan.community,tabindex:0,role:'button','aria-label':`${describe(p.plan)} Year ${p.year}.`});
    dot.append(tag('title',{},`${describe(p.plan)} Year ${p.year}.`));svg.append(dot);
   }
-  const trail=Array.from({length:101},(_,i)=>{const p=beforeFire(spacePlan,i/10);return project(p.earnings,p.healthChange,i/10);});
+  const events=planHinges(spacePlan),samples=[...Array.from({length:101},(_,i)=>i/10),7.499999].sort((a,b)=>a-b);
+  const trail=samples.map(year=>{const p=beforeFire(spacePlan,year);return project(p.earnings,p.healthChange,year);});
   svg.append(tag('path',{d:trail.map((p,i)=>`${i?'L':'M'}${p.x},${p.y}`).join(' '),fill:'none',stroke:'#e3c879','stroke-width':2.5,'data-trail':'selected','pointer-events':'none'}));
-  for(const year of anchors){const p=beforeFire(spacePlan,year),xy=project(p.earnings,p.healthChange,year);svg.append(tag('circle',{cx:xy.x,cy:xy.y,r:6,fill:'#e3c879',stroke:'#071b13','stroke-width':2,'pointer-events':'none'}),tag('text',{x:xy.x+10,y:xy.y-9,stroke:'#081b14','stroke-width':4,'paint-order':'stroke','pointer-events':'none'},year===0?'Start':`Year ${year}`));}
+  for(const year of [0,10]){if(events.some(e=>e.year===year))continue;const p=beforeFire(spacePlan,year),xy=project(p.earnings,p.healthChange,year);svg.append(tag('circle',{cx:xy.x,cy:xy.y,r:4,fill:'#e3c879','pointer-events':'none'}),tag('text',{x:xy.x+10,y:xy.y-9,stroke:'#081b14','stroke-width':4,'paint-order':'stroke','pointer-events':'none'},year===0?'Start':`Year ${year}`));}
+  events.forEach((event,i)=>{const p=beforeFire(spacePlan,event.year),xy=project(p.earnings,p.healthChange,event.year),g=tag('g',{'data-hinge':i,tabindex:0,role:'button','aria-label':`Year ${event.year}: ${event.title}`,'aria-pressed':String(hinge===i)});g.append(tag('circle',{cx:xy.x,cy:xy.y,r:10,fill:hinge===i?'#e3c879':'#10251b',stroke:'#e3c879','stroke-width':1.5}),tag('text',{x:xy.x,y:xy.y+4,'text-anchor':'middle',style:`fill:${hinge===i?'#10251b':'#e3c879'};font-weight:bold`},String(i+1)));svg.append(g);});
   if(updateCopy){
    $('recap-space-plan').value=spacePlan.ecology+spacePlan.removal+spacePlan.community;
-   story([planStory(spacePlan)[0]]);const sites=fieldPlots(spacePlan);
-   $('recap-work').textContent=sites.length===1?`One field plot to tend: ${sites[0]}. Clearing and planting can share visits.`:`${sites.length} field plots to tend: ${sites.join(', ')}. The crews must keep returning to separate sites.`;
+   $('hinge-choices').replaceChildren(...events.map((e,i)=>{const b=document.createElement('button');b.textContent=`${i+1} / Year ${e.year}`;b.setAttribute('aria-pressed',String(hinge===i));b.onclick=()=>{hinge=i;drawSpace();};return b;}));
+   $('hinge-title').textContent=events[hinge].title;story([events[hinge].text]);const sites=fieldPlots(spacePlan);
+   $('recap-work').textContent=sites.length===1?`One field plot to tend: ${sites[0]}.`:`${sites.length} field plots to tend: ${sites.join(', ')}.`;
    const end=beforeFire(spacePlan);$('recap-values').textContent=`Year ten: ${end.earnings.toFixed(1)} net credits / ${end.healthChange>=0?'+':''}${end.healthChange.toFixed(1)} forest health.`;
   }
  }
- return {dialog,open(plan){committed={...plan};selected={...plan};showFirst();if(!dialog.open)dialog.showModal();}};
+ return {dialog,open(plan,options={}){example=!!options.example;committed={...plan};selected={...plan};showFirst();if(!dialog.open)dialog.showModal();}};
 }

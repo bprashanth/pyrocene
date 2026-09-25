@@ -887,3 +887,11 @@ slider can test a new ignition at any projected year for every plan. Returning
 invasives increase the fuel and spread compared with recently cleared ground.
 These are independent comparisons, not accumulating fires. Forest and fire
 styling are unchanged. See [flow and fire semantics](../chronology/2026-09-25-fire-slider-and-prelude-flow.md).
+
+The same five-stage menu now remains in The Game. Prelude can be reviewed there
+without resetting a run. Its three pages are labelled Prelude I/II/III and each
+has an overhead A/B/C reference map. Prelude III asks “How much can we keep
+tending?” Its numbered turning points explain orders, harvests, care costs and
+repeat clearing one at a time; general instructions sit under About this graph.
+The closing Recap's fire map now uses the current Players fuel corridor and scar,
+not the older square-centre route. See [navigation, annotation and scar notes](../chronology/2026-09-25-prelude-hinges-and-consistent-menu.md).
