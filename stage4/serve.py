@@ -54,6 +54,10 @@ APP_FILES |= {'cooperation-projection.mjs', 'cooperation-growth.mjs', 'cooperati
 APP_FILES |= {'policy.html', 'policy.css', 'policy.mjs', 'policy-render.mjs', 'policy-model.mjs', 'policy-copy.mjs', 'policy-config.json', 'policy-bots.mjs'}
 APP_FILES |= {'ledger.html', 'ledger.css', 'ledger.mjs', 'ledger-render.mjs', 'ledger-model.mjs'}
 APP_FILES |= {'prelude/index.html', 'prelude/prelude.css', 'prelude/prelude.mjs', 'prelude/board.mjs'}
+APP_FILES |= {'lore/index.html', 'lore/lore.css', 'lore/lore.js'}
+APP_FILES |= {f'lore/images/{scene}-{kind}.jpg'
+              for scene in ('ridge', 'field', 'fire', 'ranger', 'nursery', 'canopy')
+              for kind in ('pixel', 'real')}
 APP_FILES |= {'play-flow.mjs', 'play-flow.css', 'play-briefing.mjs', 'hazel.png'}
 APP_FILES |= {'neglect-model.mjs'}
 APP_FILES |= {'seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json'}
@@ -403,6 +407,8 @@ class Stage4Handler(BaseHTTPRequestHandler):
             target = _resolved_file(self.stage_server.app_root, relative)
         elif decoded == "/prelude/":
             target = _resolved_file(self.stage_server.app_root, "prelude/index.html")
+        elif decoded in {"/lore", "/lore/"}:
+            target = _resolved_file(self.stage_server.app_root, "lore/index.html")
         elif decoded in {"/community", "/community/"}:
             target = _resolved_file(self.stage_server.app_root, "community/index.html")
         elif decoded in {"/community-cooperation", "/community-cooperation/"}:
