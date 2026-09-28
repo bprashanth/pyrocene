@@ -72,6 +72,14 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(self.request('/api/join',{'name':'Visitor'})[0],200)
         self.assertEqual(self.request('/api/gm/reset',{},auth=True,headers={'Origin':'https://elsewhere.example'})[0],403)
 
+    def test_https_origin_through_tunnel_keeps_forest_actions_same_origin(self):
+        path='/stage4/api/community-cooperation/new'
+        for scheme in ['http','https']:
+            status,_,data=self.request(path,{},headers={'Host':'pyrocene.idli.cc','Origin':scheme+'://pyrocene.idli.cc'})
+            self.assertEqual(status,200,data);self.assertIn('tokens',json.loads(data))
+        for origin in ['https://elsewhere.example','null','ftp://pyrocene.idli.cc','https://pyrocene.idli.cc.evil.example','https://pyrocene.idli.cc/path']:
+            self.assertEqual(self.request(path,{},headers={'Host':'pyrocene.idli.cc','Origin':origin,'X-Forwarded-Host':'elsewhere.example','X-Forwarded-Proto':'https'})[0],403,origin)
+
     def test_stage_jump_retains_phones_clears_old_playback_and_refresh_is_safe(self):
         self.request('/api/gm/seed',{'n':6},auth=True)
         tokens=[p.token for p in room.ROOM.game.players.values()]

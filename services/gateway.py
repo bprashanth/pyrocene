@@ -104,8 +104,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/static/gm.html' and not self.authorised('/gm',''): return
         if self.headers.get('Transfer-Encoding'):
             return self.reply(400,b'Use Content-Length.')
-        if self.command=='POST' and self.headers.get('Origin'):
-            if urlsplit(self.headers['Origin']).netloc.lower()!=self.headers.get('Host','').lower():
+        origin = self.headers.get('Origin')
+        host = self.headers.get('Host','')
+        if self.command=='POST' and origin:
+            if origin not in {f'http://{host}', f'https://{host}'}:
                 return self.reply(403,b'Use this game page to send actions.')
         try: size = int(self.headers.get('Content-Length','0'))
         except ValueError: return self.reply(400)
@@ -123,6 +125,12 @@ class Handler(BaseHTTPRequestHandler):
             headers = {k:v for k,v in self.headers.items() if k.lower() not in excluded}
             headers['Host'] = self.headers.get('Host','localhost')
             headers['Accept-Encoding'] = 'identity'
+            # TLS ends at Cloudflare. After validating the browser's origin,
+            # express it in the HTTP transport used by our local backends.
+            # Stage 4 still performs its own same-origin check; untrusted
+            # forwarded headers never decide which origins are accepted.
+            if self.command == 'POST' and origin:
+                headers['Origin'] = f'http://{host}'
             conn.request(self.command, target, body=body, headers=headers)
             response = conn.getresponse()
             modified = None

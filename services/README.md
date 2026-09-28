@@ -67,6 +67,14 @@ must be a catch-all, not just `/start`, because player pages, APIs, live events,
 films and forest data also need it. `/start` belongs to 8020 behind the gateway;
 pointing it directly at 8024 will not serve the launcher.
 
+Use the exact anchored Lore expression above, not plain `lore`: the latter
+also matches `explore.css` and `explore-render.mjs`, sending those Stage 4 assets
+to the wrong service path and leaving the forest page blank.
+
+TLS ends at Cloudflare. The gateway validates each action's Origin against its
+Host (HTTP or HTTPS), then normalises that validated Origin to HTTP for the
+local backend's own check. It does not trust forwarded headers to grant access.
+
 Create two **Access self-hosted applications**, separately from tunnel routes:
 
 - `pyrocene.idli.cc` with Path empty: Allow only the organiser/tester accounts.

@@ -232,6 +232,24 @@ export class ExpeditionForest extends ExplorationForest {
     this.camera.position.set(this.target.x+Math.cos(this.angle)*Math.cos(this.elevation)*this.distance,this.target.y+Math.sin(this.elevation)*this.distance,this.target.z+Math.sin(this.angle)*Math.cos(this.elevation)*this.distance);
     this.camera.lookAt(this.target);this.camera.updateMatrixWorld();
   }
+  showMatches(matches=[]){
+    super.showMatches(matches);
+    // A species selection can change while the camera is stationary.
+    this.cpuKey=null;
+  }
+  _drawFallbackMatches(ctx){
+    if(this.tlsActive||this.exploreView==='close'||!this.matchGroup)return;
+    // Project the same ground polygons used by WebGL through the live camera.
+    // The old fixed overhead-grid projection does not follow this free map.
+    ctx.save();ctx.fillStyle='#e8bc7b';ctx.strokeStyle='#e8bc7b';ctx.lineWidth=1;
+    for(const polygon of this.matchGroup.children){
+      const corners=[[-71,-71],[71,-71],[71,71],[-71,71]].map(([x,z])=>new T.Vector3(polygon.position.x+x,.25,polygon.position.z+z).project(this.camera));
+      if(corners.some(p=>p.z< -1||p.z>1))continue;
+      ctx.beginPath();corners.forEach((p,i)=>{const x=(p.x*.5+.5)*this.width,y=(-p.y*.5+.5)*this.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();
+      ctx.globalAlpha=polygon.material.opacity;ctx.fill();ctx.globalAlpha=.55;ctx.stroke();
+    }
+    ctx.restore();
+  }
   drawFallback(){
     if(!this.airborneSource)return;
     const key=[this.width,this.height,this.selected,this.detailSector,this.detailBlend.toFixed(3),...this.camera.matrixWorld.elements.map(v=>v.toFixed(3))].join(':');
@@ -247,6 +265,7 @@ export class ExpeditionForest extends ExplorationForest {
       for(let n=0;n<segments.length;n+=6){const a=new T.Vector3(segments[n],segments[n+1]*this.detailBlend,segments[n+2]).project(this.camera),b=new T.Vector3(segments[n+3],segments[n+4]*this.detailBlend,segments[n+5]).project(this.camera);if(a.z>1||b.z>1||a.z< -1||b.z< -1)continue;ctx.moveTo((a.x*.5+.5)*w,(-a.y*.5+.5)*h);ctx.lineTo((b.x*.5+.5)*w,(-b.y*.5+.5)*h);}ctx.stroke();
     }
     ctx.globalAlpha=1;
+    this._drawFallbackMatches(ctx);
     if(this.selected>=0){const c=centre(this.selected);ctx.strokeStyle='#ddbf78';ctx.lineWidth=1;ctx.beginPath();[[-75,-75],[75,-75],[75,75],[-75,75],[-75,-75]].forEach(([x,z],i)=>{v.set(c.x+x,3,c.z+z).project(this.camera);const px=(v.x*.5+.5)*w,py=(-v.y*.5+.5)*h;i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
   }
   animate(now){

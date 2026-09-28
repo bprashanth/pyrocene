@@ -1,8 +1,13 @@
 """Play through the single-host gateway on temporary ports, including stage jumps."""
 from pathlib import Path
+import ssl
+import subprocess
+import tempfile
 import unittest
 from playwright.sync_api import sync_playwright, expect
 from services.test_gateway import GatewayTests, AUTH
+from services.test_gateway import background
+from services.gateway import Gateway
 from stage2 import server as room
 
 QA=Path('/tmp/pyrocene-event-qa')
@@ -107,5 +112,54 @@ class GatewayPlay(unittest.TestCase):
         p.locator('#hint.show').wait_for(timeout=120000)
         p.keyboard.press('Enter');p.locator('#boot').wait_for(state='hidden')
         self.shot('stage3-browser-game')
+
+    def test_04_species_map_without_webgl_direct_and_prefixed(self):
+        browser=self.pw.chromium.launch(args=['--disable-webgl','--disable-webgl2'])
+        try:
+            for root,label in [(f'http://127.0.0.1:{GatewayTests.forest.server_port}','direct'),(self.base+'/stage4','gateway')]:
+                context=browser.new_context(viewport={'width':1365,'height':900},reduced_motion='reduce')
+                p=context.new_page();p.on('pageerror',lambda e:self.errors.append(str(e)))
+                p.goto(root+'/expedition.html');p.locator('#loading').wait_for(state='hidden',timeout=60000)
+                for name in ['More','Map','Explore C2','Close view']:
+                    p.get_by_role('button',name=name,exact=True).click()
+                p.wait_for_function('pyroceneDiagnostics().detailBlend===1')
+                p.locator('#plot-species button').first.click()
+                p.locator('#book-close').click();p.locator('#book-open').click()
+                p.locator('.plant-list-item input').first.check();p.locator('#find-plants').click()
+                expect(p.locator('#map-summary')).to_be_visible()
+                self.assertTrue(p.evaluate('pyroceneDiagnostics().fallback'))
+                p.wait_for_function('pyroceneDiagnostics().detailBlend===0')
+                p.wait_for_timeout(1200)
+                # Count amber pixels on the rendered canvas, not just the label.
+                amber='''()=>{const c=document.querySelector('canvas.fallback-overlay'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<d.length;i+=4)if(d[i]>d[i+1]*1.12&&d[i+1]>d[i+2]*1.2&&d[i+3]>20)n++;return n;}'''
+                highlighted=p.evaluate(amber);self.assertGreater(highlighted,5000)
+                p.screenshot(path=str(QA/f'species-matches-{label}-no-webgl.png'))
+                canvas=p.locator('canvas.fallback-overlay');box=canvas.bounding_box()
+                p.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2)
+                p.mouse.down();p.mouse.move(box['x']+box['width']/2+80,box['y']+box['height']/2+35,steps=8);p.mouse.up()
+                p.wait_for_timeout(600);self.assertGreater(p.evaluate(amber),5000)
+                p.locator('#clear-map').click();expect(p.locator('#map-summary')).to_be_hidden()
+                p.wait_for_timeout(300);self.assertLess(p.evaluate(amber),highlighted*.2)
+                context.close()
+        finally:browser.close()
+
+    def test_05_https_expedition_can_enter_players(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cert,key=Path(tmp)/'cert.pem',Path(tmp)/'key.pem'
+            subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(key),'-out',str(cert),'-days','1','-subj','/CN=localhost'],check=True,capture_output=True)
+            server=Gateway(('127.0.0.1',0),forest=GatewayTests.forest.server_port,gm_credentials=AUTH)
+            tls=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);tls.load_cert_chain(cert,key)
+            server.socket=tls.wrap_socket(server.socket,server_side=True);background(server)
+            context=self.browser.new_context(ignore_https_errors=True,viewport={'width':1365,'height':900})
+            try:
+                p=context.new_page();p.on('pageerror',lambda e:self.errors.append(str(e)))
+                p.goto(f'https://127.0.0.1:{server.server_port}/stage4/expedition.html')
+                p.locator('#loading').wait_for(state='hidden',timeout=60000)
+                p.locator('#game-mode').select_option('play')
+                p.wait_for_url('**/stage4/round.html#*',timeout=30000)
+                p.wait_for_function('globalThis.roundDiagnostics && roundDiagnostics().state && !roundDiagnostics().busy',timeout=60000)
+                p.screenshot(path=str(QA/'https-players-entry.png'))
+            finally:
+                context.close();server.shutdown();server.server_close()
 
 if __name__=='__main__':unittest.main()
