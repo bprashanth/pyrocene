@@ -1,0 +1,12 @@
+[Unit]
+Description=Pyrocene single-origin event gateway on 8030
+PartOf=pyrocene-games.target
+After=pyrocene-room.service pyrocene-films.service pyrocene-lore.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/src/github.com/bprashanth/pyrocene
+ExecStartPre=/bin/bash web/build.sh
+ExecStart=/usr/bin/python3 -u -m services.gateway --host 127.0.0.1 --port 8030 --gm-file %h/.config/pyrocene/gm-credentials
+Restart=on-failure
+RestartSec=3

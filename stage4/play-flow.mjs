@@ -1,5 +1,5 @@
 import {createPrelude} from './play-briefing.mjs';
-import {negligenceEnabled} from './game-features.mjs';
+import {negligenceEnabled,appURL} from './game-features.mjs';
 export function fillStageMenu(select,mode,{prelude=false}={}){
  select.replaceChildren(...[['expedition','Start Here'],['play','The Players'],['recap-one','Prelude'],['combined','The Game'],['recap','Recap']].map(([value,label])=>{const option=new Option(label,value);option.disabled=value==='recap-one'&&!prelude;return option;}));select.value=mode;
 }
@@ -31,8 +31,7 @@ export function navigation(mode,role){
 // Combined never advances or mutates the shared room.
 export async function enterCombined(){
  const target=new URL('strategy.html',location.href);
- // Preserve live rooms on older servers by using the companion process.
- try{const r=await fetch(target,{method:'HEAD'});if(!r.ok)target.port='8033';}catch{target.port='8033';}
+ // The Game is served beside this page, including behind the public gateway.
  target.hash=new URLSearchParams({seed:'113',fresh:'1',return:location.href}).toString();location.assign(target);
 }
 export function expeditionNavigation(){
@@ -42,13 +41,13 @@ export function expeditionNavigation(){
  const dialog=document.createElement('dialog');dialog.id='expedition-teams';dialog.innerHTML='<div class="dialog-heading"><h1>Teams</h1><button>Back</button></div><p>Share one link with each team. Explore in Start Here, then choose The Players.</p><div class="team-links"></div>';
  document.body.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();
  async function session(){
-  const r=await fetch('/api/round/'+(credentials?'state':'new'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(credentials||{})});const s=await r.json();
+  const r=await fetch(appURL('api/round/'+(credentials?'state':'new')),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(credentials||{})});const s=await r.json();
   if(!r.ok)throw Error(s.error);state=s;credentials={session:s.id,token:s.token};if(s.role!=='room'){role=s.role;roles.value=role;roles.disabled=true;}
   mode.querySelector('[value=negligence]').disabled=s.mission!=='negligence'&&s.phase!=='committed';
   history.replaceState(null,'',flowURL('expedition.html',credentials,role));return s;
  }
  roles.onchange=()=>{role=roles.value;history.replaceState(null,'',flowURL('expedition.html',credentials||{},role));};
- mode.onchange=async()=>{const target=mode.value;if(target==='combined'){await enterCombined();return;}if(!['play','negligence'].includes(target))return;mode.disabled=true;try{const s=await session(),action=target==='play'&&s.mission==='negligence'?'replay':target==='negligence'&&s.mission!=='negligence'?'advance':'enter';const r=await fetch('/api/round/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,round:s.round,revision:s.revision})});if(!r.ok)throw Error((await r.json()).error);location.assign(flowURL('round.html',credentials,role));}catch(e){mode.value='expedition';mode.disabled=false;alert(e.message);}};
+ mode.onchange=async()=>{const target=mode.value;if(target==='combined'){await enterCombined();return;}if(!['play','negligence'].includes(target))return;mode.disabled=true;try{const s=await session(),action=target==='play'&&s.mission==='negligence'?'replay':target==='negligence'&&s.mission!=='negligence'?'advance':'enter';const r=await fetch(appURL('api/round/'+action),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,round:s.round,revision:s.revision})});if(!r.ok)throw Error((await r.json()).error);location.assign(flowURL('round.html',credentials,role));}catch(e){mode.value='expedition';mode.disabled=false;alert(e.message);}};
  nav.querySelector('#teams-open').onclick=async()=>{try{const s=await session(),links=dialog.querySelector('.team-links');links.replaceChildren();
   if(s.teams)for(const [team,token]of Object.entries(s.teams)){const label=document.createElement('label');label.textContent=team==='ecology'?'Ecologist team':'Removal team';const input=document.createElement('input');input.readOnly=true;input.value=flowURL('expedition.html',{session:s.id,token},team);input.setAttribute('aria-label',label.textContent+' link');input.onclick=()=>input.select();label.append(input);links.append(label);}
   else dialog.querySelector('p').textContent='Your team explores here, then joins the current mission. The room makes the shared decision.';
@@ -64,7 +63,7 @@ function cooperationExpeditionNavigation(){
  const nav=navigation('expedition',role),mode=nav.querySelector('#game-mode'),roles=nav.querySelector('#role');
  const dialog=document.createElement('dialog');dialog.id='expedition-teams';dialog.innerHTML='<div class="dialog-heading"><h1>Teams</h1><button>Back</button></div><p>Share one link with each team. Explore, then choose The Players.</p><div class="team-links"></div>';
  document.body.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();
- async function request(action,extra={}){const r=await fetch('/api/community-cooperation/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,...extra})}),s=await r.json();if(!r.ok)throw Error(s.error);return s;}
+ async function request(action,extra={}){const r=await fetch(appURL('api/community-cooperation/'+action),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,...extra})}),s=await r.json();if(!r.ok)throw Error(s.error);return s;}
  async function session(){
   const s=await request(credentials?'state':'new',{screen:'expedition'});
   credentials={session:s.id,token:credentials?.token||s.tokens.room,game:'cooperation'};

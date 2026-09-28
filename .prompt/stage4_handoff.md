@@ -1,5 +1,26 @@
 # Stage 4 handoff, 22 September 2026
 
+## Latest: managed event gateway, 28 September
+
+See [deployment checkpoint](../chronology/2026-09-28-managed-event-gateway.md)
+and [operations / Cloudflare settings](../services/README.md). The event stack
+is now managed by `pyrocene-games.target`; plain `./run.sh` starts it and exits.
+Use `python3 services/manage.py stop` to stop the event servers, leaving Lore
+running. Do not start duplicate default-port processes or stop shared cloudflared.
+Lore and Stage 4 still share the existing 8024 service.
+
+Public entry is `/start` through the loopback gateway on 8030. Forest pages and
+APIs use `/stage4/`; keep new API/team links prefix-safe via `appURL()` or existing
+relative navigation. Direct-port 8024 remains supported. No forest mechanics or
+styling changed. Cloudflare routing/Access setup remains for the user, with Lore
+public and the rest gated. GM has a separate local credential, documented only
+by file location in the service README. Never paste that secret into this file.
+
+Stage 1/2 GM links can now abandon a running stage and open the requested stage's
+lobby. Shared games remain in memory and reset if their backend is restarted.
+Rollback tag: `pyrocene-before-managed-event-20260928`. Revert selectively;
+unrelated Lore/narrative work was already dirty and must be preserved.
+
 ## Latest: nursery inflection and coordination colours
 
 See [curves and colours](../chronology/2026-09-25-coordination-curves-and-colours.md).

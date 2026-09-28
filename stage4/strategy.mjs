@@ -1,3 +1,4 @@
+import {appURL} from './game-features.mjs';
 import {StrategyForest} from './strategy-render.mjs';
 import {newGame,clone,act,quote,ledger,metrics,studyPlot,replay,WORKABLE_IDS,VERSION,CONFIG,WORLD,coordinate,childOf,inspect,plotHealth,GRID} from './strategy-model.mjs';
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
@@ -30,7 +31,7 @@ const prelude=createCooperationRecap(forest); // Play game returns to this run, 
 async function sharedState(){
  const p=new URLSearchParams(returnURL.hash.slice(1));if(!p.has('session')||!p.has('token')||p.get('game')!=='cooperation')return null;
  const credentials={session:p.get('session'),token:p.get('token')};
- const r=await fetch('/api/community-cooperation/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(credentials)});
+ const r=await fetch(appURL('api/community-cooperation/state'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(credentials)});
  if(!r.ok)throw Error('The shared room is no longer available.');return {state:await r.json(),credentials};
 }
 async function changeStage(){
@@ -42,7 +43,7 @@ async function changeStage(){
  }
  if(!['expedition','play'].includes(mode))return;
  try{
-  if(mode==='play'){const shared=await sharedState();if(shared?.state.screen==='expedition'){const r=await fetch('/api/community-cooperation/enter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shared.credentials,revision:shared.state.revision})});if(!r.ok)throw Error('Could not open The Players. Please try again.');}}
+  if(mode==='play'){const shared=await sharedState();if(shared?.state.screen==='expedition'){const r=await fetch(appURL('api/community-cooperation/enter'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shared.credentials,revision:shared.state.revision})});if(!r.ok)throw Error('Could not open The Players. Please try again.');}}
   const target=new URL(returnURL);target.pathname=target.pathname.replace(/(round|expedition)\.html$/,mode==='play'?'round.html':'expedition.html');save();location.assign(target);
  }catch(e){toast(e.message);}
 }

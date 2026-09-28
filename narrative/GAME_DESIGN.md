@@ -913,3 +913,18 @@ Each plan retains its colour across all three time anchors, including selected
 points and their path. Field-site counts remain separate. Explanations describe
 the causes of income and health changes directly. These are scenario projections;
 wildfire and single-player rules remain unchanged. See [assumptions and rollback](../chronology/2026-09-25-coordination-curves-and-colours.md).
+
+### Event deployment and replay, 28 September 2026
+
+All stages can now share the `/start` launcher through one gateway on port 8030:
+Mafia uses the root routes, the forest uses `/stage4/`, films use `/films/`, and
+the terminal browser game uses `/stage3/`. Lore remains independently public at
+`/lore`. The service group starts at boot and can be stopped without stopping
+Lore. Cloudflare routes and login exceptions still need user configuration.
+See [operations](../services/README.md) and
+[verification / rollback](../chronology/2026-09-28-managed-event-gateway.md).
+
+The GM can jump directly to `/gm?stage=2` for a no-intervention fire demonstration,
+then return to `/gm?stage=1` for the session. Switching stages opens a fresh lobby
+while retaining connected names. It no longer leaves the GM stuck in Stage 2.
+Forest gameplay, visuals and the five-stage menu are unchanged.

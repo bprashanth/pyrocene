@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import re
+from urllib.parse import unquote
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +24,7 @@ class Handler(SimpleHTTPRequestHandler):
     """Two roots. The page comes from the repo, everything else from the drive."""
 
     def translate_path(self, path: str) -> str:
-        rel = path.split("?", 1)[0].split("#", 1)[0].lstrip("/")
+        rel = unquote(path.split("?", 1)[0].split("#", 1)[0]).lstrip("/")
         if rel in ("", "index.html"):
             return os.path.join(HERE, "index.html")
         # Resolve inside the asset root and refuse anything that climbs out.
@@ -31,6 +33,46 @@ class Handler(SimpleHTTPRequestHandler):
         if full != root and not full.startswith(root + os.sep):
             return os.path.join(HERE, "index.html")
         return full
+
+    def list_directory(self, path):
+        self.send_error(404, "No gallery at this path")
+        return None
+
+    def send_head(self):
+        self.range_remaining = None
+        header = self.headers.get('Range')
+        if not header or self.headers.get('If-Range'):
+            return super().send_head()
+        path = self.translate_path(self.path)
+        if not os.path.isfile(path): return super().send_head()
+        size = os.path.getsize(path)
+        match = re.fullmatch(r'bytes=(\d*)-(\d*)', header.strip())
+        try:
+            if not match or not any(match.groups()): raise ValueError()
+            a,b=match.groups()
+            start=int(a) if a else max(0,size-int(b))
+            end=min(size-1,int(b)) if a and b else size-1
+            if start<0 or start>end or start>=size: raise ValueError()
+        except ValueError:
+            self.send_response(416);self.send_header('Content-Range',f'bytes */{size}')
+            self.send_header('Content-Length','0');self.end_headers();return None
+        f=open(path,'rb');f.seek(start)
+        self.range_remaining=end-start+1
+        self.send_response(206)
+        self.send_header('Content-Type',self.guess_type(path))
+        self.send_header('Accept-Ranges','bytes')
+        self.send_header('Content-Range',f'bytes {start}-{end}/{size}')
+        self.send_header('Content-Length',str(self.range_remaining));self.end_headers()
+        return f
+
+    def copyfile(self, source, outputfile):
+        try:
+            if self.range_remaining is None: return super().copyfile(source,outputfile)
+            while self.range_remaining:
+                data=source.read(min(self.range_remaining,128*1024))
+                if not data: break
+                outputfile.write(data);self.range_remaining-=len(data)
+        except (BrokenPipeError,ConnectionResetError): pass
 
     def log_message(self, fmt, *args):     # quiet; the launcher owns the console
         pass

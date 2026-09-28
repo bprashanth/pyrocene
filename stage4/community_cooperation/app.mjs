@@ -1,3 +1,4 @@
+import {appURL} from '../game-features.mjs';
 import {CommunityForest} from './render.mjs';
 import {CONFIG,PATCHES,patch,INVENTORY,CLUES,fire,outcome,surveyClue} from './model.mjs';
 import {ADDITIONAL_SPECIES} from '../forest-flora.mjs';
@@ -57,7 +58,7 @@ const current=()=>PATCHES.find(p=>p.id===selected);
 const proposed=()=>state?.proposals;
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,5500);}
 async function request(action,extra={}){
- const response=await fetch('/api/community-cooperation/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,...extra})});
+ const response=await fetch(appURL('api/community-cooperation/'+action),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,...extra})});
  const data=await response.json();if(!response.ok){const e=Error(data.error||'Could not reach the room.');e.status=response.status;throw e;}return data;
 }
 function accept(next){
@@ -219,12 +220,12 @@ $('teams-open').onclick=()=>{
  $('teams').querySelector('details').open=fireReview;
  $('team-links').replaceChildren();
  if(state.tokens)for(const team of ['ecology','removal','community','room']){
-  const label=document.createElement('label');label.textContent=roleName[team];const input=document.createElement('input');input.readOnly=true;input.setAttribute('aria-label',roleName[team]+' link');input.value=new URL('/'+entry+'#'+new URLSearchParams({session:state.id,token:state.tokens[team],role:team,...(integrated?{game:'cooperation'}:{})}),location.href).href;input.onclick=()=>input.select();label.append(input);$('team-links').append(label);
+  const label=document.createElement('label');label.textContent=roleName[team];const input=document.createElement('input');input.readOnly=true;input.setAttribute('aria-label',roleName[team]+' link');input.value=new URL(appURL(entry)+'#'+new URLSearchParams({session:state.id,token:state.tokens[team],role:team,...(integrated?{game:'cooperation'}:{})}),location.href).href;input.onclick=()=>input.select();label.append(input);$('team-links').append(label);
  }
  $('new-room').hidden=fireReview||state.role!=='room';$('teams').showModal();
 };
 $('teams-back').onclick=()=>$('teams').close();
-$('new-room').onclick=()=>{location.assign('/'+entry);};
+$('new-room').onclick=()=>{location.assign(appURL(entry));};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecord();});
 globalThis.communityCooperationDiagnostics=()=>({state,role,selected,view,busy,years,clock,result,fire:fireCache.get(cacheKey)?.burned,ignition:fireCache.get(cacheKey)?.ignition,projection:forest.projectedVegetation,renderedFireTime:forest.drawnFireTime,forest:forest.performance(),renderer:forest.constructor.name,previewPlan:forest.plan,lab:lab?.diagnostics(),inventory:INVENTORY[selected]});
 if(integrated)globalThis.roundDiagnostics=globalThis.communityCooperationDiagnostics;
@@ -236,4 +237,4 @@ try{
  if(!fireReview&&!credentials.session)credentials={session:next.id,token:next.tokens.room};
  busy=false;accept(next);if(!fireReview)saveURL();$('loading').hidden=true;render();requestAnimationFrame(frame);
  if(!fireReview)setInterval(async()=>{if(mutating||document.hidden)return;try{accept(await request('state'));}catch(e){toast(e.message);}},1500);
-}catch(e){$('loading').textContent=e.message;$('loading').append(btn('New room',()=>location.assign('/'+entry)));}
+}catch(e){$('loading').textContent=e.message;$('loading').append(btn('New room',()=>location.assign(appURL(entry))));}

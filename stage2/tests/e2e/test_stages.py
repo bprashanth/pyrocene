@@ -90,7 +90,8 @@ def drain(limit=40):
 
 
 def fresh(seed=5, players=12):
-    api("/api/gm/reset", {"seed": seed})
+    # This suite's fixture is stage 1, even after a navigation/handover test.
+    api("/api/gm/reset", {"seed": seed, "stage": 1})
     api("/api/gm/seed", {"n": players})
     api("/api/gm/start", {})
     return api("/api/state")

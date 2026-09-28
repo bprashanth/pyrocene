@@ -1,3 +1,4 @@
+import {appURL} from './game-features.mjs';
 import {RoundForest} from './round-render.mjs';
 import {StructureLab} from './structure-lab.mjs';
 import {WORLD} from './world.mjs';
@@ -45,7 +46,7 @@ $('record-close').onclick=closeRecord;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]'))closeRecord();});
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,5500);}
 async function request(action,extra={}){
- const r=await fetch('/api/round/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,round:state?.round,phase:state?.phase,prior:state?.proposals[role],team:role,...extra})});
+ const r=await fetch(appURL('api/round/'+action),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,round:state?.round,phase:state?.phase,prior:state?.proposals[role],team:role,...extra})});
  const body=await r.json();if(!r.ok){const error=Error(body.error||'Cannot reach this round.');error.status=r.status;throw error;}return body;
 }
 function accept(next){
