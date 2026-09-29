@@ -206,6 +206,21 @@ class Room:
         self.epoch += 1
         self.begin(g.intro_steps())
 
+    def reset_stage(self, stage, seed=None, keep_roster=False):
+        """Cancel old playback and open a fresh lobby, even mid-game."""
+        with self.lock:
+            roster = [(p.name, p.token) for p in self.game.players.values()] if keep_roster else []
+            self.epoch += 1
+            self.stage = stage
+            self.game = Game(seed=seed, config={"stage": stage})
+            for name, token in roster:
+                self.game.add_player(name).token = token
+            self.steps, self.cursor = [], 0
+            self.replay, self.replay_at = [], 0
+            self.replaying = False
+            self.pair, self.pair_at = None, "after"
+            self.show_map()
+
     @staticmethod
     def _differ(a: dict, b: dict) -> bool:
         ca = {c["index"]: (c["cover"], c.get("stage", 0), c.get("fireline")) for c in a["cells"]}
@@ -259,9 +274,10 @@ class Room:
 
         def run():
             for f in step["beats"]:
-                if self.epoch != epoch:
-                    return
-                self.paint(self.draw_frame(f), kind=f["kind"])
+                with self.lock:
+                    if self.epoch != epoch:
+                        return
+                    self.paint(self.draw_frame(f), kind=f["kind"])
                 if not FAST:
                     time.sleep(f["hold_ms"] / 1000)
             with self.lock:
@@ -299,14 +315,18 @@ class Room:
                     return
                 # The first card is already up, put there when the half began.
                 if k and step.get("text"):
-                    self.paint(self.draw_card(step), kind="card")
-                    self.broadcast_state()
+                    with self.lock:
+                        if self.epoch != epoch:
+                            return
+                        self.paint(self.draw_card(step), kind="card")
+                        self.broadcast_state()
                     if not FAST:
                         time.sleep(card_ms / 1000)
                 for f in step["beats"]:
-                    if self.epoch != epoch:
-                        return
-                    self.paint(self.draw_frame(f), kind=f["kind"])
+                    with self.lock:
+                        if self.epoch != epoch:
+                            return
+                        self.paint(self.draw_frame(f), kind=f["kind"])
                     if not FAST:
                         time.sleep(f["hold_ms"] / 1000)
                 b, a = step.get("before"), step.get("after")
@@ -315,6 +335,8 @@ class Room:
                         first_before = b
                     last_after = a
                 with self.lock:
+                    if self.epoch != epoch:
+                        return
                     self.cursor += 1
             with self.lock:
                 if self.epoch != epoch:
@@ -475,14 +497,8 @@ class Handler(BaseHTTPRequestHandler):
         qs = urllib.parse.parse_qs(u.query)
         p = u.path
         if p in ("/", "/index.html"):
-            # The player link off the index carries the stage too, so handing
-            # out one address puts the room in the right game.
-            want = (qs.get("stage") or [None])[0]
-            if want in ("1", "2") and int(want) != ROOM.stage and ROOM.game.phase == "lobby":
-                ROOM.stage = int(want)
-                ROOM.game = Game(seed=None, config={"stage": ROOM.stage})
-                ROOM.epoch += 1
-                ROOM.show_map()
+            # Only the GM chooses the stage. Old player links must never reset
+            # the shared room when a phone reconnects.
             return self._file("phone.html", "text/html; charset=utf-8")
         if p == "/start":
             # The films run on their own port because the masters are hundreds
@@ -491,15 +507,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._file("start.html", "text/html; charset=utf-8",
                               {"__FILMS_PORT__": FILMS_PORT, "__STAGE4_PORT__": STAGE4_PORT})
         if p == "/gm":
-            # /gm?stage=2 puts the room straight into stage 2, so an evening can
-            # skip stage 1 entirely. Only before a game starts: switching under
-            # a game in progress would throw the board away.
+            # Explicit navigation can abandon a run, including during playback.
+            # Refreshing the same active stage preserves that run.
             want = (qs.get("stage") or [None])[0]
-            if want in ("1", "2") and int(want) != ROOM.stage and ROOM.game.phase == "lobby":
-                ROOM.stage = int(want)
-                ROOM.game = Game(seed=None, config={"stage": ROOM.stage})
-                ROOM.epoch += 1
-                ROOM.show_map()
+            with ROOM.lock:
+                if want in ("1", "2") and (int(want) != ROOM.stage or ROOM.game.phase == "ended"):
+                    ROOM.reset_stage(int(want), keep_roster=True)
             return self._file("gm.html", "text/html; charset=utf-8")
         if p == "/projector":
             return self._file("projector.html", "text/html; charset=utf-8")
@@ -563,9 +576,9 @@ class Handler(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         p = u.path
         body = self._body()
-        g = ROOM.game
         try:
             with ROOM.lock:
+                g = ROOM.game
                 if p == "/api/join":
                     pl = g.add_player(body.get("name", ""))
                     ROOM.broadcast_state()
@@ -647,15 +660,8 @@ class Handler(BaseHTTPRequestHandler):
                     # A reset keeps whichever stage the room is on unless it is
                     # told otherwise, so a game master can rehearse stage 1 again
                     # after going through to stage 2 without restarting.
-                    if body.get("stage") in (1, 2):
-                        ROOM.stage = int(body["stage"])
-                    ROOM.game = Game(seed=int(seed) if seed else None,
-                                     config={"stage": ROOM.stage})
-                    ROOM.steps, ROOM.cursor = [], 0
-                    ROOM.replay, ROOM.replay_at = [], 0
-                    ROOM.replaying = False
-                    ROOM.epoch += 1
-                    ROOM.show_map()
+                    stage = body.get("stage") if body.get("stage") in (1, 2) else ROOM.stage
+                    ROOM.reset_stage(stage, seed=int(seed) if seed is not None else None)
                     return self._json(200, ROOM.gm_payload())
         except (ValueError, KeyError) as e:
             return self._json(400, {"error": str(e)})

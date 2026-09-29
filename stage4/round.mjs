@@ -1,9 +1,10 @@
+import {appURL} from './game-features.mjs';
 import {RoundForest} from './round-render.mjs';
 import {StructureLab} from './structure-lab.mjs';
 import {WORLD} from './world.mjs';
 import {ADDITIONAL_SPECIES} from './forest-flora.mjs';
 import {CONFIG,PATCHES,patch,atSector,studyPlot,review,cooperationPreview} from './round-model.mjs';
-import {navigation,flowParams,roleFrom,flowURL,enterCombined} from './play-flow.mjs';
+import {navigation,flowParams,roleFrom,flowURL,enterCombined,bindRecap} from './play-flow.mjs';
 import {BRIEFINGS} from './play-briefing.mjs';
 import {speciesRecord} from './species-record.mjs';
 import {habitatReadings} from './seed-model.mjs';
@@ -38,13 +39,14 @@ const forecastTools=$('forecast-tools').content.cloneNode(true);$('outcomes').pr
 let specimenKey='';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const forest=new RoundForest($('landscape'),{select:async id=>{const p=candidates().find(p=>p.id===id);if(p)await choose(p.key);},specimen:meet});forest.reducedMotion=reduced;
+bindRecap(forest,$('game-mode'),()=>isNeglect()?'negligence':'play');
 const lab=new StructureLab({forest,catalogue:()=>catalogue});
 const closeRecord=()=>{$('plant-guide').hidden=true;plantPicker.value='';};
 $('record-close').onclick=closeRecord;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]'))closeRecord();});
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,5500);}
 async function request(action,extra={}){
- const r=await fetch('/api/round/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,round:state?.round,phase:state?.phase,prior:state?.proposals[role],team:role,...extra})});
+ const r=await fetch(appURL('api/round/'+action),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,revision:state?.revision,round:state?.round,phase:state?.phase,prior:state?.proposals[role],team:role,...extra})});
  const body=await r.json();if(!r.ok){const error=Error(body.error||'Cannot reach this round.');error.status=r.status;throw error;}return body;
 }
 function accept(next){

@@ -751,3 +751,180 @@ The current 8024 shared server links to it without losing open rooms; a freshly
 started server can serve both stages together. See [Combined notes](../stage4/STRATEGY.md)
 for model limits, tests and rollback, and the
 [integration chronology](../chronology/2026-09-21-stage4-combined.md).
+
+### Recap: from fire corridors to forest stewards
+
+Recap is available in the main stage dropdown in Expedition, Cooperation,
+Negligence and Combined. It opens over the current map. Finish closes the recap
+and returns to exactly that map without advancing time, resetting the game or
+changing a proposal. No portrait is shown.
+
+The three pages revisit local livelihood-related ignitions, connected invasive
+fuel and fire lines, then Forest Stewards. The last map marks the exposed forest
+edge. Shade-grown coffee in the Nilgiris (Aadhimalai and Keystone) and coffee
+agroforestry in Apuí, Amazonia (IDESAM and WeForest) illustrate the common need
+for reliable livelihoods and continuing land care, rather than promoting one
+organisation. Each page has its own sources and ecological qualifications.
+
+**The final playable stewardship stage is deferred.** Later it can follow the
+recap, but for now Finish only returns to the map. The separate Community
+experiment remains parked at `/community/#prototype=1`; do not silently merge
+its fixed starting plots, economics or boundary-fire rules into the main game.
+Its earlier buffer trials are learning material, not an accepted final mission.
+
+Canonical recap copy and drawing: `stage4/play-briefing.mjs`; integration:
+`stage4/play-flow.mjs`; styling: `stage4/play-flow.css`. See the
+[main-game integration chronology](../chronology/2026-09-22-stage4-recap-main-game.md)
+and the [Stage 4 handoff](../.prompt/stage4_handoff.md).
+
+### Community cooperation: separate three-role prototype
+
+An isolated [Community cooperation prototype](http://100.82.28.38:8036/community-cooperation/)
+tests the same A/B/C choices with a third team. Community considers nursery
+supply for A, cupuaçu under shade in B or pasture grazing in C. Proposals are
+private until discussion. Fruit cultivation or grazing cannot also be native
+restoration on the same square; the room must resolve land use and funding.
+Community sees numeric investment and qualitative returns/health.
+
+The prototype has its own invasion field and fire comparison. C's flanks have
+no invasive grass in its plant inventory. Fuel continuity, moisture and recovery
+shape a spreading front instead of the old authored narrow ellipse. This remains
+a designed scenario, not a reconstruction of the scanned forest's actual fire.
+
+Cooperation, Negligence and Combined are unchanged. The proposal to shorten the
+main sequence is not implemented. See [prototype rules and play findings](../stage4/community_cooperation/README.md)
+and [chronology](../chronology/2026-09-24-community-cooperation-prototype.md).
+A newly started `run.sh` serves the prototype at the same path on port 8024.
+
+Height colours remain pink/blue/green; fuel is discovered through plant surveys,
+not a replacement LiDAR palette. Fire crosses square boundaries with a forward
+bias and limited side spill. `/community/` has a Review fire link to the separate
+`/community-cooperation/#fire=1` comparison, which needs no proposals and changes
+no room state. See the [survey/fire refinement checkpoint](../chronology/2026-09-24-community-fire-survey-and-zoom.md).
+
+### Current Cooperation: three teams, one shared landscape
+
+Community now joins Removal and Ecologist in the [main Cooperation game](http://100.82.28.38:8024/round.html).
+It chooses nursery A, shade-grown coffee B or pasture grazing C. Private proposals
+lead to discussion about land use and funding before the room commits. The main
+map and fire renderer are retained; survey contents and the more natural fire
+spread come from the tested prototype. All surrounding squares can be surveyed.
+
+The default sequence is Expedition, Cooperation, Combined, then Recap.
+Negligence is hidden, not deleted. `?negligence=1` restores the archived two-team
+sequence for comparison. Combined has not received Community mechanics yet.
+See [integration and rollback notes](../chronology/2026-09-24-cooperation-community-integration.md).
+
+### Cooperation: discuss, borrow, then project the shared landscape
+
+The room can now borrow rather than reject a costly compatible plan. One A/B/C
+dropdown per role changes the shared proposal and its funds. Conflicting coffee,
+pasture and native restoration uses still need agreement before commitment.
+
+After committing, Recap I compares the allowed plans on net group earnings and
+forest-health change without fire. Then one Projection slider shows all selected
+plots: repeated invasive clearance/regrowth, native recovery and shade-grown
+coffee. Nursery production remains off-map. Grazing C includes a first-season
+burn; other choices expose a Fire slider at the projected year. Main ignition is
+always C, so coffee/nursery choices do not quietly move the spark elsewhere.
+There is no Run fire button. Revise plan reopens discussion.
+
+The graph's returns, repeated cuts and growth timings are explicit game
+assumptions, not calibrated predictions. Combined and the existing closing
+Recap remain unchanged. See [the projection checkpoint](../chronology/2026-09-24-cooperation-debt-and-projection.md)
+for assumptions, screenshots, test commands and rollback baseline `5ac5bb6`.
+
+Room editing now opens directly, with no Reveal step in main Cooperation.
+Commit opens Recap I; Revise returns to those same choices. The With/Without
+buttons are removed. Returning invasives fade through a slower continuous cycle
+rather than flashing off at a year boundary. See [the simplification checkpoint](../chronology/2026-09-24-cooperation-room-simplification.md).
+
+The latest refinement shows two smooth removal/regrowth cycles over ten years.
+Recap I prioritises the interactive graph with tighter linear bounds and a
+narrower paragraph column. Combined is still unchanged; Community integration
+there remains a discussion. See [graph and cycle notes](../chronology/2026-09-24-cooperation-graph-space-and-two-cycles.md).
+
+### Recap I tradeoffs, then Recap II time
+
+Recap I now explains each selected dot. Matched removal/restoration/nursery in A
+protects native growth and supports establishment. Restoring C can shelter coffee
+in B. Removal in A can earn more while damaging natives. These benefits are
+explicit scenario assumptions, not measured rankings, and wildfire remains
+excluded. The map's projected health uses the same accounting as the graph.
+
+Recap II holds restoration/removal in A fixed and compares nursery-only, coffee
+in B from the start, and nursery followed by coffee in B at year three. Two
+graphs show earnings and health over time; one slider advances the explanation.
+Later coffee costs money and delays harvest. It need not beat keeping the
+nursery on ten-year cash retained. Neither recap changes the committed plan.
+Combined is unchanged. See [assumptions, play checks and rollback](../chronology/2026-09-25-recap-tradeoffs-and-time.md).
+
+### Recap II income refinement and Recap III possibilities
+
+Recap II now shows **community income each year**, not accumulated group
+earnings. The first nursery order is largest; replacement orders taper as
+restoration establishes. Later coffee harvests can raise income again, although
+the investment and continued care must be paid for. Costs are shown separately.
+The Year slider is removed and a small overhead map marks A/B/C beneath the text.
+
+Recap III places Recap I's 21 fixed plans at the start, year five and year ten
+in a rotatable spatial graph. Choose one to follow its path; colours show how
+many field plots need attention. It adds time and a coordination cue without
+drawing every possible path at once. This is not a new logistics simulation.
+Recap I's group accounting and Combined stay unchanged, and all three recaps
+remain read-only and exclude wildfire. See [the trial and rollback notes](../chronology/2026-09-25-recap-income-and-possibilities.md).
+
+### Explicit Prelude and fire testing
+
+The menu now reads Start Here / The Players / Prelude / The Game / Recap.
+Committing a shared plan stays on the map with Projection and Fire sliders.
+The Recap button beneath them opens the three-page Prelude; its final Play game
+button enters the existing single-player game. The title asks how much
+place-neutral actors can keep tending, rather than speaking for every group.
+
+Grazing still includes a first-season fire in Projection. The separate Fire
+slider can test a new ignition at any projected year for every plan. Returning
+invasives increase the fuel and spread compared with recently cleared ground.
+These are independent comparisons, not accumulating fires. Forest and fire
+styling are unchanged. See [flow and fire semantics](../chronology/2026-09-25-fire-slider-and-prelude-flow.md).
+
+The same five-stage menu now remains in The Game. Prelude can be reviewed there
+without resetting a run. Its three pages are labelled Prelude I/II/III and each
+has an overhead A/B/C reference map. Prelude III asks “How much can we keep
+tending?” Its numbered turning points explain orders, harvests, care costs and
+repeat clearing one at a time; general instructions sit under About this graph.
+The closing Recap's fire map now uses the current Players fuel corridor and scar,
+not the older square-centre route. See [navigation, annotation and scar notes](../chronology/2026-09-25-prelude-hinges-and-consistent-menu.md).
+
+### Prelude earnings and coordination refinement
+
+Matched nursery supply now leads into a gentle decline in group money as care
+continues after year four. Annual community replacement orders still taper in
+Prelude II; they transfer credits within the group rather than create new group
+income. Coffee harvests ramp up after establishment, using one annual/cumulative
+curve across the pages. All-A remains healthiest before fire, while Remove C,
+restore C, coffee B offers strong health and later income. Its initial clearance
+helps fund planting and coffee, and recovering C shelters B. All-A also explicitly
+warns that untreated C remains a route for fire.
+
+Plan labels put removal first. Green/blue/pink now mean shared recovery, some
+shared work and separate work; they replace the earlier field-site-count colours.
+Each plan retains its colour across all three time anchors, including selected
+points and their path. Field-site counts remain separate. Explanations describe
+the causes of income and health changes directly. These are scenario projections;
+wildfire and single-player rules remain unchanged. See [assumptions and rollback](../chronology/2026-09-25-coordination-curves-and-colours.md).
+
+### Event deployment and replay, 28 September 2026
+
+All stages can now share the `/start` launcher through one gateway on port 8030:
+Mafia uses the root routes, the forest uses `/stage4/`, films use `/films/`, and
+the terminal browser game uses `/stage3/`. Lore remains independently public at
+`/lore`. The service group starts at boot and can be stopped without stopping
+Lore. Cloudflare routes and login exceptions still need user configuration.
+See [operations](../services/README.md) and
+[verification / rollback](../chronology/2026-09-28-managed-event-gateway.md).
+
+The GM can jump directly to `/gm?stage=2` for a no-intervention fire demonstration,
+then return to `/gm?stage=1` for the session. Switching stages opens a fresh lobby
+while retaining connected names. It no longer leaves the GM stuck in Stage 2.
+Forest gameplay, visuals and the five-stage menu are unchanged.

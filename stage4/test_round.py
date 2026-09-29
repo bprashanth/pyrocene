@@ -27,7 +27,7 @@ class RoundPlay(unittest.TestCase):
  def begin(self,p=None):
   p=p or self.page;p.locator('#briefing[open]').wait_for();self.click('Begin',p)
  def start(self,p=None,url=None):
-  p=p or self.page;p.goto(url or self.base+'/round.html');p.locator('#loading').wait_for(state='hidden',timeout=60000)
+  p=p or self.page;p.goto(url or self.base+'/round.html?negligence=1');p.locator('#loading').wait_for(state='hidden',timeout=60000)
   if '/expedition.html' in p.url:p.locator('#game-mode').select_option('play')
   self.begin(p)
  def inspect(self,key,p=None):
@@ -38,9 +38,9 @@ class RoundPlay(unittest.TestCase):
  def seek(self,id,value,p=None):
   p=p or self.page;p.locator('#'+id).fill(str(value));p.locator('#'+id).dispatch_event('input');p.wait_for_timeout(100)
  def test_expedition_role_briefing_play_sliders_and_reset(self):
-  self.page.goto(self.base+'/expedition.html');self.page.locator('#loading').wait_for(state='hidden');self.shot('play-01-expedition')
+  self.page.goto(self.base+'/expedition.html?negligence=1');self.page.locator('#loading').wait_for(state='hidden');self.shot('play-01-expedition')
   self.page.locator('#role').select_option('ecology');self.page.locator('#game-mode').select_option('play');self.page.locator('#briefing[open]').wait_for()
-  expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#game-mode option:checked')).to_have_text('Cooperation');self.shot('play-02-briefing');self.begin()
+  expect(self.page.locator('#briefing-role')).to_have_text('Role: ecologist');expect(self.page.locator('#game-mode option:checked')).to_have_text('The Players');self.shot('play-02-briefing');self.begin()
   self.inspect('C');expect(self.page.locator('#finding')).to_contain_text('Cost: 9 credits. Health: +6');expect(self.page.locator('#finding')).not_to_contain_text('shared')
   self.assertEqual(self.page.locator('#patch-actions button').all_text_contents(),['Propose','Structure'])
   self.shot('play-03-choice');self.click('Structure');self.page.wait_for_function('roundDiagnostics().lab.draws>0');self.click('Look through');self.page.locator('#structure-focus').select_option('liana')
@@ -59,7 +59,7 @@ class RoundPlay(unittest.TestCase):
   self.page.wait_for_function('(old)=>Math.abs(roundDiagnostics().forest.elevation-old)>.01',arg=elevation)
   self.seek('fire-time',0);self.click('Close view');self.page.wait_for_function('!roundDiagnostics().busy');self.shot('play-08-restored-close')
   self.page.reload();self.page.locator('#loading').wait_for(state='hidden');self.assertEqual(self.page.evaluate('roundDiagnostics().state.phase'),'committed')
-  self.page.locator('#game-mode').select_option('expedition');self.page.wait_for_url('**/expedition.html?fresh=1#*');self.page.locator('#loading').wait_for(state='hidden')
+  self.page.locator('#game-mode').select_option('expedition');self.page.wait_for_url('**/expedition.html?fresh=1&negligence=1#*');self.page.locator('#loading').wait_for(state='hidden')
   self.page.locator('#role').select_option('ecology');self.page.locator('#game-mode').select_option('play');self.begin()
   self.assertEqual(self.page.evaluate('roundDiagnostics().state.phase'),'survey');self.assertEqual(self.page.evaluate('roundDiagnostics().state.proposals'),{'removal':None,'ecology':None})
   self.assertEqual(self.page.evaluate('roundDiagnostics().state.visited'),{'removal':[],'ecology':[]})
@@ -110,7 +110,7 @@ class RoundPlay(unittest.TestCase):
    self.page.locator('#role').select_option('ecology');self.begin();self.page.locator('[data-specimen="urochloa_decumbens"]').click();self.page.get_by_role('tab',name='Germination').click();self.shot('record-phone-no-webgl');expect(self.page.locator('.seed-clue')).not_to_be_visible();expect(self.page.locator('.reading')).to_have_count(4);self.click('Back')
   finally:b.close()
  def test_briefing_types_and_can_be_dismissed_early(self):
-  self.page.emulate_media(reduced_motion='no-preference');self.page.goto(self.base+'/round.html#role=removal')
+  self.page.emulate_media(reduced_motion='no-preference');self.page.goto(self.base+'/round.html?negligence=1#role=removal')
   self.page.locator('#briefing[open]').wait_for();expect(self.page.locator('#briefing-role')).to_have_text('Role: removal')
   self.assertEqual(self.page.locator('.facilitator-photo span').count(),0)
   expect(self.page.locator('#briefing-accessible')).not_to_contain_text('The return helps pay')
@@ -160,7 +160,7 @@ class RoundPlay(unittest.TestCase):
   self.click('Propose');self.begin();self.inspect('C');self.click('Propose');self.begin();self.click('Reveal plans');expect(self.page.get_by_role('button',name='Commit plan',exact=True)).to_be_disabled()
   self.page.locator('#role').select_option('ecology');self.inspect('D');self.click('Propose');self.click('Commit plan');self.seek('fire-time',20);self.shot('neglect-08-committed')
   self.page.reload();self.page.locator('#loading').wait_for(state='hidden');self.assertEqual(self.page.evaluate('roundDiagnostics().state.mission'),'negligence');self.assertEqual(self.page.evaluate('roundDiagnostics().state.committed.removal'),'D')
-  self.page.locator('#game-mode').select_option('expedition');self.page.wait_for_url('**/expedition.html?fresh=1#*');self.page.locator('#loading').wait_for(state='hidden');self.page.locator('#role').select_option('removal');self.page.locator('#game-mode').select_option('play');self.begin();self.assertEqual(self.page.evaluate('roundDiagnostics().state.mission'),'cooperation')
+  self.page.locator('#game-mode').select_option('expedition');self.page.wait_for_url('**/expedition.html?fresh=1&negligence=1#*');self.page.locator('#loading').wait_for(state='hidden');self.page.locator('#role').select_option('removal');self.page.locator('#game-mode').select_option('play');self.begin();self.assertEqual(self.page.evaluate('roundDiagnostics().state.mission'),'cooperation')
 
  def test_seed_study_and_broad_scar_playthrough(self):
   self.start();self.inspect('C');self.page.locator('[data-specimen="urochloa_brizantha"]').click();expect(self.page.locator('.species-status')).to_have_text('Invasive');self.page.get_by_role('tab',name='Dispersal').click();self.shot('record-cooperation-removal');self.click('Back');self.click('Propose');self.begin();self.click('Propose');self.begin();self.click('Reveal plans');self.click('Commit plan')

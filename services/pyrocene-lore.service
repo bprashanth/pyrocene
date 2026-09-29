@@ -1,0 +1,12 @@
+[Unit]
+Description=Pyrocene lore and Stage 4 on port 8024
+
+[Service]
+Type=simple
+WorkingDirectory=%h/src/github.com/bprashanth/pyrocene
+ExecStart=/usr/bin/python3 -u -m stage4.serve --host 0.0.0.0 --port 8024
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=default.target

@@ -249,6 +249,11 @@ service-account*.json
 playwright/.auth/
 storage-state*.json
 auth-state*.json
+.cloudflared/
+gm-credentials
+*.har
+*.pcap
+*.pcapng
 
 # Raw survey data, media, screenshots and generated delivery bundles stay external.
 # Git cannot ignore by size. New raster assets require an explicit exception.
@@ -279,6 +284,7 @@ playwright-report/
 stage4/assets/
 stage4/qa/
 stage4/qa-*/
+/output/
 
 # Small, deliberately shipped UI portraits and lab examples.
 !stage4/hazel.png

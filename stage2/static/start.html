@@ -68,7 +68,7 @@
       <h2>Forest structure studies</h2>
     </a>
 
-    <a class="tile" href="https://pyrocene.netlify.app">
+    <a class="tile" id="stage3" href="https://pyrocene.netlify.app">
       <h2>Stage 3</h2>
     </a>
 
@@ -84,7 +84,13 @@
   document.getElementById("films").href =
     location.protocol + "//" + location.hostname + ":__FILMS_PORT__/";
   document.getElementById("stage4").href =
-    location.protocol + "//" + location.hostname + ":__STAGE4_PORT__/";
+    location.protocol + "//" + location.hostname + ":__STAGE4_PORT__/expedition.html";
+  // The gateway marks this page; ordinary LAN ports keep their existing links.
+  if (document.querySelector('meta[name="pyrocene-gateway"]')) {
+    document.getElementById("films").href = "/films/";
+    document.getElementById("stage3").href = "/stage3/";
+    document.getElementById("stage4").href = "/stage4/expedition.html";
+  }
 </script>
 </body>
 </html>

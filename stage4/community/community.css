@@ -1,0 +1,24 @@
+.community-game{--community:#89cbb5}
+.community-game header nav a{font:12px Arial;color:#d5c17b;text-decoration:none;padding:8px}
+#enterprise-name{font:11px monospace;color:var(--community)}
+#enterprise-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+#enterprise-cards button{text-align:left;padding:15px;border:1px solid #5b7d6b;color:#c7ddcd}
+#enterprise-cards button[aria-pressed=true]{border-color:#e3c879;background:#e3c87912}
+#enterprise-cards strong,#enterprise-cards span{display:block}
+#enterprise-cards strong{font:18px Georgia;color:#e3c879;margin-bottom:10px}
+#enterprise-cards span{font:13px/1.6 Arial}
+.community-game #patch-actions .partner-choice{grid-column:1/-1}
+.community-game #patch-actions .partner-choice button{border:1px solid var(--community);background:#89cbb517;color:#bee4ce}
+.community-game #round-panel{max-height:calc(100dvh - 300px);overflow:auto}
+.community-game #round-panel #community-account{font:11px/1.6 monospace;border-left:1px solid var(--community);padding-left:10px;color:var(--community)}
+.community-game .ledger-block.community{border-color:var(--community);background:linear-gradient(90deg,#89cbb52b var(--fill),transparent var(--fill))}
+.community-game .round-labels button.community{color:var(--community);border-color:var(--community)}
+.community-game .round-labels button.chosen{color:#102318}
+.community-game #season-report{max-width:440px;pointer-events:none}
+.community-game #season-note{font:12px/1.5 Arial;margin:5px 0 0;max-width:390px}
+.community-game #next-season{font:12px Arial;padding:8px 12px;margin-top:4px}
+.buffer-outlines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.buffer-outlines polygon{fill:none;stroke:#e3c879;stroke-width:1;stroke-dasharray:4 5;opacity:.6}
+.buffer-outlines polygon.managed{stroke:#89cbb5;stroke-width:2;stroke-dasharray:none;opacity:.85}
+.buffer-outlines polygon.damaged{stroke:#e38e63;stroke-dasharray:3 3}
+@media(max-width:800px){#enterprise-name{display:none}.community-game header nav a{font-size:10px;padding:3px}.community-game #round-panel{width:218px;max-height:calc(100dvh - 320px)}.community-game #season-report{bottom:72px;max-width:calc(100vw - 24px)}#enterprise-cards{grid-template-columns:1fr}.community-game #season-note{max-width:280px}}

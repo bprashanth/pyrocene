@@ -211,22 +211,44 @@ export class ExpeditionForest extends ExplorationForest {
   _positionExploreLabels(){
     this.positionObservations?.();
     const occupied=[];
-    for(const b of this.exploreLabels.children){
+    // Prioritise the inspected species, then keep labels beside their plants.
+    // At wide zoom hide collisions instead of building a tower of long leaders.
+    const labels=[...this.exploreLabels.children].sort((a,b)=>Number(b.dataset.specimen===this.focusedSpecimen)-Number(a.dataset.specimen===this.focusedSpecimen));
+    for(const b of labels){
       const a=b._world||[0,0,0],p=new T.Vector3(a[0],a[1]*(this.tlsActive?this.detailBlend:1),a[2]).project(this.camera);
       b.hidden=this.detailBlend<.85||Math.abs(p.x)>.97||Math.abs(p.y)>.92||p.z>1;
       if(b.hidden)continue;
       const notes=!!document.querySelector('#plot-notes:not([hidden]),#plant-guide:not([hidden])');
       const w=b.offsetWidth||140,right=notes&&this.width>700?this.width-370:this.width-12;
-      const x=clamp((p.x*.5+.5)*this.width,w/2+12,right-w/2),y=(-p.y*.5+.5)*this.height;
-      let ly=clamp(y,120,this.height-(notes&&this.width<=700?350:145));
-      while(occupied.some(o=>Math.abs(o.x-x)<(o.w+w)/2+8&&Math.abs(o.y-ly)<40))ly-=42;
-      occupied.push({x,y:ly,w});b.style.setProperty('--pin-shift',`${y-ly}px`);b.style.transform=`translate(${x}px,${ly}px)`;
+      const x=(p.x*.5+.5)*this.width,y=(-p.y*.5+.5)*this.height,ly=y-30;
+      const collides=occupied.some(o=>Math.abs(o.x-x)<(o.w+w)/2+8&&Math.abs(o.y-ly)<40);
+      b.hidden=collides||x<w/2+12||x>right-w/2||ly<60||ly>this.height-(notes&&this.width<=700?350:85);
+      if(b.hidden)continue;
+      occupied.push({x,y:ly,w});b.style.setProperty('--pin-shift','30px');b.style.transform=`translate(${x}px,${ly}px)`;
     }
   }
   _cpuCamera(){
     this.target.lerp(this.goal.target,.12);this.distance+=(this.goal.distance-this.distance)*.12;this.angle+=(this.goal.angle-this.angle)*.12;this.elevation+=(this.goal.elevation-this.elevation)*.12;
     this.camera.position.set(this.target.x+Math.cos(this.angle)*Math.cos(this.elevation)*this.distance,this.target.y+Math.sin(this.elevation)*this.distance,this.target.z+Math.sin(this.angle)*Math.cos(this.elevation)*this.distance);
     this.camera.lookAt(this.target);this.camera.updateMatrixWorld();
+  }
+  showMatches(matches=[]){
+    super.showMatches(matches);
+    // A species selection can change while the camera is stationary.
+    this.cpuKey=null;
+  }
+  _drawFallbackMatches(ctx){
+    if(this.tlsActive||this.exploreView==='close'||!this.matchGroup)return;
+    // Project the same ground polygons used by WebGL through the live camera.
+    // The old fixed overhead-grid projection does not follow this free map.
+    ctx.save();ctx.fillStyle='#e8bc7b';ctx.strokeStyle='#e8bc7b';ctx.lineWidth=1;
+    for(const polygon of this.matchGroup.children){
+      const corners=[[-71,-71],[71,-71],[71,71],[-71,71]].map(([x,z])=>new T.Vector3(polygon.position.x+x,.25,polygon.position.z+z).project(this.camera));
+      if(corners.some(p=>p.z< -1||p.z>1))continue;
+      ctx.beginPath();corners.forEach((p,i)=>{const x=(p.x*.5+.5)*this.width,y=(-p.y*.5+.5)*this.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();
+      ctx.globalAlpha=polygon.material.opacity;ctx.fill();ctx.globalAlpha=.55;ctx.stroke();
+    }
+    ctx.restore();
   }
   drawFallback(){
     if(!this.airborneSource)return;
@@ -243,6 +265,7 @@ export class ExpeditionForest extends ExplorationForest {
       for(let n=0;n<segments.length;n+=6){const a=new T.Vector3(segments[n],segments[n+1]*this.detailBlend,segments[n+2]).project(this.camera),b=new T.Vector3(segments[n+3],segments[n+4]*this.detailBlend,segments[n+5]).project(this.camera);if(a.z>1||b.z>1||a.z< -1||b.z< -1)continue;ctx.moveTo((a.x*.5+.5)*w,(-a.y*.5+.5)*h);ctx.lineTo((b.x*.5+.5)*w,(-b.y*.5+.5)*h);}ctx.stroke();
     }
     ctx.globalAlpha=1;
+    this._drawFallbackMatches(ctx);
     if(this.selected>=0){const c=centre(this.selected);ctx.strokeStyle='#ddbf78';ctx.lineWidth=1;ctx.beginPath();[[-75,-75],[75,-75],[75,75],[-75,75],[-75,-75]].forEach(([x,z],i)=>{v.set(c.x+x,3,c.z+z).project(this.camera);const px=(v.x*.5+.5)*w,py=(-v.y*.5+.5)*h;i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
   }
   animate(now){

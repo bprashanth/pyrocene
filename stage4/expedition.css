@@ -19,6 +19,7 @@
 .specimen-pin[data-layer]{border-color:var(--stratum);color:var(--stratum)}
 .specimen-pin[data-layer]::before{background:var(--stratum)}
 .specimen-pin.focused{background:#16372ceb;box-shadow:0 0 12px #99e6ce33}
+.inline-detail .specimen-pin::after{height:12px}
 .scientific-name,.plant-layer-note{display:block;font:11px/1.5 Arial,sans-serif;color:#a5c0ac;margin:0 0 12px}
 .plain-note a{font-size:11px}
 #plant-guide .plain-note{padding:20px 24px}

@@ -34,6 +34,8 @@ APP_FILES += ('forest-neighbourhood.mjs',)
 APP_FILES += ('forest-flora.mjs', 'inventory-trees.mjs', 'forest-structure.mjs')
 APP_FILES += ('structure-model.mjs', 'structure-lab.mjs', 'structure-lab.css')
 APP_FILES += ('round.html', 'round.css', 'round.mjs', 'round-render.mjs', 'round-model.mjs', 'round-config.json')
+APP_FILES += ('round-entry.mjs', 'cooperation.mjs', 'cooperation-briefing.mjs', 'game-features.mjs')
+APP_FILES += ('cooperation-projection.mjs', 'cooperation-growth.mjs', 'cooperation-recap.mjs')
 APP_FILES += ('policy.html', 'policy.css', 'policy.mjs', 'policy-render.mjs', 'policy-model.mjs', 'policy-copy.mjs', 'policy-config.json', 'policy-bots.mjs')
 APP_FILES += ('ledger.html', 'ledger.css', 'ledger.mjs', 'ledger-render.mjs', 'ledger-model.mjs')
 APP_FILES += ('prelude/index.html', 'prelude/prelude.css', 'prelude/prelude.mjs', 'prelude/board.mjs')
@@ -42,10 +44,15 @@ APP_FILES += ('neglect-model.mjs',)
 APP_FILES += ('seed-study.mjs', 'seed-model.mjs', 'fire-landscape.mjs', 'canopy-grid.json')
 APP_FILES += ('species-record.mjs', 'species-record.css')
 APP_FILES += ('strategy.html', 'strategy.css', 'strategy.mjs', 'strategy-model.mjs', 'strategy-render.mjs')
+APP_FILES += ('community/index.html', 'community/community.css', 'community/community.mjs', 'community/model.mjs', 'community/render.mjs')
+APP_FILES += ('community/prelude.mjs',)
+APP_FILES += ('community_cooperation/index.html', 'community_cooperation/style.css', 'community_cooperation/app.mjs', 'community_cooperation/model.mjs', 'community_cooperation/render.mjs', 'community_cooperation/config.json', 'community_cooperation/store.py')
 APP_FILES += ("expedition.html", "expedition.mjs", "expedition.css", "expedition-state.mjs", "expedition-render.mjs", "world.mjs", "field-catalogue.json", "field-photos.json", "memory.html", "memory.css", "memory.mjs", "memory-model.mjs")
 APP_FILES += ("ash.html", "ash.mjs", "ash.css", "ash-render.mjs", "lia-v1.png")
 ENGINE_FILES = ("__init__.py", "model.py", "content.py", "rules.py", "engine.py")
 DOC_NAMES = (
+    "community_cooperation/README.md",
+    "community/README.md",
     "STRATEGY.md",
     "SEEDS_AND_SCAR.md",
     "WORKING_LOOP.md",

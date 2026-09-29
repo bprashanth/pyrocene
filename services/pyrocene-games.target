@@ -1,0 +1,7 @@
+[Unit]
+Description=Pyrocene event games (Lore remains independent)
+Wants=pyrocene-room.service pyrocene-films.service pyrocene-cinematic.service pyrocene-gateway.service pyrocene-lore.service
+After=pyrocene-room.service pyrocene-films.service pyrocene-cinematic.service pyrocene-gateway.service
+
+[Install]
+WantedBy=default.target

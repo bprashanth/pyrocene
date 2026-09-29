@@ -11,6 +11,22 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# The installed event stack has one owner: systemd. Keep manual/custom-port
+# launches available through --manual; never start a second room on 8020.
+if [ "${1:-}" = "--manual" ]; then
+  shift
+elif systemctl --user cat pyrocene-games.target >/dev/null 2>&1; then
+  if [ "$#" -gt 0 ]; then
+    echo 'Managed services are installed. Use services/manage.py, or ./run.sh --manual --port 9000 ...'
+    exit 2
+  fi
+  python3 services/manage.py start || exit 1
+  echo 'Managed games started: http://127.0.0.1:8030/start'
+  echo 'Public URL after Cloudflare setup: https://pyrocene.idli.cc/start'
+  echo 'Stop: python3 services/manage.py stop (Lore stays running)'
+  exit 0
+fi
+
 PORT=8020
 ARGS=()
 while [ $# -gt 0 ]; do

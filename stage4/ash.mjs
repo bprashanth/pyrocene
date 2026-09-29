@@ -1,3 +1,4 @@
+import {appURL} from './game-features.mjs';
 import { AshForest } from './ash-render.mjs';
 
 const $=id=>document.getElementById(id),KEY='pyrocene-ash-cinema-v1';
@@ -10,7 +11,7 @@ const area=(id,size)=>id===null?[]:Array.from({length:size*size},(_,n)=>({r:Math
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,reduced?0:ms));
 function say(text,who='Ivy'){$('speaker').textContent=who;$('message').textContent=text;}
 function save(){try{localStorage.setItem(KEY,JSON.stringify({seed,commands,selected,groundAnchor,scanArea,ground}));}catch{say('This browser cannot save. You can still finish this island.');}}
-async function request(path,body){const response=await fetch('/api/ash/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw Error(result.error||'The local game could not respond.');return result;}
+async function request(path,body){const response=await fetch(appURL('api/ash/'+path),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw Error(result.error||'The local game could not respond.');return result;}
 function open(id){document.querySelectorAll('dialog[open]').forEach(d=>d.close());$(id).showModal();}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
 function render(){

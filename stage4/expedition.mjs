@@ -7,7 +7,7 @@ import { observationLayers } from './observation-layers.mjs';
 import { ADDITIONAL_SPECIES, INVENTORY_PROFILE, plantLayer, LAYERS } from './forest-flora.mjs';
 import { StructureLab } from './structure-lab.mjs';
 import { speciesRecord } from './species-record.mjs';
-import { expeditionNavigation } from './play-flow.mjs';
+import { expeditionNavigation, bindRecap } from './play-flow.mjs';
 expeditionNavigation();
 
 const $=id=>document.getElementById(id);
@@ -30,6 +30,7 @@ function playProgress(){
 try{state=restore(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch{}
 if(new URLSearchParams(location.search).has('fresh')){state=fresh();try{localStorage.removeItem(STORAGE_KEY);}catch{}}
 const forest=new ExpeditionForest($('landscape'),{select:choose,specimen:meet,qualityChanged:low=>{$('low-detail').checked=low;}});
+bindRecap(forest,$('game-mode'),()=> 'expedition');
 forest.reducedMotion=reduced;
 const network=fieldNetwork({radioFrame,radioBody:$('radio-body'),radioActions:$('radio-actions'),openDialog,toast,visit:async id=>{await camera('overhead');await choose(id);},overlay:async(ids,caption)=>{sensorMap=ids;sensorCaption=caption;mapped=[];await camera('overhead');update();},onChange:update});
 const currentWorld=()=>referenceExperiments&&network.world()||WORLD;

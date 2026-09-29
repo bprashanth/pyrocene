@@ -309,7 +309,10 @@
   $("#tostage2").onclick = async () => { await post("/api/gm/next_stage"); };
   $("#fewer").onclick = async () => { await post("/api/gm/rounds", { delta: -1 }); };
   $("#more").onclick = async () => { await post("/api/gm/rounds", { delta: 1 }); };
-  $("#backto1").onclick = async () => { await post("/api/gm/reset", { stage: 1 }); };
+  $("#backto1").onclick = async () => {
+    const s = await post("/api/gm/reset", { stage: 1 });
+    if (s.stage === 1) history.replaceState(null, "", "/gm?stage=1");
+  };
   $("#finishnight").onclick = async () => { await post("/api/gm/night"); };
   $("#finishvote").onclick = async () => { await post("/api/gm/vote"); };
   $("#advance").onclick = async () => { await post("/api/gm/advance"); };
